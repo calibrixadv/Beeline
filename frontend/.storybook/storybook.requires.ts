@@ -17,6 +17,8 @@ import * as TripSummaryBannerStories from '../src/components/stories/TripSummary
 import * as LoadingSpinnerStories from '../src/components/stories/LoadingSpinner.stories';
 import * as ScreenLoaderStories from '../src/components/stories/ScreenLoader.stories';
 import * as NavbarStories from '../src/components/stories/Navbar.stories';
+import * as RouteFinderCardStories from '../src/components/stories/RouteFinderCard.stories';
+import * as MarketingShowcaseStories from '../src/components/stories/MarketingShowcase.stories';
 
 export const stories = [
   { name: 'BaseButton', module: BaseButtonStories },
@@ -38,5 +40,7 @@ export const stories = [
   { name: 'LoadingSpinner', module: LoadingSpinnerStories },
   { name: 'ScreenLoader', module: ScreenLoaderStories },
   { name: 'Navbar', module: NavbarStories },
+  { name: 'RouteFinderCard', module: RouteFinderCardStories },
+  { name: 'MarketingShowcase', module: MarketingShowcaseStories },
 ];
 

@@ -25,6 +25,8 @@ describe('Storybook Automated UI Component Testing Library', () => {
     expect(storyNames).toContain('LoadingSpinner');
     expect(storyNames).toContain('ScreenLoader');
     expect(storyNames).toContain('Navbar');
+    expect(storyNames).toContain('RouteFinderCard');
+    expect(storyNames).toContain('MarketingShowcase');
   });
 
 

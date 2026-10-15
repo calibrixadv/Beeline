@@ -44,12 +44,12 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
                               ┌────────────────────┐
                               │      BaseCard      │
                               └─────────┬──────────┘
-                                        │
-             ┌──────────────────────────┴──────────────────────────┐
-             ▼                                                     ▼
-      ┌─────────────┐                                       ┌─────────────┐
-      │  TrainCard  │                                       │   Navbar    │
-      └─────────────┘                                       └─────────────┘
+             ┌──────────────────────────┼──────────────────────────┬──────────────────────┐
+             │                          │                          │                      │
+             ▼                          ▼                          ▼                      ▼
+      ┌─────────────┐            ┌─────────────┐            ┌───────────────┐      ┌───────────────────┐
+      │  TrainCard  │            │   Navbar    │            │RouteFinderCard│      │ MarketingShowcase │
+      └─────────────┘            └─────────────┘            └───────────────┘      └───────────────────┘
 
                               ┌────────────────────┐
                               │   LoadingSpinner   │
@@ -447,6 +447,39 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
   - Lifecycle unmount protection: Cleans up pending transition timeouts on component unmount to prevent memory leaks and React state update warnings.
   - Custom transition message preservation: Root layout app shell detects in-flight transitions and preserves custom route change status messages instead of overriding them with generic fallbacks.
 
+---
+
+### 17. `RouteFinderCard`
+- **File**: [`frontend/src/components/RouteFinderCard.tsx`](frontend/src/components/RouteFinderCard.tsx)
+- **Lineage**: Extends `BaseCard`, composes `BaseInput`, `BaseBadge`, `BaseButton`, `IconButton`
+- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with transport mode filters ("Trains", "Metro", "Busses"), station swap action, input validation, and prepared submission feedback without executing feature redirection.
+- **States & Handlers**:
+  - `origin` & `destination`: Controlled text inputs with clearable actions extending `BaseInput`.
+  - `swap`: Swaps origin and destination stations using `IconButton` (`swap-vertical`).
+  - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`) extending `BaseBadge`.
+  - `onSubmitRoute`: Validates non-empty and distinct inputs, formats prepared query `{ origin, destination, modes }`, displays in-card confirmation banner, and invokes optional callback.
+  - **Invariant**: Strictly does NOT execute router redirection.
+- **Props**:
+  - `initialOrigin`?: string (default `'Paris'`)
+  - `initialDestination`?: string (default `'Lyon'`)
+  - `initialModes`?: `TransportMode[]` (default `['Trains', 'Metro', 'Busses']`)
+  - `onSubmitRoute`?: `(params: RouteSearchParams) => void`
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: HomePage hero action shorthand to capture user travel intent quickly.
+
+---
+
+### 18. `MarketingShowcase`
+- **File**: [`frontend/src/components/MarketingShowcase.tsx`](frontend/src/components/MarketingShowcase.tsx)
+- **Lineage**: Composed Feature Component (built with `BaseCard`, `BaseBadge`, `BaseButton`)
+- **Description**: HomePage Role 2 clean marketing showcase placeholders promoting Beeline's capabilities, speed, and cross-border European coverage. Contains hero banner, 3 pillars (Speed: 300+ km/h, Coverage: 15+ European countries, Capabilities: Multi-modal live sync & eco footprint analytics), featured high-speed corridors, and trust metrics. Strictly contains NO map implementation.
+- **Props**:
+  - `onExplorePress`?: `() => void`
+  - `onCorridorPress`?: `(corridor: FeaturedCorridor) => void`
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: HomePage marketing promotion and corridor discovery without loading heavy maps.
 
 ---
 
