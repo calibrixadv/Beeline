@@ -16,3 +16,5 @@ npm-debug.*
 .system_generated/
 .DS_Store
 AI_LOG.md
+*.swp
+.*.swp
