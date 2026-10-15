@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { RouteFinderCard, RouteSearchParams } from '../src/components/RouteFinderCard';
+import { RouteFinderCard, RouteSearchParams, normalizeStation } from '../src/components/RouteFinderCard';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { useRouter } from 'expo-router';
 
@@ -22,8 +22,12 @@ describe('RouteFinderCard component', () => {
 
     expect(getByText('ROUTE SHORTHAND')).toBeTruthy();
     expect(getByText('European Route Finder')).toBeTruthy();
-    expect(getByTestId('route-origin-input')).toBeTruthy();
-    expect(getByTestId('route-destination-input')).toBeTruthy();
+    const originInput = getByTestId('route-origin-input');
+    const destinationInput = getByTestId('route-destination-input');
+    expect(originInput).toBeTruthy();
+    expect(destinationInput).toBeTruthy();
+    expect(originInput.props.value).toBe('București Nord');
+    expect(destinationInput.props.value).toBe('Brașov');
 
     expect(getByTestId('mode-filter-trains')).toBeTruthy();
     expect(getByTestId('mode-filter-metro')).toBeTruthy();
@@ -229,6 +233,110 @@ describe('RouteFinderCard component', () => {
     expect(getByText('Origin and destination cannot be identical.')).toBeTruthy();
   });
 
+  it('detects duplicate stations with Romanian diacritic variations (e.g., București vs Bucuresti)', () => {
+    const { getByTestId, getByText } = renderComponent({
+      initialOrigin: 'București',
+      initialDestination: 'Bucuresti',
+    });
+
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    expect(getByTestId('route-validation-error')).toBeTruthy();
+    expect(getByText('Origin and destination cannot be identical.')).toBeTruthy();
+  });
+
+  it('detects duplicate stations with Brașov vs Brasov case and diacritic insensitively', () => {
+    const { getByTestId, getByText } = renderComponent({
+      initialOrigin: 'BRAȘOV',
+      initialDestination: 'brasov',
+    });
+
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    expect(getByTestId('route-validation-error')).toBeTruthy();
+    expect(getByText('Origin and destination cannot be identical.')).toBeTruthy();
+  });
+
+  it('detects duplicate stations with cedilla vs comma-below Romanian diacritics', () => {
+    const { getByTestId, getByText } = renderComponent({
+      initialOrigin: 'Bucure\u0219ti', // comma below
+      initialDestination: 'Bucure\u015Fti', // cedilla
+    });
+
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    expect(getByTestId('route-validation-error')).toBeTruthy();
+    expect(getByText('Origin and destination cannot be identical.')).toBeTruthy();
+  });
+
+  it('detects duplicate stations with irregular whitespace and Romanian diacritics', () => {
+    const { getByTestId, getByText } = renderComponent({
+      initialOrigin: '  București   Nord  ',
+      initialDestination: 'Bucuresti Nord',
+    });
+
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    expect(getByTestId('route-validation-error')).toBeTruthy();
+    expect(getByText('Origin and destination cannot be identical.')).toBeTruthy();
+  });
+
+  it('detects duplicate stations with hyphenation differences (e.g., Cluj-Napoca vs Cluj Napoca)', () => {
+    const { getByTestId, getByText } = renderComponent({
+      initialOrigin: 'Cluj-Napoca',
+      initialDestination: 'Cluj Napoca',
+    });
+
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    expect(getByTestId('route-validation-error')).toBeTruthy();
+    expect(getByText('Origin and destination cannot be identical.')).toBeTruthy();
+  });
+
+  it('detects duplicate stations across full Romanian diacritic spectrum (ă, â, î, ș, ț)', () => {
+    const { getByTestId, getByText } = renderComponent({
+      initialOrigin: 'Târgu Mureș',
+      initialDestination: 'Targu Mures',
+    });
+
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    expect(getByTestId('route-validation-error')).toBeTruthy();
+    expect(getByText('Origin and destination cannot be identical.')).toBeTruthy();
+  });
+
+  it('prepares route submission with default Romanian hub stations and strictly does not redirect', () => {
+    const router = useRouter();
+    const handleSubmit = jest.fn();
+
+    const { getByTestId, getByText, queryByTestId } = renderComponent({
+      onSubmitRoute: handleSubmit,
+    });
+
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    expect(handleSubmit).toHaveBeenCalledWith<[RouteSearchParams]>({
+      origin: 'București Nord',
+      destination: 'Brașov',
+      modes: ['Trains', 'Metro', 'Busses'],
+    });
+
+    expect(getByTestId('route-submission-feedback')).toBeTruthy();
+    expect(getByText('Route Search Prepared')).toBeTruthy();
+    expect(getByText('București Nord ➔ Brașov')).toBeTruthy();
+
+    expect(queryByTestId('route-validation-error')).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
   it('supports clear buttons on inputs and all popular corridor shortcuts', () => {
     const { getByTestId, queryByTestId } = renderComponent({
       initialOrigin: 'Paris',
@@ -262,6 +370,38 @@ describe('RouteFinderCard component', () => {
     fireEvent.press(milanoRomaChip);
     expect(originInput.props.value).toBe('Milano');
     expect(destInput.props.value).toBe('Roma');
+  });
+});
+
+describe('normalizeStation utility', () => {
+  it('handles null, undefined, and empty string safely', () => {
+    expect(normalizeStation('')).toBe('');
+    expect(normalizeStation(null as unknown as string)).toBe('');
+    expect(normalizeStation(undefined as unknown as string)).toBe('');
+  });
+
+  it('collapses internal multi-space and trims leading/trailing whitespace', () => {
+    expect(normalizeStation('   București     Nord   ')).toBe('bucuresti nord');
+  });
+
+  it('normalizes hyphens and underscores to single spaces', () => {
+    expect(normalizeStation('Cluj-Napoca')).toBe('cluj napoca');
+    expect(normalizeStation('Cluj - Napoca')).toBe('cluj napoca');
+    expect(normalizeStation('Drobeta_Turnu_Severin')).toBe('drobeta turnu severin');
+  });
+
+  it('strips all Romanian diacritical marks accurately', () => {
+    expect(normalizeStation('București')).toBe('bucuresti');
+    expect(normalizeStation('Brașov')).toBe('brasov');
+    expect(normalizeStation('Constanța')).toBe('constanta');
+    expect(normalizeStation('Târgu Mureș')).toBe('targu mures');
+    expect(normalizeStation('Bacău')).toBe('bacau');
+    expect(normalizeStation('Întorsura Buzăului')).toBe('intorsura buzaului');
+  });
+
+  it('normalizes both comma-below and legacy cedilla Romanian letters identically', () => {
+    expect(normalizeStation('Bucure\u0219ti')).toBe(normalizeStation('Bucure\u015Fti'));
+    expect(normalizeStation('Constan\u021Ba')).toBe(normalizeStation('Constan\u0163a'));
   });
 });
 

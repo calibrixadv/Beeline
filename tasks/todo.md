@@ -3,13 +3,13 @@
 ## Task 1: Update Domain Corridor Data & Romanian Hub Presets in RouteFinderCard
 **Description:** Update `RouteFinderCard` default stations to Romania's central rail hub (`București Nord` ➔ `Brașov`) and adjust initial state and mode options.
 **Acceptance criteria:**
-- [ ] Initial origin defaults to `București Nord` and destination defaults to `Brașov`.
-- [ ] Preserves multi-modal filter chips (`Trains`, `Metro`, `Busses`).
-- [ ] Robust against Romanian diacritics (`București` vs `Bucuresti`) during duplicate validation.
+- [x] Initial origin defaults to `București Nord` and destination defaults to `Brașov`.
+- [x] Preserves multi-modal filter chips (`Trains`, `Metro`, `Busses`).
+- [x] Robust against Romanian diacritics (`București` vs `Bucuresti`) during duplicate validation.
 **Verification:**
-- [ ] Tests pass: `npm test -- frontend/__tests__/RouteFinderCard.test.tsx`
-- [ ] Storybook tests pass: `npm run test:storybook`
-- [ ] Manual check: Default inputs display `București Nord` and `Brașov`.
+- [x] Tests pass: `npm test -- frontend/__tests__/RouteFinderCard.test.tsx`
+- [x] Storybook tests pass: `npm run test:storybook`
+- [x] Manual check: Default inputs display `București Nord` and `Brașov`.
 **Dependencies:** None
 **Files likely touched:**
 - `frontend/src/components/RouteFinderCard.tsx`

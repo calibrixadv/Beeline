@@ -5,8 +5,8 @@ const meta: StoryMeta<RouteFinderCardProps> = {
   title: 'Feature/RouteFinderCard',
   component: RouteFinderCard,
   args: {
-    initialOrigin: 'Paris',
-    initialDestination: 'Lyon',
+    initialOrigin: 'București Nord',
+    initialDestination: 'Brașov',
     initialModes: ['Trains', 'Metro', 'Busses'],
   },
 };
@@ -15,24 +15,24 @@ export default meta;
 
 export const Default: StoryObj<RouteFinderCardProps> = {
   args: {
-    initialOrigin: 'Paris',
-    initialDestination: 'Lyon',
+    initialOrigin: 'București Nord',
+    initialDestination: 'Brașov',
     initialModes: ['Trains', 'Metro', 'Busses'],
   },
 };
 
 export const TrainsOnly: StoryObj<RouteFinderCardProps> = {
   args: {
-    initialOrigin: 'London',
-    initialDestination: 'Brussels',
+    initialOrigin: 'București Nord',
+    initialDestination: 'Constanța',
     initialModes: ['Trains'],
   },
 };
 
 export const InteractiveSwap: StoryObj<RouteFinderCardProps> = {
   args: {
-    initialOrigin: 'Milano',
-    initialDestination: 'Roma',
+    initialOrigin: 'București Nord',
+    initialDestination: 'Brașov',
     initialModes: ['Trains', 'Metro'],
   },
   play: async ({ canvasElement }) => {
@@ -43,8 +43,8 @@ export const InteractiveSwap: StoryObj<RouteFinderCardProps> = {
 
 export const InteractiveSubmitPrepared: StoryObj<RouteFinderCardProps> = {
   args: {
-    initialOrigin: 'Berlin',
-    initialDestination: 'Munich',
+    initialOrigin: 'Cluj-Napoca',
+    initialDestination: 'București Nord',
     initialModes: ['Trains', 'Busses'],
   },
   play: async ({ canvasElement }) => {
@@ -57,8 +57,8 @@ export const InteractiveSubmitPrepared: StoryObj<RouteFinderCardProps> = {
 
 export const InteractiveToggleMode: StoryObj<RouteFinderCardProps> = {
   args: {
-    initialOrigin: 'Barcelona',
-    initialDestination: 'Madrid',
+    initialOrigin: 'Timișoara Nord',
+    initialDestination: 'București Nord',
     initialModes: ['Trains'],
   },
   play: async ({ canvasElement }) => {
@@ -76,6 +76,20 @@ export const WithValidationError: StoryObj<RouteFinderCardProps> = {
     const submitBtn = canvasElement.getByTestId('route-finder-submit-btn');
     fireEvent.press(submitBtn);
     expect(canvasElement.getByTestId('route-validation-error')).toBeTruthy();
+  },
+};
+
+export const DuplicateDiacriticValidation: StoryObj<RouteFinderCardProps> = {
+  args: {
+    initialOrigin: 'București',
+    initialDestination: 'Bucuresti',
+  },
+  play: async ({ canvasElement }) => {
+    const submitBtn = canvasElement.getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+    expect(canvasElement.getByTestId('route-validation-error')).toBeTruthy();
+    expect(canvasElement.getByText('Origin and destination cannot be identical.')).toBeTruthy();
+    expect(canvasElement.queryByTestId('route-submission-feedback')).toBeNull();
   },
 };
 

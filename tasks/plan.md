@@ -19,7 +19,7 @@ Adapt the Beeline HomePage template to align with the refined specification in `
 ## Task List
 
 ### Phase 1: Foundation & Shorthand Adaptation
-- [ ] **Task 1**: Update `RouteFinderCard` default stations to Romanian hub (`București Nord` ⇄ `Brașov`) and configure quick corridor helper presets.
+- [x] **Task 1**: Update `RouteFinderCard` default stations to Romanian hub (`București Nord` ⇄ `Brașov`) and configure quick corridor helper presets.
 - [ ] **Task 2**: Enhance `RouteFinderCard` non-redirecting submission feedback to display the "Curated Trifecta" preview pillars (Fastest, Best Value €10/hr rule, Most Reliable buffer alert).
 
 ### Checkpoint 1: Shorthand Validation

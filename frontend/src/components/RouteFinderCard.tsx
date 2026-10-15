@@ -44,9 +44,18 @@ export const ALL_TRANSPORT_MODES: { id: TransportMode; label: string; icon: Reac
   { id: 'Busses', label: 'Busses', icon: 'bus-outline' },
 ];
 
+export const normalizeStation = (station: string): string =>
+  (station || '')
+    .trim()
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
 export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
-  initialOrigin = 'Paris',
-  initialDestination = 'Lyon',
+  initialOrigin = 'București Nord',
+  initialDestination = 'Brașov',
   initialModes = ['Trains', 'Metro', 'Busses'],
   onSubmitRoute,
   style,
@@ -95,10 +104,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
       return;
     }
 
-    if (
-      trimmedOrigin.normalize('NFC').toLowerCase() ===
-      trimmedDestination.normalize('NFC').toLowerCase()
-    ) {
+    if (normalizeStation(trimmedOrigin) === normalizeStation(trimmedDestination)) {
       setValidationError('Origin and destination cannot be identical.');
       setSubmittedQuery(null);
       return;
@@ -173,7 +179,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
         <View style={styles.inputRow}>
           <BaseInput
             label="ORIGIN"
-            placeholder="Origin station (e.g., Paris Gare de Lyon)"
+            placeholder="Origin station (e.g., București Nord)"
             value={origin}
             onChangeText={(text) => {
               setOrigin(text);
@@ -219,7 +225,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
         <View style={styles.inputRow}>
           <BaseInput
             label="DESTINATION"
-            placeholder="Destination station (e.g., Lyon Part-Dieu)"
+            placeholder="Destination station (e.g., Brașov)"
             value={destination}
             onChangeText={(text) => {
               setDestination(text);
