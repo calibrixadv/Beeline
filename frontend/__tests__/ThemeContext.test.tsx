@@ -1,0 +1,119 @@
+import React from 'react';
+import { Text, TouchableOpacity } from 'react-native';
+import { render, fireEvent } from '@testing-library/react-native';
+import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
+import { BaseButton } from '../src/components/BaseButton';
+import { BaseCard } from '../src/components/BaseCard';
+import { BaseInput } from '../src/components/BaseInput';
+
+const ThemeConsumer: React.FC = () => {
+  const { mode, isDark, theme, toggleTheme, setMode } = useTheme();
+
+  return (
+    <>
+      <Text testID="theme-mode">{mode}</Text>
+      <Text testID="theme-isDark">{String(isDark)}</Text>
+      <Text testID="theme-brandYellow">{theme.colors.brandYellow}</Text>
+      <Text testID="theme-bg">{theme.colors.background}</Text>
+      <TouchableOpacity testID="toggle-btn" onPress={toggleTheme}>
+        <Text>Toggle</Text>
+      </TouchableOpacity>
+      <TouchableOpacity testID="set-dark-btn" onPress={() => setMode('dark')}>
+        <Text>Set Dark</Text>
+      </TouchableOpacity>
+      <TouchableOpacity testID="set-light-btn" onPress={() => setMode('light')}>
+        <Text>Set Light</Text>
+      </TouchableOpacity>
+    </>
+  );
+};
+
+describe('ThemeContext and ThemeProvider', () => {
+  it('provides light theme defaults and Beeline Yellow brand tokens', () => {
+    const { getByTestId } = render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>
+    );
+
+    expect(getByTestId('theme-mode').props.children).toBe('light');
+    expect(getByTestId('theme-isDark').props.children).toBe('false');
+    expect(getByTestId('theme-brandYellow').props.children).toBe('#FFC700');
+    expect(getByTestId('theme-bg').props.children).toBe('#FFFFFF');
+  });
+
+  it('toggles mode from light to dark cleanly', () => {
+    const { getByTestId } = render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>
+    );
+
+    const toggleBtn = getByTestId('toggle-btn');
+    fireEvent.press(toggleBtn);
+
+    expect(getByTestId('theme-mode').props.children).toBe('dark');
+    expect(getByTestId('theme-isDark').props.children).toBe('true');
+    expect(getByTestId('theme-bg').props.children).toBe('#09090B');
+
+    fireEvent.press(toggleBtn);
+    expect(getByTestId('theme-mode').props.children).toBe('light');
+  });
+
+  it('allows setting explicit mode', () => {
+    const { getByTestId } = render(
+      <ThemeProvider>
+        <ThemeConsumer />
+      </ThemeProvider>
+    );
+
+    fireEvent.press(getByTestId('set-dark-btn'));
+    expect(getByTestId('theme-mode').props.children).toBe('dark');
+
+    fireEvent.press(getByTestId('set-light-btn'));
+    expect(getByTestId('theme-mode').props.children).toBe('light');
+  });
+
+  it('provides fallback defaults even when rendered outside ThemeProvider', () => {
+    const { getByTestId } = render(<ThemeConsumer />);
+    expect(getByTestId('theme-brandYellow').props.children).toBe('#FFC700');
+  });
+
+  it('adapts BaseCard, BaseButton, and BaseInput across light and dark theme modes', () => {
+    const ThemedComponentsHarness: React.FC = () => {
+      const { toggleTheme } = useTheme();
+      return (
+        <>
+          <BaseButton testID="test-themed-btn" variant="primary" title="Book Now" />
+          <BaseCard testID="test-themed-card" variant="elevated">
+            <Text>Card Content</Text>
+          </BaseCard>
+          <BaseInput testID="test-themed-input" value="Paris" onChangeText={() => {}} />
+          <TouchableOpacity testID="toggle-theme-harness" onPress={toggleTheme}>
+            <Text>Toggle</Text>
+          </TouchableOpacity>
+        </>
+      );
+    };
+
+    const { getByTestId } = render(
+      <ThemeProvider initialMode="light">
+        <ThemedComponentsHarness />
+      </ThemeProvider>
+    );
+
+    const btn = getByTestId('test-themed-btn');
+    const card = getByTestId('test-themed-card');
+    const input = getByTestId('test-themed-input');
+
+    expect(btn).toBeTruthy();
+    expect(card).toBeTruthy();
+    expect(input).toBeTruthy();
+
+    // Toggle to dark mode
+    fireEvent.press(getByTestId('toggle-theme-harness'));
+
+    expect(getByTestId('test-themed-btn')).toBeTruthy();
+    expect(getByTestId('test-themed-card')).toBeTruthy();
+  });
+});

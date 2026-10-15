@@ -1,48 +1,100 @@
-import React from 'react';
-import { Stack } from 'expo-router';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TripProvider } from '../src/context/TripContext';
+import { ThemeProvider, useTheme } from '../src/context/ThemeContext';
+import {
+  ScreenTransitionProvider,
+  useScreenTransition,
+} from '../src/context/ScreenTransitionContext';
+import { Navbar } from '../src/components/Navbar';
+import { ScreenLoader } from '../src/components/ScreenLoader';
 
-export default function RootLayout() {
+function AppShell() {
+  const { theme, isDark } = useTheme();
+  const { isTransitioning, transitionMessage, triggerTransition } = useScreenTransition();
+
+  let pathname = '/';
+  try {
+    const p = usePathname();
+    if (p) {
+      pathname = p;
+    }
+  } catch {
+    pathname = '/';
+  }
+
+  const prevPathRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (pathname && prevPathRef.current !== null && prevPathRef.current !== pathname) {
+      if (!isTransitioning) {
+        const screenName = pathname === '/' ? 'Home' : pathname.replace('/', '');
+        triggerTransition(`Loading Beeline ${screenName}...`);
+      }
+    }
+    prevPathRef.current = pathname;
+  }, [pathname, isTransitioning, triggerTransition]);
+
   return (
-    <SafeAreaProvider>
-      <TripProvider>
-        <StatusBar style="light" />
+    <View style={[styles.shell, { backgroundColor: theme.colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <Navbar />
+      <View style={styles.mainContent}>
         <Stack
           screenOptions={{
-            headerStyle: {
-              backgroundColor: '#0F172A',
-            },
-            headerTintColor: '#FFFFFF',
-            headerTitleStyle: {
-              fontWeight: '700',
-            },
+            headerShown: false,
             contentStyle: {
-              backgroundColor: '#F8FAFC',
+              backgroundColor: theme.colors.background,
             },
           }}
         >
           <Stack.Screen
             name="index"
             options={{
-              title: 'Trip Planner',
+              title: 'Beeline - Home',
             }}
           />
           <Stack.Screen
             name="trains"
             options={{
-              title: 'Train Schedules',
+              title: 'Beeline - Train Schedules',
             }}
           />
           <Stack.Screen
             name="my-trip"
             options={{
-              title: 'My Trip Itinerary',
+              title: 'Beeline - My Trip',
             }}
           />
         </Stack>
-      </TripProvider>
+      </View>
+      <ScreenLoader visible={isTransitioning} message={transitionMessage} />
+    </View>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <TripProvider>
+          <ScreenTransitionProvider>
+            <AppShell />
+          </ScreenTransitionProvider>
+        </TripProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  shell: {
+    flex: 1,
+  },
+  mainContent: {
+    flex: 1,
+  },
+});

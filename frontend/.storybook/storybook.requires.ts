@@ -14,6 +14,9 @@ import * as TrainCardStories from '../src/components/stories/TrainCard.stories';
 import * as FilterBarStories from '../src/components/stories/FilterBar.stories';
 import * as TrainDetailModalStories from '../src/components/stories/TrainDetailModal.stories';
 import * as TripSummaryBannerStories from '../src/components/stories/TripSummaryBanner.stories';
+import * as LoadingSpinnerStories from '../src/components/stories/LoadingSpinner.stories';
+import * as ScreenLoaderStories from '../src/components/stories/ScreenLoader.stories';
+import * as NavbarStories from '../src/components/stories/Navbar.stories';
 
 export const stories = [
   { name: 'BaseButton', module: BaseButtonStories },
@@ -32,4 +35,8 @@ export const stories = [
   { name: 'FilterBar', module: FilterBarStories },
   { name: 'TrainDetailModal', module: TrainDetailModalStories },
   { name: 'TripSummaryBanner', module: TripSummaryBannerStories },
+  { name: 'LoadingSpinner', module: LoadingSpinnerStories },
+  { name: 'ScreenLoader', module: ScreenLoaderStories },
+  { name: 'Navbar', module: NavbarStories },
 ];
+

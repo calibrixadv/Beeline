@@ -1,14 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useTripPlanner } from '../src/context/TripContext';
+import { useTheme } from '../src/context/ThemeContext';
+import { useScreenTransition } from '../src/context/ScreenTransitionContext';
 import { formatCurrency, formatTimeOnly } from '../src/utils/trainFilters';
 import { StatusBadge } from '../src/components/StatusBadge';
 
 export default function MyTripScreen() {
-  const router = useRouter();
+  const { theme, isDark } = useTheme();
   const { trips, removeTrainFromTrip, clearTrip, getTripTotalCost } = useTripPlanner();
+  const { navigateWithTransition } = useScreenTransition();
 
   const totalCost = getTripTotalCost();
   const totalCO2 = trips.reduce((acc, t) => acc + t.journey.carbonFootprintKg, 0);
@@ -17,25 +19,41 @@ export default function MyTripScreen() {
     clearTrip();
   };
 
+
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       {trips.length === 0 ? (
         <View style={styles.emptyContainer} testID="empty-trip-view">
-          <View style={styles.emptyIconBox}>
-            <Ionicons name="train-outline" size={54} color="#94A3B8" />
+          <View
+            style={[
+              styles.emptyIconBox,
+              {
+                backgroundColor: isDark ? '#1F1F23' : '#FEF9C3',
+              },
+            ]}
+          >
+            <Ionicons name="train-outline" size={54} color={theme.colors.brandYellow} />
           </View>
-          <Text style={styles.emptyTitle}>Your Itinerary is Empty</Text>
-          <Text style={styles.emptySubtitle}>
+          <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>
+            Your Itinerary is Empty
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
             Browse train routes, compare timetables, and add train legs to your trip itinerary.
           </Text>
           <TouchableOpacity
-            style={styles.browseBtn}
-            onPress={() => router.push('/trains')}
+            style={[
+              styles.browseBtn,
+              {
+                backgroundColor: theme.colors.brandYellow,
+              },
+            ]}
+            onPress={() => navigateWithTransition('/trains', { message: 'Loading train schedules...' })}
             accessibilityRole="button"
             accessibilityLabel="Browse Train Schedules"
           >
-            <Ionicons name="search" size={18} color="#FFFFFF" />
-            <Text style={styles.browseBtnText}>Browse Train Schedules</Text>
+            <Ionicons name="search" size={18} color="#000000" />
+            <Text style={[styles.browseBtnText, { color: '#000000' }]}>Browse Train Schedules</Text>
+
           </TouchableOpacity>
         </View>
       ) : (
@@ -45,21 +63,39 @@ export default function MyTripScreen() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Trip Itinerary Overview</Text>
+            <View
+              style={[
+                styles.summaryCard,
+                {
+                  backgroundColor: theme.colors.surface,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.summaryTitle, { color: theme.colors.textPrimary }]}>
+                Trip Itinerary Overview
+              </Text>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryStat}>
-                  <Text style={styles.statLabel}>Legs</Text>
-                  <Text style={styles.statValue}>{trips.length}</Text>
+                  <Text style={[styles.statLabel, { color: theme.colors.textMuted }]}>Legs</Text>
+                  <Text style={[styles.statValue, { color: theme.colors.textPrimary }]}>
+                    {trips.length}
+                  </Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
                 <View style={styles.summaryStat}>
-                  <Text style={styles.statLabel}>Total Est. Cost</Text>
-                  <Text style={styles.statValuePrice}>{formatCurrency(totalCost)}</Text>
+                  <Text style={[styles.statLabel, { color: theme.colors.textMuted }]}>
+                    Total Est. Cost
+                  </Text>
+                  <Text style={[styles.statValuePrice, { color: theme.colors.brandYellow }]}>
+                    {formatCurrency(totalCost)}
+                  </Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
                 <View style={styles.summaryStat}>
-                  <Text style={styles.statLabel}>CO₂ Emissions</Text>
+                  <Text style={[styles.statLabel, { color: theme.colors.textMuted }]}>
+                    CO₂ Emissions
+                  </Text>
                   <Text style={styles.statValueEco}>{totalCO2.toFixed(1)} kg</Text>
                 </View>
               </View>
@@ -71,12 +107,30 @@ export default function MyTripScreen() {
               item.journey.fares[0];
 
             return (
-              <View style={styles.tripCard} testID={`itinerary-item-${item.id}`}>
+              <View
+                style={[
+                  styles.tripCard,
+                  {
+                    backgroundColor: theme.colors.cardBg,
+                    borderColor: theme.colors.cardBorder,
+                  },
+                ]}
+                testID={`itinerary-item-${item.id}`}
+              >
                 <View style={styles.legHeader}>
-                  <View style={styles.legBadge}>
+                  <View
+                    style={[
+                      styles.legBadge,
+                      {
+                        backgroundColor: theme.colors.brandYellow,
+                      },
+                    ]}
+                  >
                     <Text style={styles.legBadgeText}>Leg {index + 1}</Text>
                   </View>
-                  <Text style={styles.trainTitle}>{item.journey.trainNumber}</Text>
+                  <Text style={[styles.trainTitle, { color: theme.colors.textPrimary }]}>
+                    {item.journey.trainNumber}
+                  </Text>
                   <StatusBadge
                     status={item.journey.status}
                     delayMinutes={item.journey.delayMinutes}
@@ -86,33 +140,47 @@ export default function MyTripScreen() {
                 {/* Stations */}
                 <View style={styles.routeRow}>
                   <View style={styles.routeCol}>
-                    <Text style={styles.routeTime}>
+                    <Text style={[styles.routeTime, { color: theme.colors.textPrimary }]}>
                       {formatTimeOnly(item.journey.departureTime)}
                     </Text>
-                    <Text style={styles.routeCity}>{item.journey.origin.city}</Text>
-                    <Text style={styles.stationSubtitle}>{item.journey.origin.name}</Text>
+                    <Text style={[styles.routeCity, { color: theme.colors.textPrimary }]}>
+                      {item.journey.origin.city}
+                    </Text>
+                    <Text style={[styles.stationSubtitle, { color: theme.colors.textSecondary }]}>
+                      {item.journey.origin.name}
+                    </Text>
                   </View>
 
                   <View style={styles.routeMiddle}>
-                    <Text style={styles.routeDuration}>{item.journey.durationFormatted}</Text>
-                    <Ionicons name="arrow-forward" size={16} color="#94A3B8" />
+                    <Text style={[styles.routeDuration, { color: theme.colors.textSecondary }]}>
+                      {item.journey.durationFormatted}
+                    </Text>
+                    <Ionicons name="arrow-forward" size={16} color={theme.colors.brandYellow} />
                   </View>
 
                   <View style={[styles.routeCol, styles.alignRight]}>
-                    <Text style={styles.routeTime}>
+                    <Text style={[styles.routeTime, { color: theme.colors.textPrimary }]}>
                       {formatTimeOnly(item.journey.arrivalTime)}
                     </Text>
-                    <Text style={styles.routeCity}>{item.journey.destination.city}</Text>
-                    <Text style={styles.stationSubtitle}>{item.journey.destination.name}</Text>
+                    <Text style={[styles.routeCity, { color: theme.colors.textPrimary }]}>
+                      {item.journey.destination.city}
+                    </Text>
+                    <Text style={[styles.stationSubtitle, { color: theme.colors.textSecondary }]}>
+                      {item.journey.destination.name}
+                    </Text>
                   </View>
                 </View>
 
                 {/* Class & Price Bar */}
-                <View style={styles.cardFooter}>
+                <View style={[styles.cardFooter, { borderTopColor: theme.colors.border }]}>
                   <View style={styles.classInfo}>
-                    <Text style={styles.classLabel}>Class: </Text>
-                    <Text style={styles.classValue}>{item.selectedClass}</Text>
-                    <Text style={styles.fareAmount}>
+                    <Text style={[styles.classLabel, { color: theme.colors.textSecondary }]}>
+                      Class:{' '}
+                    </Text>
+                    <Text style={[styles.classValue, { color: theme.colors.textPrimary }]}>
+                      {item.selectedClass}
+                    </Text>
+                    <Text style={[styles.fareAmount, { color: theme.colors.textSecondary }]}>
                       ({formatCurrency(fare ? fare.price : 0, fare?.currency)})
                     </Text>
                   </View>
@@ -133,21 +201,37 @@ export default function MyTripScreen() {
           ListFooterComponent={
             <View style={styles.footerActions}>
               <TouchableOpacity
-                style={styles.addMoreBtn}
-                onPress={() => router.push('/trains')}
+                style={[
+                  styles.addMoreBtn,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.brandYellow,
+                  },
+                ]}
+                onPress={() => navigateWithTransition('/trains', { message: 'Browsing more train journeys...' })}
                 accessibilityRole="button"
               >
-                <Ionicons name="add" size={18} color="#2563EB" />
-                <Text style={styles.addMoreBtnText}>Add More Trains</Text>
+                <Ionicons name="add" size={18} color={theme.colors.brandYellow} />
+                <Text style={[styles.addMoreBtnText, { color: theme.colors.textPrimary }]}>
+                  Add More Trains
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.clearTripBtn}
+                style={[
+                  styles.clearTripBtn,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                  },
+                ]}
                 onPress={handleClear}
                 accessibilityRole="button"
               >
-                <Ionicons name="close" size={18} color="#64748B" />
-                <Text style={styles.clearTripBtnText}>Clear Itinerary</Text>
+                <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
+                <Text style={[styles.clearTripBtnText, { color: theme.colors.textSecondary }]}>
+                  Clear Itinerary
+                </Text>
               </TouchableOpacity>
             </View>
           }
@@ -160,247 +244,221 @@ export default function MyTripScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   listContent: {
     padding: 16,
     paddingBottom: 32,
+    maxWidth: 900,
+    width: '100%',
+    alignSelf: 'center',
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 32,
   },
   emptyIconBox: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
-    maxWidth: 280,
+    maxWidth: 320,
   },
   browseBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2563EB',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 10,
     gap: 8,
   },
   browseBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
     fontSize: 14,
+    fontWeight: '800',
   },
   summaryCard: {
-    backgroundColor: '#0F172A',
     borderRadius: 14,
     padding: 18,
     marginBottom: 16,
+    borderWidth: 1,
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '800',
     marginBottom: 14,
   },
   summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   summaryStat: {
-    alignItems: 'center',
     flex: 1,
-  },
-  statDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: '#334155',
+    alignItems: 'center',
   },
   statLabel: {
     fontSize: 11,
-    color: '#94A3B8',
     fontWeight: '600',
     marginBottom: 4,
   },
   statValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#FFFFFF',
   },
   statValuePrice: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#60A5FA',
+    fontWeight: '900',
   },
   statValueEco: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#34D399',
+    color: '#16A34A',
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
   },
   tripCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   legHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
     marginBottom: 12,
   },
   legBadge: {
-    backgroundColor: '#EFF6FF',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   legBadgeText: {
+    color: '#000000',
     fontSize: 11,
-    fontWeight: '700',
-    color: '#2563EB',
+    fontWeight: '900',
   },
   trainTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: '800',
     flex: 1,
-    marginLeft: 8,
   },
   routeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#F1F5F9',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
   routeCol: {
-    flex: 1,
+    flex: 2,
   },
   alignRight: {
     alignItems: 'flex-end',
   },
   routeTime: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E293B',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 2,
   },
   routeCity: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-    marginTop: 2,
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 1,
   },
   stationSubtitle: {
     fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 1,
   },
   routeMiddle: {
+    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 8,
+    gap: 2,
   },
   routeDuration: {
     fontSize: 11,
-    color: '#64748B',
     fontWeight: '600',
-    marginBottom: 2,
   },
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
   },
   classInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   classLabel: {
     fontSize: 12,
-    color: '#64748B',
   },
   classValue: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
   },
   fareAmount: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#2563EB',
     marginLeft: 4,
   },
   removeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    padding: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   removeBtnText: {
+    color: '#DC2626',
     fontSize: 12,
     fontWeight: '600',
-    color: '#DC2626',
   },
   footerActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 12,
+    gap: 10,
+    marginTop: 8,
   },
   addMoreBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
     paddingVertical: 12,
     borderRadius: 10,
+    borderWidth: 1,
     gap: 6,
   },
   addMoreBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#2563EB',
   },
   clearTripBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
     paddingVertical: 12,
     borderRadius: 10,
+    borderWidth: 1,
     gap: 6,
   },
   clearTripBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
   },
 });

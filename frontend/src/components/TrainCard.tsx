@@ -8,6 +8,7 @@ import { BaseCard } from './BaseCard';
 import { BaseButton } from './BaseButton';
 import { PlanButton } from './PlanButton';
 import { useTripPlanner } from '../context/TripContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface TrainCardProps {
   journey: TrainJourney;
@@ -15,6 +16,7 @@ interface TrainCardProps {
 }
 
 export const TrainCard: React.FC<TrainCardProps> = ({ journey, onPressDetails }) => {
+  const { theme, isDark } = useTheme();
   const { isTrainInTrip, addTrainToTrip } = useTripPlanner();
   const isSaved = isTrainInTrip(journey.id);
   const lowestPrice = getLowestFare(journey);
@@ -30,8 +32,12 @@ export const TrainCard: React.FC<TrainCardProps> = ({ journey, onPressDetails })
       {/* Top Header: Train Number, Operator & Status Badge */}
       <View style={styles.headerRow}>
         <View style={styles.operatorBlock}>
-          <Text style={styles.trainNumber}>{journey.trainNumber}</Text>
-          <Text style={styles.operatorText}>{journey.operator}</Text>
+          <Text style={[styles.trainNumber, { color: theme.colors.textPrimary }]}>
+            {journey.trainNumber}
+          </Text>
+          <Text style={[styles.operatorText, { color: theme.colors.textSecondary }]}>
+            {journey.operator}
+          </Text>
         </View>
         <StatusBadge status={journey.status} delayMinutes={journey.delayMinutes} />
       </View>
@@ -40,40 +46,70 @@ export const TrainCard: React.FC<TrainCardProps> = ({ journey, onPressDetails })
       <View style={styles.timelineRow}>
         {/* Origin */}
         <View style={styles.stationBlock}>
-          <Text style={styles.timeText}>{formatTimeOnly(journey.departureTime)}</Text>
-          <Text style={styles.cityText}>{journey.origin.city}</Text>
-          <Text style={styles.stationName} numberOfLines={1}>
+          <Text style={[styles.timeText, { color: theme.colors.textPrimary }]}>
+            {formatTimeOnly(journey.departureTime)}
+          </Text>
+          <Text style={[styles.cityText, { color: theme.colors.textSecondary }]}>
+            {journey.origin.city}
+          </Text>
+          <Text
+            style={[styles.stationName, { color: theme.colors.textMuted }]}
+            numberOfLines={1}
+          >
             {journey.origin.name}
           </Text>
           {journey.origin.platform ? (
-            <Text style={styles.platformText}>{journey.origin.platform}</Text>
+            <Text style={[styles.platformText, { color: theme.colors.textSecondary }]}>
+              {journey.origin.platform}
+            </Text>
           ) : null}
         </View>
 
         {/* Center Duration Bar */}
         <View style={styles.durationBlock}>
-          <Text style={styles.durationText}>{journey.durationFormatted}</Text>
+          <Text style={[styles.durationText, { color: theme.colors.textSecondary }]}>
+            {journey.durationFormatted}
+          </Text>
           <View style={styles.lineIndicator}>
-            <View style={styles.dot} />
-            <View style={styles.horizontalLine} />
-            <Ionicons name="train" size={14} color="#2563EB" />
-            <View style={styles.horizontalLine} />
-            <View style={styles.dot} />
+            <View style={[styles.dot, { backgroundColor: theme.colors.brandYellow }]} />
+            <View
+              style={[
+                styles.horizontalLine,
+                { backgroundColor: isDark ? theme.colors.border : '#CBD5E1' },
+              ]}
+            />
+            <Ionicons name="train" size={14} color={theme.colors.brandYellow} />
+            <View
+              style={[
+                styles.horizontalLine,
+                { backgroundColor: isDark ? theme.colors.border : '#CBD5E1' },
+              ]}
+            />
+            <View style={[styles.dot, { backgroundColor: theme.colors.brandYellow }]} />
           </View>
-          <Text style={styles.stopsText}>
+          <Text style={[styles.stopsText, { color: theme.colors.textMuted }]}>
             {journey.stops.length <= 2 ? 'Direct' : `${journey.stops.length - 2} stops`}
           </Text>
         </View>
 
         {/* Destination */}
         <View style={[styles.stationBlock, styles.alignRight]}>
-          <Text style={styles.timeText}>{formatTimeOnly(journey.arrivalTime)}</Text>
-          <Text style={styles.cityText}>{journey.destination.city}</Text>
-          <Text style={styles.stationName} numberOfLines={1}>
+          <Text style={[styles.timeText, { color: theme.colors.textPrimary }]}>
+            {formatTimeOnly(journey.arrivalTime)}
+          </Text>
+          <Text style={[styles.cityText, { color: theme.colors.textSecondary }]}>
+            {journey.destination.city}
+          </Text>
+          <Text
+            style={[styles.stationName, { color: theme.colors.textMuted }]}
+            numberOfLines={1}
+          >
             {journey.destination.name}
           </Text>
           {journey.destination.platform ? (
-            <Text style={styles.platformText}>{journey.destination.platform}</Text>
+            <Text style={[styles.platformText, { color: theme.colors.textSecondary }]}>
+              {journey.destination.platform}
+            </Text>
           ) : null}
         </View>
       </View>
@@ -82,20 +118,37 @@ export const TrainCard: React.FC<TrainCardProps> = ({ journey, onPressDetails })
       <View style={styles.metaRow}>
         <View style={styles.classChips}>
           {journey.fares.map((fare) => (
-            <View key={fare.classType} style={styles.fareChip}>
-              <Text style={styles.fareClass}>{fare.classType}</Text>
-              <Text style={styles.farePrice}>{formatCurrency(fare.price, fare.currency)}</Text>
+            <View
+              key={fare.classType}
+              style={[
+                styles.fareChip,
+                {
+                  backgroundColor: isDark ? '#1F1F23' : '#F8FAFC',
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.fareClass, { color: theme.colors.textSecondary }]}>
+                {fare.classType}
+              </Text>
+              <Text style={[styles.farePrice, { color: theme.colors.textPrimary }]}>
+                {formatCurrency(fare.price, fare.currency)}
+              </Text>
             </View>
           ))}
         </View>
-        <Text style={styles.co2Text}>🌱 {journey.carbonFootprintKg} kg CO₂</Text>
+        <Text style={[styles.co2Text, { color: isDark ? '#34D399' : '#166534' }]}>
+          🌱 {journey.carbonFootprintKg} kg CO₂
+        </Text>
       </View>
 
       {/* Action Footer */}
       <View style={styles.footerRow}>
         <View>
-          <Text style={styles.fromLabel}>from</Text>
-          <Text style={styles.priceHighlight}>{formatCurrency(lowestPrice)}</Text>
+          <Text style={[styles.fromLabel, { color: theme.colors.textMuted }]}>from</Text>
+          <Text style={[styles.priceHighlight, { color: theme.colors.brandYellow }]}>
+            {formatCurrency(lowestPrice)}
+          </Text>
         </View>
 
         <View style={styles.buttonGroup}>
@@ -107,7 +160,7 @@ export const TrainCard: React.FC<TrainCardProps> = ({ journey, onPressDetails })
             accessibilityRole="button"
             accessibilityLabel={`View details for ${journey.trainNumber}`}
             style={styles.detailsBtn}
-            textStyle={styles.detailsBtnText}
+            textStyle={[styles.detailsBtnText, { color: theme.colors.textPrimary }]}
           />
 
           <PlanButton

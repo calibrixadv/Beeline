@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { stories } from './storybook.requires';
 import { TripProvider } from '../src/context/TripContext';
+import { ThemeProvider } from '../src/context/ThemeContext';
+import { ScreenTransitionProvider } from '../src/context/ScreenTransitionContext';
 
 /**
  * StorybookUIRoot - Interactive Storybook UI viewer component
@@ -20,10 +22,13 @@ export const StorybookUIRoot: React.FC = () => {
   );
 
   return (
-    <TripProvider>
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>VoyageRail Storybook UI</Text>
+    <ThemeProvider>
+      <ScreenTransitionProvider>
+        <TripProvider>
+          <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+              <Text style={styles.title}>Beeline Component Storybook</Text>
+
           <Text style={styles.subtitle}>{activeStoryGroup.name}</Text>
         </View>
 
@@ -73,8 +78,10 @@ export const StorybookUIRoot: React.FC = () => {
             </View>
           )}
         </ScrollView>
-      </SafeAreaView>
-    </TripProvider>
+        </SafeAreaView>
+      </TripProvider>
+    </ScreenTransitionProvider>
+  </ThemeProvider>
   );
 };
 

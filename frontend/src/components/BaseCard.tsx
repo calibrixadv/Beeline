@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Pressable,
@@ -8,6 +8,7 @@ import {
   AccessibilityRole,
   GestureResponderEvent,
 } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export type CardVariant = 'elevated' | 'outlined' | 'flat';
 export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
@@ -64,6 +65,35 @@ export const BaseCard: React.FC<BaseCardProps> = ({
     }
   };
 
+  const { theme, isDark } = useTheme();
+
+  const dynamicCardStyle = useMemo(() => {
+    switch (variant) {
+      case 'elevated':
+        return {
+          backgroundColor: theme.colors.cardBg,
+          borderColor: isDark ? theme.colors.border : '#E2E8F0',
+        };
+      case 'outlined':
+        return {
+          backgroundColor: theme.colors.cardBg,
+          borderColor: isDark ? theme.colors.borderStrong : '#CBD5E1',
+        };
+      case 'flat':
+        return {
+          backgroundColor: isDark ? theme.colors.surfaceSubtle : '#F8FAFC',
+        };
+      default:
+        return {
+          backgroundColor: theme.colors.cardBg,
+        };
+    }
+  }, [variant, theme, isDark]);
+
+  const dynamicHoverStyle = isHovered && isInteractive
+    ? { borderColor: theme.colors.borderFocus }
+    : null;
+
   const variantStyle = styles[`variant_${variant}`];
   const paddingStyle = styles[`padding_${padding}`];
   const hoverStyle = isHovered && isInteractive ? styles.hoverState : null;
@@ -77,7 +107,15 @@ export const BaseCard: React.FC<BaseCardProps> = ({
         onPress={onPress}
         onHoverIn={handleHoverIn}
         onHoverOut={handleHoverOut}
-        style={[styles.base, variantStyle, paddingStyle, hoverStyle, style]}
+        style={[
+          styles.base,
+          variantStyle,
+          dynamicCardStyle,
+          paddingStyle,
+          hoverStyle,
+          dynamicHoverStyle,
+          style,
+        ]}
       >
         {children}
       </Pressable>
@@ -89,7 +127,7 @@ export const BaseCard: React.FC<BaseCardProps> = ({
       testID={testID}
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
-      style={[styles.base, variantStyle, paddingStyle, style]}
+      style={[styles.base, variantStyle, dynamicCardStyle, paddingStyle, style]}
     >
       {children}
     </View>

@@ -4,12 +4,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { SAMPLE_TRAINS } from '../src/data/sampleTrains';
 import { TrainFilterState, TrainJourney } from '../src/types/train';
 import { filterAndSortTrains } from '../src/utils/trainFilters';
+import { useTheme } from '../src/context/ThemeContext';
 import { TrainCard } from '../src/components/TrainCard';
 import { FilterBar } from '../src/components/FilterBar';
 import { TrainDetailModal } from '../src/components/TrainDetailModal';
 import { TripSummaryBanner } from '../src/components/TripSummaryBanner';
 
 export default function TrainsScreen() {
+  const { theme, isDark } = useTheme();
+
   const [filters, setFilters] = useState<TrainFilterState>({
     searchQuery: '',
     statusFilter: 'ALL',
@@ -52,7 +55,7 @@ export default function TrainsScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       {/* Top Filter and Search Bar */}
       <FilterBar
         filters={filters}
@@ -61,13 +64,44 @@ export default function TrainsScreen() {
       />
 
       {/* Results Header Count */}
-      <View style={styles.resultsHeader}>
-        <Text style={styles.resultsCount}>
+      <View
+        style={[
+          styles.resultsHeader,
+          {
+            backgroundColor: isDark ? '#141416' : '#F1F5F9',
+            borderBottomColor: theme.colors.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.resultsCount,
+            {
+              color: theme.colors.textSecondary,
+            },
+          ]}
+        >
           Showing {displayedTrains.length} of {SAMPLE_TRAINS.length} train journeys
         </Text>
         {filters.statusFilter !== 'ALL' && (
-          <View style={styles.activeFilterBadge}>
-            <Text style={styles.activeFilterText}>Status: {filters.statusFilter}</Text>
+          <View
+            style={[
+              styles.activeFilterBadge,
+              {
+                backgroundColor: isDark ? '#3E3204' : '#FEF9C3',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.activeFilterText,
+                {
+                  color: isDark ? theme.colors.brandYellow : '#854D0E',
+                },
+              ]}
+            >
+              Status: {filters.statusFilter}
+            </Text>
           </View>
         )}
       </View>
@@ -85,13 +119,24 @@ export default function TrainsScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer} testID="empty-trains-container">
-            <Ionicons name="search-outline" size={48} color="#94A3B8" />
-            <Text style={styles.emptyTitle}>No Trains Found</Text>
-            <Text style={styles.emptyDescription}>
+            <Ionicons
+              name="search-outline"
+              size={48}
+              color={theme.colors.brandYellow}
+            />
+            <Text style={[styles.emptyTitle, { color: theme.colors.textPrimary }]}>
+              No Trains Found
+            </Text>
+            <Text style={[styles.emptyDescription, { color: theme.colors.textSecondary }]}>
               No journeys match your current search and filter criteria.
             </Text>
             <TouchableOpacity
-              style={styles.resetEmptyBtn}
+              style={[
+                styles.resetEmptyBtn,
+                {
+                  backgroundColor: theme.colors.brandYellow,
+                },
+              ]}
               onPress={handleResetFilters}
               accessibilityRole="button"
             >
@@ -117,7 +162,6 @@ export default function TrainsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
   },
   resultsHeader: {
     flexDirection: 'row',
@@ -125,15 +169,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#F1F5F9',
+    borderBottomWidth: 1,
   },
   resultsCount: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
   },
   activeFilterBadge: {
-    backgroundColor: '#DBEAFE',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -141,7 +183,6 @@ const styles = StyleSheet.create({
   activeFilterText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#1E40AF',
   },
   listContent: {
     paddingVertical: 8,
@@ -158,26 +199,23 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
     marginTop: 12,
   },
   emptyDescription: {
     fontSize: 13,
-    color: '#64748B',
     textAlign: 'center',
     marginTop: 6,
     marginBottom: 16,
     maxWidth: 260,
   },
   resetEmptyBtn: {
-    backgroundColor: '#2563EB',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 8,
   },
   resetEmptyBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: '#000000',
+    fontWeight: '800',
     fontSize: 13,
   },
 });

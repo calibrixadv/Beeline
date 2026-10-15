@@ -22,7 +22,11 @@ describe('Storybook Automated UI Component Testing Library', () => {
     expect(storyNames).toContain('FilterBar');
     expect(storyNames).toContain('TrainDetailModal');
     expect(storyNames).toContain('TripSummaryBanner');
+    expect(storyNames).toContain('LoadingSpinner');
+    expect(storyNames).toContain('ScreenLoader');
+    expect(storyNames).toContain('Navbar');
   });
+
 
   // Dynamically generate automated test suites for every component story
   stories.forEach((storyGroup) => {

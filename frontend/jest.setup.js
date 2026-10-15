@@ -8,13 +8,15 @@ const mockRouter = {
 jest.mock('expo-router', () => {
   const React = require('react');
   const { View } = require('react-native');
+  const MockStack = ({ children }) => React.createElement(View, null, children);
+  MockStack.Screen = () => null;
   return {
     useRouter: () => mockRouter,
     useLocalSearchParams: () => ({}),
+    usePathname: () => '/',
+    useSegments: () => [],
     Link: ({ children, ...props }) => React.createElement(View, props, children),
-    Stack: {
-      Screen: () => null,
-    },
+    Stack: MockStack,
     mockRouter,
   };
 });

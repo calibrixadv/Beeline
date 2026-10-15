@@ -45,9 +45,19 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
                               │      BaseCard      │
                               └─────────┬──────────┘
                                         │
+             ┌──────────────────────────┴──────────────────────────┐
+             ▼                                                     ▼
+      ┌─────────────┐                                       ┌─────────────┐
+      │  TrainCard  │                                       │   Navbar    │
+      └─────────────┘                                       └─────────────┘
+
+                              ┌────────────────────┐
+                              │   LoadingSpinner   │
+                              └─────────┬──────────┘
+                                        │
                                         ▼
                                  ┌─────────────┐
-                                 │  TrainCard  │
+                                 │ ScreenLoader│
                                  └─────────────┘
 ```
 
@@ -383,6 +393,60 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 - **`FilterBar`**: [`frontend/src/components/FilterBar.tsx`](frontend/src/components/FilterBar.tsx) — Timetable control bar using `SearchInput`, `ResetButton`, and status chips.
 - **`TrainDetailModal`**: [`frontend/src/components/TrainDetailModal.tsx`](frontend/src/components/TrainDetailModal.tsx) — Intermediate stops sheet using `IconButton`, `PlanButton`, `BaseButton`, and `StatusBadge`.
 - **`TripSummaryBanner`**: [`frontend/src/components/TripSummaryBanner.tsx`](frontend/src/components/TripSummaryBanner.tsx) — Bottom docking banner using `BaseButton`.
+
+---
+
+### 13. `LoadingSpinner`
+- **File**: [`frontend/src/components/LoadingSpinner.tsx`](frontend/src/components/LoadingSpinner.tsx)
+- **Lineage**: Root Foundational Feedback Component
+- **Description**: High-contrast Beeline Yellow animated circular spinner with central transit bee/dot placeholder mark, customizable size tiers (`sm`, `md`, `lg`, `xl`), and accessible progressbar role.
+- **Props**:
+  - `size`?: `'sm' | 'md' | 'lg' | 'xl'` (default `'md'`)
+  - `color`?: string (defaults to Beeline Yellow `#FFC700`)
+  - `trackColor`?: string
+  - `label`?: string
+  - `subtitle`?: string
+  - `placeholderIcon`?: boolean (default `true`)
+- **When to Use**: Feedback indicators, async network requests, screen loaders, button states.
+
+---
+
+### 14. `ScreenLoader`
+- **File**: [`frontend/src/components/ScreenLoader.tsx`](frontend/src/components/ScreenLoader.tsx)
+- **Lineage**: Extends `BaseCard` & composes `LoadingSpinner`
+- **Description**: Dedicated full-screen and inline route transition loader with backdrop wash, Beeline brand text, placeholder favicon/icon indicator, and spinner.
+- **Props**:
+  - `visible`?: boolean (default `true`)
+  - `message`?: string
+  - `subtitle`?: string
+  - `spinnerSize`?: `SpinnerSize` (default `'lg'`)
+  - `fullScreen`?: boolean (default `true`)
+- **When to Use**: During screen transitions and page navigation.
+
+---
+
+### 15. `Navbar`
+- **File**: [`frontend/src/components/Navbar.tsx`](frontend/src/components/Navbar.tsx)
+- **Lineage**: Composed Navigation Component (built with `BaseCard`, `BaseButton`, `IconButton`)
+- **Description**: Top header navigation bar for the Beeline website featuring placeholder brand icon, placeholder favicon tag, route links (`/`, `/trains`, `/my-trip`), quick action CTA, and light/dark theme toggle.
+- **Props**:
+  - `activeRoute`?: string
+  - `onNavigate`?: (route: string) => void
+  - `showThemeToggle`?: boolean (default `true`)
+  - `showQuickAction`?: boolean (default `true`)
+- **When to Use**: Site-wide top navigation in root layout and page headers.
+
+---
+
+### 16. Theme System & Providers
+- **`ThemeContext`**: [`frontend/src/context/ThemeContext.tsx`](frontend/src/context/ThemeContext.tsx) — Beeline Yellow (`#FFC700`), White (`#FFFFFF`), and Black (`#000000` / `#09090B`) color token system with complete light and dark mode support via `ThemeProvider` and `useTheme()` hook.
+  - Dynamically consumed by foundational components (`BaseButton`, `BaseCard`, `BaseInput`, `BaseBadge`) and composite screens (`TrainCard`, `FilterBar`, `TrainDetailModal`, `TripSummaryBanner`, `Navbar`, `LoadingSpinner`, `ScreenLoader`).
+  - High-contrast compliance: WCAG AAA on Beeline Yellow (`#000000` text on `#FFC700` background: 13.8:1 ratio), ensuring zero contrast degradation.
+- **`ScreenTransitionContext`**: [`frontend/src/context/ScreenTransitionContext.tsx`](frontend/src/context/ScreenTransitionContext.tsx) — Coordinates screen change loading transitions with `useScreenTransition()`.
+  - Single-flight concurrency safety: Automatically clears any in-flight transition timers when new transitions are triggered to prevent race conditions and premature spinner dismissal during rapid clicks.
+  - Lifecycle unmount protection: Cleans up pending transition timeouts on component unmount to prevent memory leaks and React state update warnings.
+  - Custom transition message preservation: Root layout app shell detects in-flight transitions and preserves custom route change status messages instead of overriding them with generic fallbacks.
+
 
 ---
 

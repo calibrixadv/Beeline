@@ -10,6 +10,7 @@ import {
   NativeSyntheticEvent,
   TextInputFocusEventData,
 } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 import { IconButton } from './IconButton';
 
 export interface BaseInputProps {
@@ -71,6 +72,8 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
+  const { theme, isDark } = useTheme();
+
   const handleFocus = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
     setIsFocused(true);
     onFocus?.(e);
@@ -104,7 +107,9 @@ export const BaseInput: React.FC<BaseInputProps> = ({
 
   return (
     <View style={[styles.wrapper, style]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? (
+        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{label}</Text>
+      ) : null}
       <View
         testID={testID ? `${testID}-container` : 'base-input-container'}
         onPointerEnter={handleHoverIn}
@@ -115,18 +120,34 @@ export const BaseInput: React.FC<BaseInputProps> = ({
         onHoverOut={handleHoverOut}
         style={[
           styles.inputContainer,
-          isHovered && styles.hovered,
-          isFocused && styles.focused,
-          disabled && styles.disabled,
+          {
+            backgroundColor: isDark ? theme.colors.surfaceSubtle : '#F8FAFC',
+            borderColor: isDark ? theme.colors.border : '#E2E8F0',
+          },
+          isHovered && [
+            styles.hovered,
+            { borderColor: isDark ? theme.colors.borderStrong : '#94A3B8' },
+          ],
+          isFocused && [
+            styles.focused,
+            {
+              borderColor: theme.colors.borderFocus,
+              backgroundColor: isDark ? theme.colors.surfaceElevated : '#FFFFFF',
+            },
+          ],
+          disabled && [
+            styles.disabled,
+            { backgroundColor: isDark ? '#141416' : '#F1F5F9' },
+          ],
           error ? styles.hasError : null,
         ]}
       >
         {leftIcon ? <View style={styles.leftIconWrapper}>{leftIcon}</View> : null}
         <TextInput
           testID={testID}
-          style={[styles.input, inputStyle]}
+          style={[styles.input, { color: theme.colors.textPrimary }, inputStyle]}
           placeholder={placeholder}
-          placeholderTextColor="#94A3B8"
+          placeholderTextColor={theme.colors.textMuted}
           value={value}
           onChangeText={onChangeText}
           editable={!disabled}
@@ -139,7 +160,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           <IconButton
             iconName="close-circle"
             iconSize={18}
-            iconColor="#94A3B8"
+            iconColor={theme.colors.textMuted}
             onPress={handleClear}
             testID={`${testID ?? 'input'}-clear-btn`}
             accessibilityLabel="Clear input value"

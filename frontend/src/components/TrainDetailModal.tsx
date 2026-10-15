@@ -9,6 +9,7 @@ import { BaseButton } from './BaseButton';
 import { PlanButton } from './PlanButton';
 import { formatCurrency } from '../utils/trainFilters';
 import { useTripPlanner } from '../context/TripContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface TrainDetailModalProps {
   journey: TrainJourney | null;
@@ -21,6 +22,7 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({
   visible,
   onClose,
 }) => {
+  const { theme, isDark } = useTheme();
   const { isTrainInTrip, addTrainToTrip } = useTripPlanner();
 
   if (!journey) return null;
@@ -41,17 +43,21 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({
       testID="train-detail-modal"
     >
       <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { backgroundColor: theme.colors.cardBg }]}>
           {/* Header */}
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
             <View>
-              <Text style={styles.trainTitle}>{journey.trainNumber}</Text>
-              <Text style={styles.operatorSubtitle}>{journey.operator}</Text>
+              <Text style={[styles.trainTitle, { color: theme.colors.textPrimary }]}>
+                {journey.trainNumber}
+              </Text>
+              <Text style={[styles.operatorSubtitle, { color: theme.colors.textSecondary }]}>
+                {journey.operator}
+              </Text>
             </View>
             <IconButton
               iconName="close"
               iconSize={24}
-              iconColor="#64748B"
+              iconColor={theme.colors.textSecondary}
               onPress={onClose}
               accessibilityLabel="Close train details"
               style={styles.closeBtn}
@@ -71,8 +77,18 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({
             </View>
 
             {/* Route Stops Itinerary */}
-            <Text style={styles.sectionHeader}>Itinerary & Stops</Text>
-            <View style={styles.itineraryBox}>
+            <Text style={[styles.sectionHeader, { color: theme.colors.textPrimary }]}>
+              Itinerary & Stops
+            </Text>
+            <View
+              style={[
+                styles.itineraryBox,
+                {
+                  backgroundColor: isDark ? theme.colors.surfaceSubtle : '#F8FAFC',
+                  borderColor: theme.colors.border,
+                },
+              ]}
+            >
               {journey.stops.map((stop, index) => {
                 const isFirst = index === 0;
                 const isLast = index === journey.stops.length - 1;
@@ -80,7 +96,7 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({
                 return (
                   <View key={`${stop.station.code}-${stop.stopNumber}`} style={styles.stopRow}>
                     <View style={styles.timeColumn}>
-                      <Text style={styles.stopTime}>
+                      <Text style={[styles.stopTime, { color: theme.colors.textPrimary }]}>
                         {stop.scheduledDeparture || stop.scheduledArrival}
                       </Text>
                       {stop.actualDeparture && stop.actualDeparture !== stop.scheduledDeparture ? (
@@ -95,17 +111,33 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({
                       <View
                         style={[
                           styles.timelineNode,
-                          (isFirst || isLast) && styles.timelineNodeTerminal,
+                          (isFirst || isLast) && [
+                            styles.timelineNodeTerminal,
+                            { backgroundColor: theme.colors.brandYellow },
+                          ],
                         ]}
                       />
-                      {!isLast && <View style={styles.timelineBar} />}
+                      {!isLast && (
+                        <View
+                          style={[
+                            styles.timelineBar,
+                            { backgroundColor: isDark ? theme.colors.border : '#CBD5E1' },
+                          ]}
+                        />
+                      )}
                     </View>
 
                     <View style={styles.stationInfoColumn}>
-                      <Text style={styles.stopCityName}>{stop.station.city}</Text>
-                      <Text style={styles.stopStationName}>{stop.station.name}</Text>
+                      <Text style={[styles.stopCityName, { color: theme.colors.textPrimary }]}>
+                        {stop.station.city}
+                      </Text>
+                      <Text style={[styles.stopStationName, { color: theme.colors.textMuted }]}>
+                        {stop.station.name}
+                      </Text>
                       {stop.platform ? (
-                        <Text style={styles.stopPlatform}>Platform: {stop.platform}</Text>
+                        <Text style={[styles.stopPlatform, { color: theme.colors.textSecondary }]}>
+                          Platform: {stop.platform}
+                        </Text>
                       ) : null}
                     </View>
                   </View>
@@ -114,7 +146,9 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({
             </View>
 
             {/* Onboard Amenities */}
-            <Text style={styles.sectionHeader}>Onboard Amenities</Text>
+            <Text style={[styles.sectionHeader, { color: theme.colors.textPrimary }]}>
+              Onboard Amenities
+            </Text>
             <View style={styles.amenitiesGrid}>
               {journey.amenities.map((amenity) => (
                 <AmenityIcon key={amenity} amenity={amenity} />
@@ -122,22 +156,36 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({
             </View>
 
             {/* Available Classes & Pricing */}
-            <Text style={styles.sectionHeader}>Fares & Classes</Text>
+            <Text style={[styles.sectionHeader, { color: theme.colors.textPrimary }]}>
+              Fares & Classes
+            </Text>
             <View style={styles.fareList}>
               {journey.fares.map((fare) => {
                 const isUnavailable = isCancelled || fare.seatsAvailable === 0;
                 return (
-                  <View key={fare.classType} style={styles.fareRow}>
+                  <View
+                    key={fare.classType}
+                    style={[
+                      styles.fareRow,
+                      {
+                        borderBottomColor: theme.colors.border,
+                      },
+                    ]}
+                  >
                     <View>
-                      <Text style={styles.fareClassTitle}>{fare.classType} CLASS</Text>
-                      <Text style={styles.seatsLeft}>
+                      <Text style={[styles.fareClassTitle, { color: theme.colors.textPrimary }]}>
+                        {fare.classType} CLASS
+                      </Text>
+                      <Text style={[styles.seatsLeft, { color: theme.colors.textSecondary }]}>
                         {fare.seatsAvailable > 0
                           ? `${fare.seatsAvailable} seats remaining`
                           : 'Sold out'}
                       </Text>
                     </View>
                     <View style={styles.fareRight}>
-                      <Text style={styles.farePriceText}>
+                      <Text
+                        style={[styles.farePriceText, { color: theme.colors.brandYellow }]}
+                      >
                         {formatCurrency(fare.price, fare.currency)}
                       </Text>
                       <BaseButton
@@ -165,7 +213,7 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({
           </ScrollView>
 
           {/* Modal Footer */}
-          <View style={styles.modalFooter}>
+          <View style={[styles.modalFooter, { borderTopColor: theme.colors.border }]}>
             <PlanButton
               isSaved={isSaved}
               isCancelled={isCancelled}

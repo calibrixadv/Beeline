@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Pressable,
   Text,
@@ -11,6 +11,7 @@ import {
   AccessibilityState,
   GestureResponderEvent,
 } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export type ButtonVariant =
   | 'primary'
@@ -122,6 +123,125 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
     }
   };
 
+  const { theme, isDark } = useTheme();
+
+  // Dynamic theme-aware color styling
+  const dynamicStyles = useMemo(() => {
+    switch (variant) {
+      case 'primary':
+        return {
+          container: {
+            backgroundColor: theme.colors.primary,
+            borderColor: theme.colors.primary,
+          },
+          text: {
+            color: theme.colors.primaryText,
+            fontWeight: '800' as const,
+          },
+          hover: {
+            backgroundColor: theme.colors.primaryHover,
+            borderColor: theme.colors.primaryHover,
+          },
+          spinnerColor: theme.colors.primaryText,
+        };
+      case 'secondary':
+        return {
+          container: {
+            backgroundColor: theme.colors.secondary,
+            borderColor: theme.colors.secondary,
+          },
+          text: {
+            color: theme.colors.secondaryText,
+          },
+          hover: {
+            backgroundColor: theme.colors.secondaryHover,
+            borderColor: theme.colors.secondaryHover,
+          },
+          spinnerColor: theme.colors.secondaryText,
+        };
+      case 'outline':
+        return {
+          container: {
+            backgroundColor: 'transparent',
+            borderColor: isDark ? theme.colors.borderStrong : '#CBD5E1',
+          },
+          text: {
+            color: theme.colors.textPrimary,
+          },
+          hover: {
+            backgroundColor: isDark ? '#1F1F23' : '#F8FAFC',
+            borderColor: theme.colors.brandYellow,
+          },
+          spinnerColor: theme.colors.textPrimary,
+        };
+      case 'ghost':
+        return {
+          container: {
+            backgroundColor: 'transparent',
+            borderColor: 'transparent',
+          },
+          text: {
+            color: theme.colors.textPrimary,
+          },
+          hover: {
+            backgroundColor: isDark ? '#1F1F23' : '#F1F5F9',
+          },
+          spinnerColor: theme.colors.textPrimary,
+        };
+      case 'surface':
+        return {
+          container: {
+            backgroundColor: isDark ? theme.colors.surfaceElevated : '#F1F5F9',
+            borderColor: theme.colors.border,
+          },
+          text: {
+            color: theme.colors.textPrimary,
+          },
+          hover: {
+            backgroundColor: isDark ? '#2E2E33' : '#E2E8F0',
+          },
+          spinnerColor: theme.colors.textPrimary,
+        };
+      case 'danger':
+        return {
+          container: {
+            backgroundColor: theme.colors.danger,
+            borderColor: theme.colors.danger,
+          },
+          text: {
+            color: '#FFFFFF',
+          },
+          hover: {
+            backgroundColor: '#B91C1C',
+            borderColor: '#B91C1C',
+          },
+          spinnerColor: '#FFFFFF',
+        };
+      case 'success':
+        return {
+          container: {
+            backgroundColor: theme.colors.success,
+            borderColor: theme.colors.success,
+          },
+          text: {
+            color: '#FFFFFF',
+          },
+          hover: {
+            backgroundColor: '#15803D',
+            borderColor: '#15803D',
+          },
+          spinnerColor: '#FFFFFF',
+        };
+      default:
+        return {
+          container: {},
+          text: {},
+          hover: {},
+          spinnerColor: '#FFFFFF',
+        };
+    }
+  }, [variant, theme, isDark]);
+
   // Determine styling based on state
   const variantContainerStyle = styles[`variant_${variant}`];
   const variantTextStyle = styles[`text_${variant}`];
@@ -134,10 +254,7 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
   const disabledTextStyle = disabled ? styles.disabledText : null;
   const fullWidthStyle = fullWidth ? styles.fullWidth : null;
 
-  const resolvedSpinnerColor =
-    variant === 'outline' || variant === 'ghost' || variant === 'surface'
-      ? '#2563EB'
-      : '#FFFFFF';
+  const resolvedSpinnerColor = dynamicStyles.spinnerColor;
 
   return (
     <Pressable
@@ -159,8 +276,10 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
         styles.base,
         sizeContainerStyle,
         variantContainerStyle,
+        dynamicStyles.container,
         fullWidthStyle,
         hoverStyle,
+        isHovered && isInteractive && dynamicStyles.hover,
         pressedStyle,
         disabledContainerStyle,
         style,
@@ -180,6 +299,7 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
                 styles.baseText,
                 sizeTextStyle,
                 variantTextStyle,
+                dynamicStyles.text,
                 disabledTextStyle,
                 textStyle,
               ]}
@@ -197,6 +317,7 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
                 styles.baseText,
                 sizeTextStyle,
                 variantTextStyle,
+                dynamicStyles.text,
                 disabledTextStyle,
                 textStyle,
               ]}

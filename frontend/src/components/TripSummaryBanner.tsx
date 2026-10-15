@@ -1,13 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useTripPlanner } from '../context/TripContext';
+import { useTheme } from '../context/ThemeContext';
+import { useScreenTransition } from '../context/ScreenTransitionContext';
 import { formatCurrency } from '../utils/trainFilters';
 import { BaseButton } from './BaseButton';
 
 export const TripSummaryBanner: React.FC = () => {
-  const router = useRouter();
+  const { theme, isDark } = useTheme();
+  const { navigateWithTransition } = useScreenTransition();
   const { getTripTotalCost, getTripItemCount } = useTripPlanner();
 
   const count = getTripItemCount();
@@ -16,16 +18,34 @@ export const TripSummaryBanner: React.FC = () => {
   const totalCost = getTripTotalCost();
 
   return (
-    <View style={styles.container} testID="trip-summary-banner">
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: isDark ? '#000000' : '#09090B',
+          borderTopColor: isDark ? theme.colors.border : '#27272A',
+        },
+      ]}
+      testID="trip-summary-banner"
+    >
       <View style={styles.content}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="briefcase" size={18} color="#2563EB" />
+        <View
+          style={[
+            styles.iconCircle,
+            {
+              backgroundColor: theme.colors.brandYellow,
+            },
+          ]}
+        >
+          <Ionicons name="briefcase" size={18} color="#000000" />
         </View>
         <View style={styles.info}>
           <Text style={styles.title}>
             {count} {count === 1 ? 'Train' : 'Trains'} Planned
           </Text>
-          <Text style={styles.costSubtext}>Estimated Total: {formatCurrency(totalCost)}</Text>
+          <Text style={[styles.costSubtext, { color: theme.colors.brandYellow }]}>
+            Estimated Total: {formatCurrency(totalCost)}
+          </Text>
         </View>
       </View>
 
@@ -33,8 +53,12 @@ export const TripSummaryBanner: React.FC = () => {
         variant="primary"
         size="sm"
         title="View Itinerary"
-        iconRight={<Ionicons name="arrow-forward" size={14} color="#FFFFFF" />}
-        onPress={() => router.push('/my-trip')}
+        iconRight={<Ionicons name="arrow-forward" size={14} color="#000000" />}
+        onPress={() =>
+          navigateWithTransition('/my-trip', {
+            message: 'Loading your trip itinerary...',
+          })
+        }
         accessibilityRole="button"
         accessibilityLabel="View Trip Itinerary"
         style={styles.viewTripBtn}

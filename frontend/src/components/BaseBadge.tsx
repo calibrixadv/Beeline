@@ -10,6 +10,7 @@ import {
   AccessibilityRole,
   GestureResponderEvent,
 } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 export type BadgeVariant =
   | 'default'
@@ -81,13 +82,26 @@ export const BaseBadge: React.FC<BaseBadgeProps> = ({
     }
   };
 
+  const { theme, isDark } = useTheme();
+
   const variantStyle = styles[`variant_${variant}`];
   const variantTextStyle = styles[`text_${variant}`];
   const sizeStyle = styles[`size_${size}`];
   const sizeTextStyle = styles[`textSize_${size}`];
 
-  const selectedContainerStyle = selected ? styles.selectedContainer : null;
-  const selectedTextStyle = selected ? styles.selectedText : null;
+  const dynamicSelectedContainer = selected
+    ? {
+        backgroundColor: isDark ? '#3E3204' : '#FEF9C3',
+        borderColor: theme.colors.brandYellow,
+        borderWidth: 1,
+      }
+    : null;
+  const dynamicSelectedText = selected
+    ? {
+        color: isDark ? theme.colors.brandYellow : '#854D0E',
+        fontWeight: '700' as const,
+      }
+    : null;
   const hoverStyle = isHovered && isInteractive ? styles.hoverState : null;
 
   const content = (
@@ -98,7 +112,7 @@ export const BaseBadge: React.FC<BaseBadgeProps> = ({
           styles.text,
           sizeTextStyle,
           variantTextStyle,
-          selectedTextStyle,
+          dynamicSelectedText,
           textStyle,
         ]}
       >
@@ -124,7 +138,7 @@ export const BaseBadge: React.FC<BaseBadgeProps> = ({
           styles.badge,
           sizeStyle,
           variantStyle,
-          selectedContainerStyle,
+          dynamicSelectedContainer,
           hoverStyle,
           style,
         ]}

@@ -9,6 +9,8 @@ import {
 } from '@testing-library/react-native';
 import * as sbTestingLib from '@storybook/testing-library';
 import { TripProvider } from '../src/context/TripContext';
+import { ThemeProvider } from '../src/context/ThemeContext';
+import { ScreenTransitionProvider } from '../src/context/ScreenTransitionContext';
 
 export interface StoryMeta<TProps = Record<string, unknown>> {
   title: string;
@@ -46,18 +48,25 @@ export function renderStory<TProps extends Record<string, unknown>>(
 
   if (customDecorator) {
     return render(
-      <TripProvider>
-        {customDecorator(StoryWrapper)}
-      </TripProvider>
+      <ThemeProvider>
+        <ScreenTransitionProvider>
+          <TripProvider>{customDecorator(StoryWrapper)}</TripProvider>
+        </ScreenTransitionProvider>
+      </ThemeProvider>
     );
   }
 
   return render(
-    <TripProvider>
-      <StoryWrapper />
-    </TripProvider>
+    <ThemeProvider>
+      <ScreenTransitionProvider>
+        <TripProvider>
+          <StoryWrapper />
+        </TripProvider>
+      </ScreenTransitionProvider>
+    </ThemeProvider>
   );
 }
+
 
 export const fireEvent = rnFireEvent;
 export const waitFor = rnWaitFor;

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TrainFilterState, TrainStatus } from '../types/train';
+import { useTheme } from '../context/ThemeContext';
 import { SearchInput } from './SearchInput';
 import { ResetButton } from './ResetButton';
 
@@ -16,6 +17,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onFilterChange,
   availableOperators,
 }) => {
+  const { theme, isDark } = useTheme();
   const statuses: (TrainStatus | 'ALL')[] = ['ALL', 'ON_TIME', 'DELAYED', 'BOARDING', 'CANCELLED'];
 
   const handleSearchChange = (text: string) => {
@@ -64,7 +66,15 @@ export const FilterBar: React.FC<FilterBarProps> = ({
     filters.sortOrder !== 'asc';
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.colors.surface,
+          borderBottomColor: theme.colors.border,
+        },
+      ]}
+    >
       {/* Search Input */}
       <SearchInput
         value={filters.searchQuery}
@@ -76,19 +86,38 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
       {/* Status Chips */}
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Status:</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>Status:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           {statuses.map((status) => {
             const isSelected = filters.statusFilter === status;
             return (
               <TouchableOpacity
                 key={status}
-                style={[styles.chip, isSelected && styles.chipSelected]}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: isDark ? theme.colors.surfaceSubtle : '#F8FAFC',
+                    borderColor: theme.colors.border,
+                  },
+                  isSelected && {
+                    backgroundColor: isDark ? '#3E3204' : '#FEF9C3',
+                    borderColor: theme.colors.brandYellow,
+                  },
+                ]}
                 onPress={() => handleStatusSelect(status)}
                 accessibilityRole="button"
                 accessibilityLabel={`Filter by ${status} status`}
               >
-                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: theme.colors.textSecondary },
+                    isSelected && {
+                      color: isDark ? theme.colors.brandYellow : '#854D0E',
+                      fontWeight: '800',
+                    },
+                  ]}
+                >
                   {status === 'ALL' ? 'All Statuses' : status.replace('_', ' ')}
                 </Text>
               </TouchableOpacity>
@@ -99,15 +128,34 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
       {/* Operator Chips */}
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Operator:</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>Operator:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
           <TouchableOpacity
-            style={[styles.chip, filters.operatorFilter === 'ALL' && styles.chipSelected]}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: isDark ? theme.colors.surfaceSubtle : '#F8FAFC',
+                borderColor: theme.colors.border,
+              },
+              filters.operatorFilter === 'ALL' && {
+                backgroundColor: isDark ? '#3E3204' : '#FEF9C3',
+                borderColor: theme.colors.brandYellow,
+              },
+            ]}
             onPress={() => handleOperatorSelect('ALL')}
             accessibilityRole="button"
             accessibilityLabel="Filter by all operators"
           >
-            <Text style={[styles.chipText, filters.operatorFilter === 'ALL' && styles.chipTextSelected]}>
+            <Text
+              style={[
+                styles.chipText,
+                { color: theme.colors.textSecondary },
+                filters.operatorFilter === 'ALL' && {
+                  color: isDark ? theme.colors.brandYellow : '#854D0E',
+                  fontWeight: '800',
+                },
+              ]}
+            >
               All Operators
             </Text>
           </TouchableOpacity>
@@ -116,12 +164,31 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             return (
               <TouchableOpacity
                 key={op}
-                style={[styles.chip, isSelected && styles.chipSelected]}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: isDark ? theme.colors.surfaceSubtle : '#F8FAFC',
+                    borderColor: theme.colors.border,
+                  },
+                  isSelected && {
+                    backgroundColor: isDark ? '#3E3204' : '#FEF9C3',
+                    borderColor: theme.colors.brandYellow,
+                  },
+                ]}
                 onPress={() => handleOperatorSelect(op)}
                 accessibilityRole="button"
                 accessibilityLabel={`Filter by operator ${op}`}
               >
-                <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: theme.colors.textSecondary },
+                    isSelected && {
+                      color: isDark ? theme.colors.brandYellow : '#854D0E',
+                      fontWeight: '800',
+                    },
+                  ]}
+                >
                   {op}
                 </Text>
               </TouchableOpacity>
@@ -132,28 +199,47 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
       {/* Sort Buttons & Reset */}
       <View style={styles.sortRow}>
-        <Text style={styles.sortLabel}>Sort by:</Text>
+        <Text style={[styles.sortLabel, { color: theme.colors.textSecondary }]}>Sort by:</Text>
         <View style={styles.sortButtonGroup}>
           {(['departure', 'price', 'duration'] as const).map((key) => {
             const isActive = filters.sortBy === key;
             return (
               <TouchableOpacity
                 key={key}
-                style={[styles.sortBtn, isActive && styles.sortBtnActive]}
+                style={[
+                  styles.sortBtn,
+                  {
+                    backgroundColor: isDark ? theme.colors.surfaceSubtle : '#F1F5F9',
+                  },
+                  isActive && {
+                    backgroundColor: isDark ? '#3E3204' : '#FEF9C3',
+                    borderColor: theme.colors.brandYellow,
+                    borderWidth: 1,
+                  },
+                ]}
                 onPress={() => handleSortBy(key)}
                 accessibilityRole="button"
                 accessibilityLabel={`Sort by ${key} ${
                   isActive ? (filters.sortOrder === 'asc' ? 'ascending' : 'descending') : ''
                 }`}
               >
-                <Text style={[styles.sortBtnText, isActive && styles.sortBtnTextActive]}>
+                <Text
+                  style={[
+                    styles.sortBtnText,
+                    { color: theme.colors.textSecondary },
+                    isActive && {
+                      color: isDark ? theme.colors.brandYellow : '#854D0E',
+                      fontWeight: '800',
+                    },
+                  ]}
+                >
                   {key.charAt(0).toUpperCase() + key.slice(1)}
                 </Text>
                 {isActive && (
                   <Ionicons
                     name={filters.sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'}
                     size={12}
-                    color="#2563EB"
+                    color={isDark ? theme.colors.brandYellow : '#854D0E'}
                     style={{ marginLeft: 3 }}
                   />
                 )}
