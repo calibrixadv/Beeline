@@ -26,11 +26,14 @@ export default function HomeScreen() {
   };
 
   const handleExploreTrains = () => {
-    handleNavigate('/trains', 'Exploring European rail corridors...');
+    handleNavigate('/trains', 'Exploring Romanian & European rail corridors...');
   };
 
   const handleCorridorExplore = (corridor: FeaturedCorridor) => {
-    handleNavigate('/trains', `Loading ${corridor.from} to ${corridor.to} timetable...`);
+    const routeMsg = corridor?.from && corridor?.to
+      ? `Loading ${corridor.from} to ${corridor.to} timetable...`
+      : 'Loading timetable...';
+    handleNavigate('/trains', routeMsg);
   };
 
   return (

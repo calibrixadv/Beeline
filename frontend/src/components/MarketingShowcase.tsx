@@ -31,11 +31,49 @@ export interface MarketingShowcaseProps {
   testID?: string;
 }
 
+export const getCorridorTestId = (from: string, to: string): string => {
+  const slug = (str: string) =>
+    (str || '')
+      .toLowerCase()
+      .replace(/ß/g, 'ss')
+      .replace(/æ/g, 'ae')
+      .replace(/œ/g, 'oe')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `featured-corridor-${slug(from)}-${slug(to)}`;
+};
+
 export const FEATURED_CORRIDORS: FeaturedCorridor[] = [
-  { from: 'Paris', to: 'Lyon', operator: 'TGV INOUI', duration: '1h 56m direct', price: 'from €49.00' },
-  { from: 'London', to: 'Paris', operator: 'Eurostar', duration: '2h 23m direct', price: 'from €92.00' },
-  { from: 'Milano', to: 'Roma', operator: 'Frecciarossa', duration: '3h 05m direct', price: 'from €54.90' },
-  { from: 'Berlin', to: 'Munich', operator: 'ICE Sprinter', duration: '3h 55m direct', price: 'from €39.90' },
+  {
+    from: 'București Nord',
+    to: 'Brașov',
+    operator: 'CFR IR / Astra Trans Carpatic',
+    duration: '2h 15m direct',
+    price: 'from 48 lei (~€9.60)',
+  },
+  {
+    from: 'București Nord',
+    to: 'Constanța',
+    operator: 'CFR IR Sun Train',
+    duration: '2h 00m direct',
+    price: 'from 65 lei (~€13.00)',
+  },
+  {
+    from: 'Cluj-Napoca',
+    to: 'București Nord',
+    operator: 'InterRegio Nightjet / Sleeper',
+    duration: '8h 30m',
+    price: 'from 115 lei (~€23.00)',
+  },
+  {
+    from: 'București Nord',
+    to: 'Viena Hbf',
+    operator: 'Dacia EuroNight 346',
+    duration: '18h 45m direct',
+    price: 'from €39.00',
+  },
 ];
 
 export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
@@ -199,9 +237,10 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
         </BaseCard>
       </View>
 
-      {/* 3. High-Impact Feature Highlights (Live Status, Eco Impact, Stop Details, Tiered Fares) */}
-      <View style={styles.featureGrid}>
+      {/* 3. High-Impact Feature Highlights (Curated Trifecta Value Propositions) */}
+      <View style={styles.featureGrid} testID="marketing-feature-grid">
         <View
+          testID="feature-card-direct-corridors"
           style={[
             styles.featureItem,
             {
@@ -211,15 +250,60 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           ]}
         >
           <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#EFF6FF' }]}>
-            <Ionicons name="speedometer" size={20} color={isDark ? theme.colors.brandYellow : '#2563EB'} />
+            <Ionicons name="flash" size={20} color={isDark ? theme.colors.brandYellow : '#2563EB'} />
           </View>
-          <Text style={[styles.featureTitle, { color: theme.colors.textPrimary }]}>Live Status</Text>
+          <Text style={[styles.featureTitle, { color: theme.colors.textPrimary }]}>
+            ⚡ High-Speed & Direct Romanian Corridors
+          </Text>
           <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>
-            Real-time delay tracking, platform assignments, and boarding updates.
+            Direct InterRegio and Astra Trans Carpatic corridors connecting Bucharest, Brașov, Constanța, and Cluj.
           </Text>
         </View>
 
         <View
+          testID="feature-card-value-engine"
+          style={[
+            styles.featureItem,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#FEF3C7' }]}>
+            <Ionicons name="cash-outline" size={20} color={isDark ? theme.colors.brandYellow : '#B45309'} />
+          </View>
+          <Text style={[styles.featureTitle, { color: theme.colors.textPrimary }]}>
+            💰 Smart €10/Hour Value Engine
+          </Text>
+          <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>
+            Time saved valued at €10/hr (~50 RON/hr); faster rail outranks buses unless road savings exceed the threshold.
+          </Text>
+        </View>
+
+        <View
+          testID="feature-card-transfer-shield"
+          style={[
+            styles.featureItem,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}
+        >
+          <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#EFF6FF' }]}>
+            <Ionicons name="shield-checkmark" size={20} color={isDark ? '#60A5FA' : '#2563EB'} />
+          </View>
+          <Text style={[styles.featureTitle, { color: theme.colors.textPrimary }]}>
+            🛡️ Romanian Transfer Shield (25–35 min buffers)
+          </Text>
+          <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>
+            Generous 25–35 min buffer protection at key Romanian junctions to safeguard against network delay vulnerabilities.
+          </Text>
+        </View>
+
+        <View
+          testID="feature-card-eco-savings"
           style={[
             styles.featureItem,
             {
@@ -231,45 +315,11 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#DCFCE7' }]}>
             <Ionicons name="leaf" size={20} color={isDark ? '#34D399' : '#166534'} />
           </View>
-          <Text style={[styles.featureTitle, { color: theme.colors.textPrimary }]}>Eco Impact</Text>
-          <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>
-            Detailed CO₂ footprint analytics demonstrating cleaner travel than flights.
+          <Text style={[styles.featureTitle, { color: theme.colors.textPrimary }]}>
+            🌿 Eco CO₂ Savings over DN1 and regional flights
           </Text>
-        </View>
-
-        <View
-          style={[
-            styles.featureItem,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#FEF3C7' }]}>
-            <Ionicons name="git-commit-outline" size={20} color={isDark ? theme.colors.brandYellow : '#B45309'} />
-          </View>
-          <Text style={[styles.featureTitle, { color: theme.colors.textPrimary }]}>Stop Details</Text>
           <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>
-            Inspect intermediate stops, arrival timetables, and platform numbers.
-          </Text>
-        </View>
-
-        <View
-          style={[
-            styles.featureItem,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}
-        >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#F3E8FF' }]}>
-            <Ionicons name="card" size={20} color={isDark ? '#A78BFA' : '#7E22CE'} />
-          </View>
-          <Text style={[styles.featureTitle, { color: theme.colors.textPrimary }]}>Tiered Fares</Text>
-          <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>
-            Standard, First, Business, and Sleeper compartments with seat counts.
+            Up to 85% lower carbon footprint than congested DN1 road traffic and regional short-haul air corridors.
           </Text>
         </View>
       </View>
@@ -313,7 +363,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
         Featured High-Speed Corridors
       </Text>
       <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
-        Direct routes connecting major European metropolitan centers.
+        Direct routes connecting major Romanian metropolitan hubs and European gateways.
       </Text>
 
       {FEATURED_CORRIDORS.map((corridor, idx) => (
@@ -321,10 +371,10 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           key={`${corridor.from}-${corridor.to}-${idx}`}
           variant="outlined"
           padding="md"
-          onPress={() => onCorridorPress?.(corridor)}
-          accessibilityRole="button"
+          onPress={onCorridorPress ? () => onCorridorPress(corridor) : undefined}
+          accessibilityRole={onCorridorPress ? 'button' : undefined}
           accessibilityLabel={`Explore route from ${corridor.from} to ${corridor.to}`}
-          testID={`featured-corridor-${corridor.from.toLowerCase()}-${corridor.to.toLowerCase()}`}
+          testID={getCorridorTestId(corridor.from, corridor.to)}
           style={[
             styles.corridorCard,
             {
@@ -368,7 +418,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           </Text>
         </View>
         <Text style={[styles.trustSubtitle, { color: theme.colors.textSecondary }]}>
-          Aggregating SNCF, Deutsche Bahn, Eurostar, Trenitalia, ÖBB, Renfe, and SBB into one unified experience.
+          Aggregating CFR Călători, Astra Trans Carpatic, Transferoviar Călători, ÖBB, and European operators into one unified experience.
         </Text>
       </BaseCard>
     </View>

@@ -48,15 +48,15 @@
 ## Task 3: Adapt MarketingShowcase to Romanian Hub Corridors & Trifecta Pillars
 **Description:** Update `MarketingShowcase` featured corridors to prominent Romanian domestic and international routes, and update feature cards to showcase the Curated Trifecta value propositions.
 **Acceptance criteria:**
-- [ ] Featured corridors updated:
+- [x] Featured corridors updated:
   - `București Nord` ⇄ `Brașov` (CFR IR / Astra Trans Carpatic, 2h 15m)
   - `București Nord` ⇄ `Constanța` (CFR IR, 2h 00m)
   - `Cluj-Napoca` ⇄ `București Nord` (InterRegio Nightjet / Sleeper, 8h 30m)
   - `București Nord` ⇄ `Viena Hbf` (Dacia EuroNight, 18h 45m)
-- [ ] Highlights the Curated Trifecta (Fastest, Best Value €10/hr threshold, Most Reliable buffer protection).
+- [x] Highlights the Curated Trifecta (Fastest, Best Value €10/hr threshold, Most Reliable buffer protection).
 **Verification:**
-- [ ] Tests pass: `npm test -- frontend/__tests__/MarketingShowcase.test.tsx`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test -- frontend/__tests__/MarketingShowcase.test.tsx`
+- [x] Build succeeds: `npm run build`
 **Dependencies:** None
 **Files likely touched:**
 - `frontend/src/components/MarketingShowcase.tsx`
@@ -69,12 +69,12 @@
 ## Task 4: Align Home Screen Integration & Route Handlers
 **Description:** Align `frontend/app/index.tsx` corridor explore handlers and transitional loader messages with the Romanian hub corridors while confirming zero redirect on route finder submission.
 **Acceptance criteria:**
-- [ ] Clicking a featured corridor triggers a transition message referencing the selected Romanian corridor.
-- [ ] RouteFinderCard submission handler remains non-redirecting.
-- [ ] Layout remains responsive on mobile and desktop without any map element.
+- [x] Clicking a featured corridor triggers a transition message referencing the selected Romanian corridor.
+- [x] RouteFinderCard submission handler remains non-redirecting.
+- [x] Layout remains responsive on mobile and desktop without any map element.
 **Verification:**
-- [ ] Tests pass: `npm test -- frontend/__tests__/indexRoute.test.tsx`
-- [ ] Type check passes: `npm run type-check`
+- [x] Tests pass: `npm test -- frontend/__tests__/indexRoute.test.tsx`
+- [x] Type check passes: `npm run type-check`
 **Dependencies:** Tasks 2, 3
 **Files likely touched:**
 - `frontend/app/index.tsx`
@@ -84,21 +84,21 @@
 ---
 
 ## Checkpoint 2: Full Screen Verification
-- [ ] All route and component unit tests pass
-- [ ] Metro web dev server renders the updated Romanian hub home screen seamlessly
-- [ ] Zero console warnings or layout overflows
+- [x] All route and component unit tests pass
+- [x] Metro web dev server renders the updated Romanian hub home screen seamlessly
+- [x] Zero console warnings or layout overflows
 
 ---
 
 ## Task 5: Master Documentation & Storybook Sync
 **Description:** Synchronize `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` with the Romanian hub presets and Curated Trifecta preview documentation.
 **Acceptance criteria:**
-- [ ] Documents the Curated Trifecta shorthand preview in `COMPONENTS.md`.
-- [ ] Updates test counts and status matrix in `PLAN_AND_STATUS.md`.
-- [ ] AI_LOG.md is strictly untouched.
+- [x] Documents the Curated Trifecta shorthand preview in `COMPONENTS.md`.
+- [x] Updates test counts and status matrix in `PLAN_AND_STATUS.md`.
+- [x] AI_LOG.md is strictly untouched.
 **Verification:**
-- [ ] Manual inspection of markdown links and status tables
-- [ ] `git status` verifies clean tree
+- [x] Manual inspection of markdown links and status tables
+- [x] `git status` verifies clean tree
 **Dependencies:** Tasks 1-4
 **Files likely touched:**
 - `COMPONENTS.md`
@@ -109,7 +109,7 @@
 ---
 
 ## Checkpoint 3: Complete & Clean Build
-- [ ] `npm test`: All test suites pass (30+ suites, 319+ tests)
-- [ ] `npm run type-check`: 0 TypeScript compiler errors under strict mode
-- [ ] `npm run test:storybook`: All component story tests pass
-- [ ] Ready for review
+- [x] `npm test`: All test suites pass (30 suites, 337 tests)
+- [x] `npm run type-check`: 0 TypeScript compiler errors under strict mode
+- [x] `npm run test:storybook`: All component story tests pass (156 tests)
+- [x] Ready for review

@@ -28,21 +28,21 @@ Adapt the Beeline HomePage template to align with the refined specification in `
 - [x] Zero redirection executed on submission
 
 ### Phase 2: Marketing Showcase & HomePage Integration
-- [ ] **Task 3**: Update `MarketingShowcase` featured corridors to Romanian domestic & international gateways (București-Brașov, București-Constanța, București-Cluj, București-Vienna) and highlight the Curated Trifecta value proposition.
-- [ ] **Task 4**: Update `frontend/app/index.tsx` corridor handlers and labels to match the Romanian hub presets.
+- [x] **Task 3**: Update `MarketingShowcase` featured corridors to Romanian domestic & international gateways (București-Brașov, București-Constanța, București-Cluj, București-Vienna) and highlight the Curated Trifecta value proposition.
+- [x] **Task 4**: Update `frontend/app/index.tsx` corridor handlers and labels to match the Romanian hub presets.
 
 ### Checkpoint 2: Full Screen Verification
-- [ ] `indexRoute.test.tsx` and `MarketingShowcase.test.tsx` pass cleanly
-- [ ] Visual harmony across Light and Dark themes
+- [x] `indexRoute.test.tsx` and `MarketingShowcase.test.tsx` pass cleanly
+- [x] Visual harmony across Light and Dark themes
 
 ### Phase 3: Documentation & Storybook Sync
-- [ ] **Task 5**: Update `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` reflecting the adapted HomePage template and Curated Trifecta preview.
+- [x] **Task 5**: Update `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` reflecting the adapted HomePage template and Curated Trifecta preview.
 
 ### Checkpoint 3: Complete & Clean Build
-- [ ] `npm test`: All test suites pass (30+ suites, 319+ tests)
-- [ ] `npm run type-check`: 0 TypeScript compiler errors under strict mode
-- [ ] `npm run test:storybook`: All component story tests pass
-- [ ] Working tree clean and committed to Git
+- [x] `npm test`: All test suites pass (30 suites, 337 tests)
+- [x] `npm run type-check`: 0 TypeScript compiler errors under strict mode
+- [x] `npm run test:storybook`: All component story tests pass (156 tests)
+- [x] Ready for review
 
 ---
 

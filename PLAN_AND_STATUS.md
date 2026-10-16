@@ -111,10 +111,10 @@ Every agent and developer modifying this codebase must adhere strictly to the fo
 | **Filter Bar Component** | `frontend/src/components/FilterBar.tsx` | **COMPLETE** | 96.3% coverage, refactored with SearchInput, ResetButton |
 | **Summary Banner** | `frontend/src/components/TripSummaryBanner.tsx`| **COMPLETE** | 100% coverage, refactored with BaseButton |
 | **RouteFinderCard Component** | `frontend/src/components/RouteFinderCard.tsx` | **COMPLETE** | 91.4% line coverage, extends BaseCard, BaseInput, BaseBadge, BaseButton, IconButton; 2-point routing, transport filters, no redirect |
-| **MarketingShowcase Component** | `frontend/src/components/MarketingShowcase.tsx` | **COMPLETE** | 100% line coverage, extends BaseCard, BaseBadge, BaseButton; Beeline Speed/Coverage/Capabilities showcase, strictly NO map |
+| **MarketingShowcase Component** | `frontend/src/components/MarketingShowcase.tsx` | **COMPLETE** | 100% line coverage, extends BaseCard, BaseBadge, BaseButton; Romanian Hub Corridors & Curated Trifecta value propositions, strictly NO map |
 | **Component Stories** | `frontend/src/components/stories/*.stories.tsx` (21 files) | **COMPLETE** | 100% story coverage with CSF 3 `play` functions for automated interaction testing |
-| **Storybook Automated Tests** | `frontend/__tests__/storybookAuto.test.tsx` | **COMPLETE** | Dynamic test runner validating 154 automated tests (story variants, CSF play functions, onClick & onHover states) |
-| **Unit & Interaction Tests** | `frontend/__tests__/*.test.ts(x)` (30 files) | **COMPLETE** | **314 passing tests across 30 test suites (100% pass rate, 0 warnings)** |
+| **Storybook Automated Tests** | `frontend/__tests__/storybookAuto.test.tsx` | **COMPLETE** | Dynamic test runner validating 156 automated tests (story variants, CSF play functions, onClick & onHover states) |
+| **Unit & Interaction Tests** | `frontend/__tests__/*.test.ts(x)` (30 files) | **COMPLETE** | **337 passing tests across 30 test suites (100% pass rate, 0 warnings)** |
 | **Web Platform Support** | `frontend/package.json`, `@expo/metro-runtime`, `react-dom`, `react-native-web` | **COMPLETE** | Validated via `npm run build:web` (0 errors) |
 
 ---
@@ -129,7 +129,7 @@ npm test
 ```
 **Expected Output**:
 - 30 Test Suites Passed
-- 314 Tests Passed
+- 337 Tests Passed
 - 0 Failures, 0 Warnings
 
 ### Test Command 2: Run Storybook Component Testing Library Exclusively
@@ -138,7 +138,7 @@ npm run test:storybook
 ```
 **Expected Output**:
 - All 21 registered UI component stories validated
-- 154 automated tests passed without crash (including play interactions, hover, and press states)
+- 156 automated tests passed without crash (including play interactions, hover, and press states)
 
 ### Test Command 3: Validate Code Coverage
 ```bash

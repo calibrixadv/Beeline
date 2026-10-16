@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { MarketingShowcase, FEATURED_CORRIDORS } from '../src/components/MarketingShowcase';
+import { MarketingShowcase, FEATURED_CORRIDORS, getCorridorTestId } from '../src/components/MarketingShowcase';
 import { ThemeProvider } from '../src/context/ThemeContext';
 
 describe('MarketingShowcase component', () => {
@@ -51,17 +51,26 @@ describe('MarketingShowcase component', () => {
     expect(getByText('CAPABILITIES')).toBeTruthy();
   });
 
-  it('renders feature highlights matching app capabilities', () => {
-    const { getByText } = renderComponent();
+  it('renders feature highlights showcasing the Curated Trifecta value propositions', () => {
+    const { getByText, getByTestId } = renderComponent();
 
     expect(getByText('Why Plan With Beeline?')).toBeTruthy();
-    expect(getByText('Live Status')).toBeTruthy();
-    expect(getByText('Eco Impact')).toBeTruthy();
-    expect(getByText('Stop Details')).toBeTruthy();
-    expect(getByText('Tiered Fares')).toBeTruthy();
+    expect(getByTestId('marketing-feature-grid')).toBeTruthy();
+
+    expect(getByTestId('feature-card-direct-corridors')).toBeTruthy();
+    expect(getByText('⚡ High-Speed & Direct Romanian Corridors')).toBeTruthy();
+
+    expect(getByTestId('feature-card-value-engine')).toBeTruthy();
+    expect(getByText('💰 Smart €10/Hour Value Engine')).toBeTruthy();
+
+    expect(getByTestId('feature-card-transfer-shield')).toBeTruthy();
+    expect(getByText('🛡️ Romanian Transfer Shield (25–35 min buffers)')).toBeTruthy();
+
+    expect(getByTestId('feature-card-eco-savings')).toBeTruthy();
+    expect(getByText('🌿 Eco CO₂ Savings over DN1 and regional flights')).toBeTruthy();
   });
 
-  it('renders metrics bar and trust guarantees', () => {
+  it('renders metrics bar and trust guarantees with Romanian operators', () => {
     const { getByTestId, getByText } = renderComponent();
 
     expect(getByTestId('marketing-metrics-card')).toBeTruthy();
@@ -72,26 +81,85 @@ describe('MarketingShowcase component', () => {
 
     expect(getByTestId('marketing-trust-card')).toBeTruthy();
     expect(getByText('Unified European Rail Booking with Beeline')).toBeTruthy();
+    expect(
+      getByText(/Aggregating CFR Călători, Astra Trans Carpatic, Transferoviar Călători, ÖBB/)
+    ).toBeTruthy();
   });
 
-  it('renders all featured high-speed corridors and responds to clicks', () => {
+  it('renders all featured Romanian domestic & European gateway corridors and responds to clicks', () => {
     const handleCorridorPress = jest.fn();
-    const { getByTestId, getByText } = renderComponent({
+    const { getByTestId, getByText, getAllByText } = renderComponent({
       onCorridorPress: handleCorridorPress,
     });
 
     expect(getByText('Featured High-Speed Corridors')).toBeTruthy();
+    expect(
+      getByText('Direct routes connecting major Romanian metropolitan hubs and European gateways.')
+    ).toBeTruthy();
 
     FEATURED_CORRIDORS.forEach((corridor) => {
       expect(
-        getByTestId(`featured-corridor-${corridor.from.toLowerCase()}-${corridor.to.toLowerCase()}`)
+        getByTestId(getCorridorTestId(corridor.from, corridor.to))
       ).toBeTruthy();
     });
 
-    const parisLyonCard = getByTestId('featured-corridor-paris-lyon');
-    fireEvent.press(parisLyonCard);
+    // Check Romanian domestic corridors and European gateway connections
+    expect(getAllByText('București Nord').length).toBeGreaterThan(0);
+    expect(getAllByText('Brașov').length).toBeGreaterThan(0);
+    expect(getAllByText('Constanța').length).toBeGreaterThan(0);
+    expect(getAllByText('Cluj-Napoca').length).toBeGreaterThan(0);
+    expect(getAllByText('Viena Hbf').length).toBeGreaterThan(0);
 
-    expect(handleCorridorPress).toHaveBeenCalledWith(FEATURED_CORRIDORS[0]);
+    // Check operator details & prices
+    expect(getByText(/CFR IR \/ Astra Trans Carpatic/)).toBeTruthy();
+    expect(getByText(/from 48 lei/)).toBeTruthy();
+    expect(getByText(/CFR IR Sun Train/)).toBeTruthy();
+    expect(getByText(/from 65 lei/)).toBeTruthy();
+    expect(getByText(/InterRegio Nightjet \/ Sleeper/)).toBeTruthy();
+    expect(getByText(/from 115 lei/)).toBeTruthy();
+    expect(getByText(/Dacia EuroNight 346/)).toBeTruthy();
+    expect(getByText(/from €39\.00/)).toBeTruthy();
+
+    // Click each corridor card to assert callback is invoked for each route
+    FEATURED_CORRIDORS.forEach((corridor, idx) => {
+      const card = getByTestId(getCorridorTestId(corridor.from, corridor.to));
+      fireEvent.press(card);
+      expect(handleCorridorPress).toHaveBeenNthCalledWith(idx + 1, corridor);
+    });
+  });
+
+  it('renders cleanly without error when callbacks are omitted', () => {
+    const { getByTestId } = renderComponent();
+    const card = getByTestId(getCorridorTestId('București Nord', 'Brașov'));
+    expect(() => fireEvent.press(card)).not.toThrow();
+  });
+
+  describe('getCorridorTestId helper', () => {
+    it('normalizes Romanian diacritics, spaces, and hyphens into slug test IDs', () => {
+      expect(getCorridorTestId('București Nord', 'Brașov')).toBe(
+        'featured-corridor-bucuresti-nord-brasov'
+      );
+      expect(getCorridorTestId('Cluj-Napoca', 'București Nord')).toBe(
+        'featured-corridor-cluj-napoca-bucuresti-nord'
+      );
+      expect(getCorridorTestId('București Nord', 'Constanța')).toBe(
+        'featured-corridor-bucuresti-nord-constanta'
+      );
+      expect(getCorridorTestId('București Nord', 'Viena Hbf')).toBe(
+        'featured-corridor-bucuresti-nord-viena-hbf'
+      );
+    });
+
+    it('robustly handles edge cases, special characters, and missing inputs', () => {
+      expect(getCorridorTestId('Braşov', 'Constanţa')).toBe(
+        'featured-corridor-brasov-constanta'
+      );
+      expect(getCorridorTestId(' Wien (Hbf) ', 'München')).toBe(
+        'featured-corridor-wien-hbf-munchen'
+      );
+      expect(getCorridorTestId('', '')).toBe('featured-corridor--');
+      expect(getCorridorTestId(undefined as any, null as any)).toBe('featured-corridor--');
+    });
   });
 
   it('STRICT INVARIANT: does not render any map implementation', () => {

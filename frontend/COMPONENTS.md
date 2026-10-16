@@ -473,12 +473,13 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 ### 18. `MarketingShowcase`
 - **File**: [`frontend/src/components/MarketingShowcase.tsx`](frontend/src/components/MarketingShowcase.tsx)
 - **Lineage**: Composed Feature Component (built with `BaseCard`, `BaseBadge`, `BaseButton`)
-- **Description**: HomePage Role 2 clean marketing showcase placeholders promoting Beeline's capabilities, speed, and cross-border European coverage. Contains hero banner, 3 pillars (Speed: 300+ km/h, Coverage: 15+ European countries, Capabilities: Multi-modal live sync & eco footprint analytics), featured high-speed corridors, and trust metrics. Strictly contains NO map implementation.
+- **Description**: HomePage Role 2 clean marketing showcase placeholders promoting Beeline's capabilities, Romanian hub corridors, and cross-border European coverage. Contains hero banner, 3 pillars (Speed: 300+ km/h, Coverage: 15+ European countries, Capabilities: Multi-modal live sync & eco footprint analytics), 4 Curated Trifecta value propositions (⚡ High-Speed & Direct Romanian Corridors, 💰 Smart €10/Hour Value Engine, 🛡️ Romanian Transfer Shield with 25–35 min buffers, 🌿 Eco CO₂ Savings over DN1 and regional flights), featured Romanian hub corridors (`București Nord ⇄ Brașov`, `București Nord ⇄ Constanța`, `Cluj-Napoca ⇄ București Nord`, `București Nord ⇄ Viena Hbf`), and multi-operator trust metrics. Strictly contains NO map implementation.
 - **Props**:
   - `onExplorePress`?: `() => void`
   - `onCorridorPress`?: `(corridor: FeaturedCorridor) => void`
   - `style`?: StyleProp<ViewStyle>
   - `testID`?: string
+- **Helpers**: `getCorridorTestId(from: string, to: string): string` generates normalized test identifiers for featured corridor cards.
 - **When to Use**: HomePage marketing promotion and corridor discovery without loading heavy maps.
 
 ---
