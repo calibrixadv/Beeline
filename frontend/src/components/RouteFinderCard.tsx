@@ -44,6 +44,46 @@ export const ALL_TRANSPORT_MODES: { id: TransportMode; label: string; icon: Reac
   { id: 'Busses', label: 'Busses', icon: 'bus-outline' },
 ];
 
+export interface TrifectaPreviewPillar {
+  id: string;
+  badgeLabel: string;
+  badgeVariant: 'warning' | 'success' | 'info';
+  title: string;
+  description: string;
+  meta: string;
+  testID: string;
+}
+
+export const CURATED_TRIFECTA_PILLARS: TrifectaPreviewPillar[] = [
+  {
+    id: 'fastest',
+    badgeLabel: 'FASTEST',
+    badgeVariant: 'warning',
+    title: '⚡ Fastest Route',
+    description: 'Direct InterRegio / High-speed connection prioritizing minimum travel duration.',
+    meta: 'Direct CFR IR / High-speed • Minimum transit duration',
+    testID: 'trifecta-card-fastest',
+  },
+  {
+    id: 'best-value',
+    badgeLabel: 'BEST VALUE',
+    badgeVariant: 'success',
+    title: '💰 Best Value',
+    description: 'Applying the €10/hour saved threshold rule ~50 RON/hr.',
+    meta: '€10/hr threshold rule (~50 RON/hr) • Optimal cost-time balance',
+    testID: 'trifecta-card-best-value',
+  },
+  {
+    id: 'most-reliable',
+    badgeLabel: 'MOST RELIABLE',
+    badgeVariant: 'info',
+    title: '🛡️ Most Reliable',
+    description: 'Transfer Shield with generous 25–35 min buffers for Romanian network delay safety.',
+    meta: 'Transfer Shield • 25-35m (25–35 min) buffer protection • Delay risk safety',
+    testID: 'trifecta-card-most-reliable',
+  },
+];
+
 export const normalizeStation = (station: string): string =>
   (station || '')
     .trim()
@@ -183,13 +223,13 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
             value={origin}
             onChangeText={(text) => {
               setOrigin(text);
-              if (validationError) setValidationError(null);
-              if (submittedQuery) setSubmittedQuery(null);
+              setValidationError(null);
+              setSubmittedQuery(null);
             }}
             onClear={() => {
               setOrigin('');
-              if (validationError) setValidationError(null);
-              if (submittedQuery) setSubmittedQuery(null);
+              setValidationError(null);
+              setSubmittedQuery(null);
             }}
             leftIcon={<Ionicons name="navigate-circle-outline" size={18} color={theme.colors.brandYellow} />}
             clearable
@@ -229,13 +269,13 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
             value={destination}
             onChangeText={(text) => {
               setDestination(text);
-              if (validationError) setValidationError(null);
-              if (submittedQuery) setSubmittedQuery(null);
+              setValidationError(null);
+              setSubmittedQuery(null);
             }}
             onClear={() => {
               setDestination('');
-              if (validationError) setValidationError(null);
-              if (submittedQuery) setSubmittedQuery(null);
+              setValidationError(null);
+              setSubmittedQuery(null);
             }}
             leftIcon={<Ionicons name="location-outline" size={18} color={theme.colors.brandYellow} />}
             clearable
@@ -301,37 +341,86 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           style={[
             styles.submissionFeedbackBox,
             {
-              backgroundColor: isDark ? '#064E3B' : '#ECFDF5',
-              borderColor: '#10B981',
+              backgroundColor: isDark ? '#141416' : '#F9FAFB',
+              borderColor: isDark ? theme.colors.brandYellow : '#E5E7EB',
             },
           ]}
         >
           <View style={styles.feedbackHeader}>
-            <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-            <Text style={[styles.feedbackTitle, { color: isDark ? '#A7F3D0' : '#065F46' }]}>
-              Route Search Prepared
-            </Text>
+            <View style={styles.feedbackTitleRow}>
+              <Ionicons name="sparkles" size={16} color={isDark ? theme.colors.brandYellow : '#D97706'} />
+              <Text style={[styles.feedbackTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+                Route Search Prepared
+              </Text>
+            </View>
+            <BaseBadge label="THE CURATED TRIFECTA" variant="warning" size="sm" />
           </View>
+
           <Text
             numberOfLines={2}
             ellipsizeMode="tail"
-            style={[styles.feedbackDetails, { color: isDark ? '#D1FAE5' : '#047857' }]}
+            style={[styles.feedbackDetails, { color: isDark ? '#E4E4E7' : '#1F2937' }]}
           >
             {submittedQuery.origin} ➔ {submittedQuery.destination}
           </Text>
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
-            style={[styles.feedbackModes, { color: isDark ? '#A7F3D0' : '#065F46' }]}
+            style={[styles.feedbackModes, { color: isDark ? '#A1A1AA' : '#6B7280' }]}
           >
             Active filters: {submittedQuery.modes.join(', ')}
           </Text>
+
+          {/* Curated Trifecta 3 Preview Cards */}
+          <View style={styles.trifectaContainer}>
+            {CURATED_TRIFECTA_PILLARS.map((pillar) => (
+              <BaseCard
+                key={pillar.id}
+                variant="outlined"
+                padding="sm"
+                testID={pillar.testID}
+                accessibilityLabel={`${pillar.title} - ${pillar.badgeLabel}: ${pillar.description}`}
+                style={[
+                  styles.trifectaCard,
+                  {
+                    backgroundColor: isDark ? '#27272A' : '#FFFFFF',
+                    borderColor: isDark ? '#3F3F46' : '#E4E4E7',
+                  },
+                ]}
+              >
+                <View style={styles.trifectaCardHeader}>
+                  <Text style={[styles.trifectaCardTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+                    {pillar.title}
+                  </Text>
+                  <BaseBadge
+                    label={pillar.badgeLabel}
+                    variant={pillar.badgeVariant}
+                    size="sm"
+                  />
+                </View>
+                <Text style={[styles.trifectaCardDesc, { color: isDark ? '#D4D4D8' : '#3F3F46' }]}>
+                  {pillar.description}
+                </Text>
+                <Text style={[styles.trifectaCardMeta, { color: isDark ? '#A1A1AA' : '#71717A' }]}>
+                  {pillar.meta}
+                </Text>
+              </BaseCard>
+            ))}
+          </View>
+
           <View style={styles.templateNoteRow}>
-            <Ionicons name="information-circle-outline" size={13} color={isDark ? '#6EE7B7' : '#059669'} />
-            <Text style={[styles.templateNoteText, { color: isDark ? '#6EE7B7' : '#059669' }]}>
+            <Ionicons name="information-circle-outline" size={13} color={isDark ? '#34D399' : '#059669'} />
+            <Text style={[styles.templateNoteText, { color: isDark ? '#34D399' : '#059669' }]}>
               Template mode: submission handled; feature redirection disabled.
             </Text>
           </View>
+
+          <Text
+            testID="trifecta-shorthand-disclaimer"
+            style={[styles.disclaimerText, { color: isDark ? '#A1A1AA' : '#4B5563' }]}
+          >
+            Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.
+          </Text>
         </View>
       ) : null}
 
@@ -509,16 +598,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   submissionFeedbackBox: {
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    marginBottom: 14,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginBottom: 16,
+    gap: 6,
   },
   feedbackHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  feedbackTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    marginBottom: 4,
   },
   feedbackTitle: {
     fontSize: 13,
@@ -527,22 +622,60 @@ const styles = StyleSheet.create({
   feedbackDetails: {
     fontSize: 14,
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   feedbackModes: {
     fontSize: 12,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 4,
+  },
+  trifectaContainer: {
+    gap: 8,
+    marginVertical: 4,
+  },
+  trifectaCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  trifectaCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 4,
+  },
+  trifectaCardTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  trifectaCardDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  trifectaCardMeta: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '600',
   },
   templateNoteRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 2,
+    marginTop: 4,
   },
   templateNoteText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  disclaimerText: {
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: '500',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   submitButton: {
     borderRadius: 10,

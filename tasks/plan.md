@@ -20,12 +20,12 @@ Adapt the Beeline HomePage template to align with the refined specification in `
 
 ### Phase 1: Foundation & Shorthand Adaptation
 - [x] **Task 1**: Update `RouteFinderCard` default stations to Romanian hub (`București Nord` ⇄ `Brașov`) and configure quick corridor helper presets.
-- [ ] **Task 2**: Enhance `RouteFinderCard` non-redirecting submission feedback to display the "Curated Trifecta" preview pillars (Fastest, Best Value €10/hr rule, Most Reliable buffer alert).
+- [x] **Task 2**: Enhance `RouteFinderCard` non-redirecting submission feedback to display the "Curated Trifecta" preview pillars (Fastest, Best Value €10/hr rule, Most Reliable buffer alert).
 
 ### Checkpoint 1: Shorthand Validation
-- [ ] Unit tests pass in `RouteFinderCard.test.tsx`
-- [ ] Storybook stories updated with Romanian corridor fixtures
-- [ ] Zero redirection executed on submission
+- [x] Unit tests pass in `RouteFinderCard.test.tsx`
+- [x] Storybook stories updated with Romanian corridor fixtures
+- [x] Zero redirection executed on submission
 
 ### Phase 2: Marketing Showcase & HomePage Integration
 - [ ] **Task 3**: Update `MarketingShowcase` featured corridors to Romanian domestic & international gateways (București-Brașov, București-Constanța, București-Cluj, București-Vienna) and highlight the Curated Trifecta value proposition.

@@ -22,25 +22,26 @@
 ## Task 2: Adapt Shorthand Submission Feedback to "Curated Trifecta" Preview
 **Description:** Enhance the non-redirecting submission feedback banner in `RouteFinderCard` to present a concise preview of the 3 Curated Trifecta pillars (⚡ Fastest, 💰 Best Value applying the €10/hr rule, 🛡️ Most Reliable with 25–35m transfer buffer).
 **Acceptance criteria:**
-- [ ] Submitting valid origin/destination displays the 3 Curated Trifecta cards preview with Beeline badges.
-- [ ] Informs the user that full door-to-door results will load upon future redirect.
-- [ ] Strictly does NOT execute a router push or page redirect.
-- [ ] Modifying inputs, swapping stations, or toggling modes immediately clears the preview banner.
+- [x] Submitting valid origin/destination displays the 3 Curated Trifecta cards preview with Beeline badges.
+- [x] Informs the user that full door-to-door results will load upon future redirect.
+- [x] Strictly does NOT execute a router push or page redirect.
+- [x] Modifying inputs, swapping stations, or toggling modes immediately clears the preview banner.
 **Verification:**
-- [ ] Tests pass: `npm test -- frontend/__tests__/RouteFinderCard.test.tsx`
-- [ ] Manual check: Submitting shows the Trifecta preview banner without changing routes.
+- [x] Tests pass: `npm test -- frontend/__tests__/RouteFinderCard.test.tsx`
+- [x] Manual check: Submitting shows the Trifecta preview banner without changing routes.
 **Dependencies:** Task 1
 **Files likely touched:**
 - `frontend/src/components/RouteFinderCard.tsx`
+- `frontend/src/components/stories/RouteFinderCard.stories.tsx`
 - `frontend/__tests__/RouteFinderCard.test.tsx`
-**Estimated scope:** S (2 files)
+**Estimated scope:** S (3 files)
 
 ---
 
 ## Checkpoint 1: Shorthand Validation
-- [ ] RouteFinderCard tests pass cleanly (100%)
-- [ ] Storybook renders all RouteFinderCard variants without errors
-- [ ] No navigation or redirection triggered on submit
+- [x] RouteFinderCard tests pass cleanly (100%)
+- [x] Storybook renders all RouteFinderCard variants without errors
+- [x] No navigation or redirection triggered on submit
 
 ---
 

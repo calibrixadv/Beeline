@@ -52,6 +52,26 @@ export const InteractiveSubmitPrepared: StoryObj<RouteFinderCardProps> = {
     fireEvent.press(submitBtn);
     // Verifies the prepared feedback banner is shown and no redirect occurs
     expect(canvasElement.getByTestId('route-submission-feedback')).toBeTruthy();
+
+    // Verifies all 3 Curated Trifecta preview pillars render
+    expect(canvasElement.getByTestId('trifecta-card-fastest')).toBeTruthy();
+    expect(canvasElement.getByText('⚡ Fastest Route')).toBeTruthy();
+    expect(canvasElement.getByText('FASTEST')).toBeTruthy();
+
+    expect(canvasElement.getByTestId('trifecta-card-best-value')).toBeTruthy();
+    expect(canvasElement.getByText('💰 Best Value')).toBeTruthy();
+    expect(canvasElement.getByText('BEST VALUE')).toBeTruthy();
+    expect(canvasElement.getByText(/€10\/hour saved threshold rule/i)).toBeTruthy();
+
+    expect(canvasElement.getByTestId('trifecta-card-most-reliable')).toBeTruthy();
+    expect(canvasElement.getByText('🛡️ Most Reliable')).toBeTruthy();
+    expect(canvasElement.getByText('MOST RELIABLE')).toBeTruthy();
+    expect(canvasElement.getByText(/25–35 min buffers/i)).toBeTruthy();
+
+    // Verifies shorthand disclaimer
+    expect(
+      canvasElement.getByText('Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.')
+    ).toBeTruthy();
   },
 };
 

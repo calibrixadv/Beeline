@@ -144,6 +144,27 @@ describe('RouteFinderCard component', () => {
     expect(getByText('Frankfurt ➔ Zurich')).toBeTruthy();
     expect(getByText('Template mode: submission handled; feature redirection disabled.')).toBeTruthy();
 
+    // 3 Curated Trifecta preview cards and shorthand disclaimer
+    expect(getByTestId('trifecta-card-fastest')).toBeTruthy();
+    expect(getByText('⚡ Fastest Route')).toBeTruthy();
+    expect(getByText('FASTEST')).toBeTruthy();
+    expect(getByText('Direct InterRegio / High-speed connection prioritizing minimum travel duration.')).toBeTruthy();
+
+    expect(getByTestId('trifecta-card-best-value')).toBeTruthy();
+    expect(getByText('💰 Best Value')).toBeTruthy();
+    expect(getByText('BEST VALUE')).toBeTruthy();
+    expect(getByText('Applying the €10/hour saved threshold rule ~50 RON/hr.')).toBeTruthy();
+
+    expect(getByTestId('trifecta-card-most-reliable')).toBeTruthy();
+    expect(getByText('🛡️ Most Reliable')).toBeTruthy();
+    expect(getByText('MOST RELIABLE')).toBeTruthy();
+    expect(getByText('Transfer Shield with generous 25–35 min buffers for Romanian network delay safety.')).toBeTruthy();
+
+    expect(getByTestId('trifecta-shorthand-disclaimer')).toBeTruthy();
+    expect(
+      getByText('Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.')
+    ).toBeTruthy();
+
     // No error shown
     expect(queryByTestId('route-validation-error')).toBeNull();
 
@@ -331,8 +352,81 @@ describe('RouteFinderCard component', () => {
     expect(getByTestId('route-submission-feedback')).toBeTruthy();
     expect(getByText('Route Search Prepared')).toBeTruthy();
     expect(getByText('București Nord ➔ Brașov')).toBeTruthy();
+    expect(getByTestId('trifecta-card-fastest')).toBeTruthy();
+    expect(getByTestId('trifecta-card-best-value')).toBeTruthy();
+    expect(getByTestId('trifecta-card-most-reliable')).toBeTruthy();
+    expect(getByText('⚡ Fastest Route')).toBeTruthy();
+    expect(getByText('💰 Best Value')).toBeTruthy();
+    expect(getByText('🛡️ Most Reliable')).toBeTruthy();
+    expect(getByText(/€10\/hour saved threshold rule/i)).toBeTruthy();
+    expect(getByText(/25–35 min buffers/i)).toBeTruthy();
+    expect(
+      getByText('Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.')
+    ).toBeTruthy();
 
     expect(queryByTestId('route-validation-error')).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('displays the 3 Curated Trifecta pillars with €10/hr rule and 25-35m buffer note without redirecting', () => {
+    const router = useRouter();
+    const handleSubmit = jest.fn();
+
+    const { getByTestId, getByText } = renderComponent({
+      initialOrigin: 'București Nord',
+      initialDestination: 'Brașov',
+      onSubmitRoute: handleSubmit,
+    });
+
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    // Submission triggered
+    expect(handleSubmit).toHaveBeenCalledTimes(1);
+
+    // Feedback banner displayed
+    expect(getByTestId('route-submission-feedback')).toBeTruthy();
+    expect(getByText('THE CURATED TRIFECTA')).toBeTruthy();
+
+    // Pillar 1: ⚡ Fastest Route
+    expect(getByTestId('trifecta-card-fastest')).toBeTruthy();
+    expect(getByText('⚡ Fastest Route')).toBeTruthy();
+    expect(getByText('FASTEST')).toBeTruthy();
+    expect(getByText('Direct InterRegio / High-speed connection prioritizing minimum travel duration.')).toBeTruthy();
+
+    // Pillar 2: 💰 Best Value with €10/hr rule
+    expect(getByTestId('trifecta-card-best-value')).toBeTruthy();
+    expect(getByText('💰 Best Value')).toBeTruthy();
+    expect(getByText('BEST VALUE')).toBeTruthy();
+    expect(getByText('Applying the €10/hour saved threshold rule ~50 RON/hr.')).toBeTruthy();
+    expect(getByText(/€10\/hr threshold rule/i)).toBeTruthy();
+
+    // Pillar 3: 🛡️ Most Reliable with 25-35m buffer note
+    expect(getByTestId('trifecta-card-most-reliable')).toBeTruthy();
+    expect(getByText('🛡️ Most Reliable')).toBeTruthy();
+    expect(getByText('MOST RELIABLE')).toBeTruthy();
+    expect(getByText('Transfer Shield with generous 25–35 min buffers for Romanian network delay safety.')).toBeTruthy();
+    expect(getByText(/25-35m/i)).toBeTruthy();
+    expect(getByText(/25–35 min buffers/i)).toBeTruthy();
+
+    // Accessibility label checks on all 3 Curated Trifecta preview cards
+    const fastestCard = getByTestId('trifecta-card-fastest');
+    expect(fastestCard.props.accessibilityLabel).toContain('⚡ Fastest Route');
+
+    const bestValueCard = getByTestId('trifecta-card-best-value');
+    expect(bestValueCard.props.accessibilityLabel).toContain('💰 Best Value');
+
+    const mostReliableCard = getByTestId('trifecta-card-most-reliable');
+    expect(mostReliableCard.props.accessibilityLabel).toContain('🛡️ Most Reliable');
+
+    // Shorthand disclaimer
+    expect(getByTestId('trifecta-shorthand-disclaimer')).toBeTruthy();
+    expect(
+      getByText('Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.')
+    ).toBeTruthy();
+
+    // Strict zero-redirect verification
     expect(router.push).not.toHaveBeenCalled();
     expect(router.replace).not.toHaveBeenCalled();
   });
@@ -347,24 +441,36 @@ describe('RouteFinderCard component', () => {
     fireEvent.press(submitBtn);
     expect(getByTestId('route-submission-feedback')).toBeTruthy();
 
-    // Clear origin via clear button
+    // Clear origin via clear button clears the feedback banner
     const originClearBtn = getByTestId('route-origin-input-clear-btn');
     fireEvent.press(originClearBtn);
     const originInput = getByTestId('route-origin-input');
     expect(originInput.props.value).toBe('');
     expect(queryByTestId('route-submission-feedback')).toBeNull();
 
-    // Clear destination via clear button
+    // Re-fill origin and re-submit to test destination clear button
+    fireEvent.changeText(originInput, 'București Nord');
+    fireEvent.press(submitBtn);
+    expect(getByTestId('route-submission-feedback')).toBeTruthy();
+
+    // Clear destination via clear button clears the feedback banner
     const destClearBtn = getByTestId('route-destination-input-clear-btn');
     fireEvent.press(destClearBtn);
     const destInput = getByTestId('route-destination-input');
     expect(destInput.props.value).toBe('');
+    expect(queryByTestId('route-submission-feedback')).toBeNull();
 
-    // Test corridor shortcuts
+    // Re-fill destination and re-submit to test corridor shortcut clearing feedback
+    fireEvent.changeText(destInput, 'Brașov');
+    fireEvent.press(submitBtn);
+    expect(getByTestId('route-submission-feedback')).toBeTruthy();
+
+    // Clicking corridor shortcut immediately clears active feedback banner
     const parisLyonChip = getByTestId('quick-corridor-paris-lyon');
     fireEvent.press(parisLyonChip);
     expect(originInput.props.value).toBe('Paris');
     expect(destInput.props.value).toBe('Lyon');
+    expect(queryByTestId('route-submission-feedback')).toBeNull();
 
     const milanoRomaChip = getByTestId('quick-corridor-milano-roma');
     fireEvent.press(milanoRomaChip);

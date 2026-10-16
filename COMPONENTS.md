@@ -452,16 +452,16 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 ### 17. `RouteFinderCard`
 - **File**: [`frontend/src/components/RouteFinderCard.tsx`](frontend/src/components/RouteFinderCard.tsx)
 - **Lineage**: Extends `BaseCard`, composes `BaseInput`, `BaseBadge`, `BaseButton`, `IconButton`
-- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with transport mode filters ("Trains", "Metro", "Busses"), station swap action, input validation, and prepared submission feedback without executing feature redirection.
+- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with transport mode filters ("Trains", "Metro", "Busses"), station swap action, diacritic-insensitive duplicate validation, and prepared submission feedback showcasing the **Curated Trifecta** (⚡ Fastest, 💰 Best Value with €10/hr rule, 🛡️ Most Reliable with 25-35m Transfer Shield buffer) without executing feature redirection.
 - **States & Handlers**:
-  - `origin` & `destination`: Controlled text inputs with clearable actions extending `BaseInput`.
-  - `swap`: Swaps origin and destination stations using `IconButton` (`swap-vertical`).
-  - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`) extending `BaseBadge`.
-  - `onSubmitRoute`: Validates non-empty and distinct inputs, formats prepared query `{ origin, destination, modes }`, displays in-card confirmation banner, and invokes optional callback.
+  - `origin` & `destination`: Controlled text inputs with clearable actions extending `BaseInput`. Modifying text immediately clears active preview feedback.
+  - `swap`: Swaps origin and destination stations using `IconButton` (`swap-vertical`). Immediately dismisses active preview feedback.
+  - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`) extending `BaseBadge`. Retains at least 1 active mode; toggling dismisses active preview feedback.
+  - `onSubmitRoute`: Validates non-empty and distinct inputs, formats prepared query `{ origin, destination, modes }`, displays in-card Curated Trifecta preview cards, and invokes optional callback.
   - **Invariant**: Strictly does NOT execute router redirection.
 - **Props**:
-  - `initialOrigin`?: string (default `'Paris'`)
-  - `initialDestination`?: string (default `'Lyon'`)
+  - `initialOrigin`?: string (default `'București Nord'`)
+  - `initialDestination`?: string (default `'Brașov'`)
   - `initialModes`?: `TransportMode[]` (default `['Trains', 'Metro', 'Busses']`)
   - `onSubmitRoute`?: `(params: RouteSearchParams) => void`
   - `style`?: StyleProp<ViewStyle>
