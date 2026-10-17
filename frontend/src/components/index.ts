@@ -21,3 +21,4 @@ export * from './RouteFinderCard';
 export * from './MarketingShowcase';
 export * from './MascotBee';
 export * from './RouteRewardBadge';
+export * from './CozyHoneyBackground';

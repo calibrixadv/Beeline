@@ -29,6 +29,7 @@ describe('Storybook Automated UI Component Testing Library', () => {
     expect(storyNames).toContain('MarketingShowcase');
     expect(storyNames).toContain('MascotBee');
     expect(storyNames).toContain('RouteRewardBadge');
+    expect(storyNames).toContain('CozyHoneyBackground');
   });
 
 

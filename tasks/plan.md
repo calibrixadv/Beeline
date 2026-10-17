@@ -29,13 +29,13 @@ Implement "The Cozy Hive" redesign specified in `docs/ideas/cozy-bee-homepage-re
 - [x] Zero TypeScript compiler errors under strict mode
 
 ### Phase 2: Ambient Atmosphere & Marketing Showcase Redesign
-- [ ] **Task 3**: Build `CozyHoneyBackground.tsx` with floating golden pollen particles, subtle honeycomb watermark, and reduced-motion support.
-- [ ] **Task 4**: Redesign `MarketingShowcase.tsx` with honey-soaked hero banner, Waggle flight paths for Romanian corridors, and the Mascot Trifecta showcase cards.
+- [x] **Task 3**: Build `CozyHoneyBackground.tsx` with floating golden pollen particles, subtle honeycomb watermark, and reduced-motion support.
+- [x] **Task 4**: Redesign `MarketingShowcase.tsx` with honey-soaked hero banner, Waggle flight paths for Romanian corridors, and the Mascot Trifecta showcase cards.
 
 ### Checkpoint 2: Showcase & Motion Verification
-- [ ] Ambient background renders at 60fps without layout reflows
-- [ ] Corridor cards display animated waggle paths and respond to interaction
-- [ ] `MarketingShowcase.test.tsx` and stories pass 100%
+- [x] Ambient background renders at 60fps without layout reflows
+- [x] Corridor cards display animated waggle paths and respond to interaction
+- [x] `MarketingShowcase.test.tsx` and stories pass 100%
 
 ### Phase 3: Route Finder Alignment & Home Screen Integration
 - [ ] **Task 5**: Enhance `RouteFinderCard.tsx` with warm honey borders, waggle flight connector between origin/destination, and embed the Trifecta mascot companions in the submission preview banner (preserving zero-redirect).

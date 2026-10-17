@@ -21,6 +21,7 @@ import * as RouteFinderCardStories from '../src/components/stories/RouteFinderCa
 import * as MarketingShowcaseStories from '../src/components/stories/MarketingShowcase.stories';
 import * as MascotBeeStories from '../src/components/stories/MascotBee.stories';
 import * as RouteRewardBadgeStories from '../src/components/stories/RouteRewardBadge.stories';
+import * as CozyHoneyBackgroundStories from '../src/components/stories/CozyHoneyBackground.stories';
 
 export const stories = [
   { name: 'BaseButton', module: BaseButtonStories },
@@ -46,6 +47,7 @@ export const stories = [
   { name: 'MarketingShowcase', module: MarketingShowcaseStories },
   { name: 'MascotBee', module: MascotBeeStories },
   { name: 'RouteRewardBadge', module: RouteRewardBadgeStories },
+  { name: 'CozyHoneyBackground', module: CozyHoneyBackgroundStories },
 ];
 
 

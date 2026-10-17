@@ -1,6 +1,12 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
-import { MarketingShowcase, FEATURED_CORRIDORS, getCorridorTestId } from '../src/components/MarketingShowcase';
+import {
+  MarketingShowcase,
+  FEATURED_CORRIDORS,
+  getCorridorTestId,
+  WaggleFlightPath,
+} from '../src/components/MarketingShowcase';
 import { ThemeProvider } from '../src/context/ThemeContext';
 
 describe('MarketingShowcase component', () => {
@@ -8,23 +14,34 @@ describe('MarketingShowcase component', () => {
     jest.clearAllMocks();
   });
 
-  const renderComponent = (props: React.ComponentProps<typeof MarketingShowcase> = {}) => {
+  const renderComponent = (
+    props: React.ComponentProps<typeof MarketingShowcase> = {},
+    mode: 'light' | 'dark' = 'light'
+  ) => {
     return render(
-      <ThemeProvider>
+      <ThemeProvider initialMode={mode}>
         <MarketingShowcase {...props} />
       </ThemeProvider>
     );
   };
 
-  it('renders hero card, title, and explore CTA', () => {
+  it('renders hero card in honey theme with friendly copy, Barnaby mascot preview, and explore CTA', () => {
     const handleExplore = jest.fn();
-    const { getByText, getByTestId } = renderComponent({
+    const { getByText, getByTestId, getAllByTestId } = renderComponent({
       onExplorePress: handleExplore,
     });
 
+    expect(getByTestId('marketing-hero-card')).toBeTruthy();
     expect(getByText('Beeline High-Speed Transit')).toBeTruthy();
     expect(getByText('Plan Your European Rail Journey')).toBeTruthy();
-    expect(getByText('Fast high-speed corridors, live status tracking, stop-by-stop itineraries, and transparent eco-impact data.')).toBeTruthy();
+    expect(getByText('Make a beeline across Romania & Europe')).toBeTruthy();
+    expect(
+      getByText(/Fast, sweet, stress-free rail journeys\. High-speed corridors, live status tracking/)
+    ).toBeTruthy();
+
+    // Verify inline Barnaby mascot preview in hero badge
+    const barnabyMascots = getAllByTestId('mascot-bee-barnaby');
+    expect(barnabyMascots.length).toBeGreaterThanOrEqual(1);
 
     const exploreBtn = getByTestId('marketing-explore-btn');
     fireEvent.press(exploreBtn);
@@ -32,23 +49,37 @@ describe('MarketingShowcase component', () => {
     expect(handleExplore).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the 3 core pillars promoting Beeline (Speed, Coverage, Capabilities)', () => {
+  it('renders the 3 Mascot Trifecta pillar cards (Speed with Barnaby, Value with Honey, Reliability with Bumble)', () => {
     const { getByTestId, getByText } = renderComponent();
 
-    // Pillar 1: Speed
+    // Pillar 1: Speed with Barnaby
     expect(getByTestId('pillar-speed-card')).toBeTruthy();
     expect(getByText('300+ km/h High-Speed')).toBeTruthy();
     expect(getByText('SPEED')).toBeTruthy();
+    expect(getByText('Barnaby the Scout')).toBeTruthy();
+    expect(getByText('Direct High-Speed')).toBeTruthy();
+    expect(getByText(/City-center to city-center corridors engineered for maximum velocity with Barnaby/)).toBeTruthy();
+    expect(getByText('⚡ Instant timetable routing')).toBeTruthy();
 
-    // Pillar 2: Cross-Border European Coverage
+    // Pillar 2: Value with Honey
     expect(getByTestId('pillar-coverage-card')).toBeTruthy();
+    expect(getByText('Smart €10/Hour Value Engine')).toBeTruthy();
+    expect(getByText('VALUE')).toBeTruthy();
+    expect(getByText('Honey the Hive Saver')).toBeTruthy();
     expect(getByText('15+ European Countries')).toBeTruthy();
-    expect(getByText('COVERAGE')).toBeTruthy();
+    expect(getByText(/Honey evaluates every journey against the smart €10\/hour rule/)).toBeTruthy();
+    expect(getByText("💰 Honey's Nectar Jar savings")).toBeTruthy();
+    expect(getByTestId('mascot-bee-honey')).toBeTruthy();
 
-    // Pillar 3: Capabilities
+    // Pillar 3: Reliability with Bumble
     expect(getByTestId('pillar-capabilities-card')).toBeTruthy();
+    expect(getByText('Romanian Transfer Shield (25–35 min buffers)')).toBeTruthy();
+    expect(getByText('RELIABILITY')).toBeTruthy();
+    expect(getByText('Bumble the Buffer Guard')).toBeTruthy();
     expect(getByText('Multi-Modal & Live Sync')).toBeTruthy();
-    expect(getByText('CAPABILITIES')).toBeTruthy();
+    expect(getByText(/Bumble safeguards your trip with generous 25–35 min buffers/)).toBeTruthy();
+    expect(getByText("🛡️ Bumble's safe transfer shield guarantee")).toBeTruthy();
+    expect(getByTestId('mascot-bee-bumble')).toBeTruthy();
   });
 
   it('renders feature highlights showcasing the Curated Trifecta value propositions', () => {
@@ -86,9 +117,9 @@ describe('MarketingShowcase component', () => {
     ).toBeTruthy();
   });
 
-  it('renders all featured Romanian domestic & European gateway corridors and responds to clicks', () => {
+  it('renders all featured Romanian corridors with Waggle Flight Paths and responds to clicks', () => {
     const handleCorridorPress = jest.fn();
-    const { getByTestId, getByText, getAllByText } = renderComponent({
+    const { getByTestId, getAllByTestId, getByText, getAllByText } = renderComponent({
       onCorridorPress: handleCorridorPress,
     });
 
@@ -96,6 +127,10 @@ describe('MarketingShowcase component', () => {
     expect(
       getByText('Direct routes connecting major Romanian metropolitan hubs and European gateways.')
     ).toBeTruthy();
+
+    // Verify Waggle Flight Paths are rendered for each corridor
+    const wagglePaths = getAllByTestId('waggle-flight-path');
+    expect(wagglePaths.length).toBe(FEATURED_CORRIDORS.length);
 
     FEATURED_CORRIDORS.forEach((corridor) => {
       expect(
@@ -134,6 +169,14 @@ describe('MarketingShowcase component', () => {
     expect(() => fireEvent.press(card)).not.toThrow();
   });
 
+  it('renders properly under dark theme mode', () => {
+    const { getByTestId } = renderComponent({}, 'dark');
+    const heroCard = getByTestId('marketing-hero-card');
+    expect(heroCard).toBeTruthy();
+    const flattened = StyleSheet.flatten(heroCard.props.style);
+    expect(flattened.backgroundColor).toBe('#1C1917');
+  });
+
   describe('getCorridorTestId helper', () => {
     it('normalizes Romanian diacritics, spaces, and hyphens into slug test IDs', () => {
       expect(getCorridorTestId('București Nord', 'Brașov')).toBe(
@@ -159,6 +202,42 @@ describe('MarketingShowcase component', () => {
       );
       expect(getCorridorTestId('', '')).toBe('featured-corridor--');
       expect(getCorridorTestId(undefined as any, null as any)).toBe('featured-corridor--');
+    });
+  });
+
+  it('supports animated={false} on MarketingShowcase for static reduced motion', () => {
+    const { getByTestId, getAllByTestId } = renderComponent({ animated: false });
+    expect(getByTestId('marketing-hero-card')).toBeTruthy();
+    expect(getAllByTestId('waggle-flight-path').length).toBe(4);
+  });
+
+  describe('WaggleFlightPath component standalone', () => {
+    it('renders leading line, bee wave trail, and trailing line', () => {
+      const { getByTestId, getByText } = render(
+        <ThemeProvider>
+          <WaggleFlightPath testID="standalone-waggle" />
+        </ThemeProvider>
+      );
+
+      expect(getByTestId('standalone-waggle')).toBeTruthy();
+      expect(getByTestId('waggle-line-leading')).toBeTruthy();
+      expect(getByTestId('waggle-bee-trail')).toBeTruthy();
+      expect(getByText('🐝')).toBeTruthy();
+      expect(getByText('~ ~')).toBeTruthy();
+      expect(getByTestId('waggle-line-trailing')).toBeTruthy();
+    });
+
+    it('handles animated=false static mode cleanly without throwing', () => {
+      const { getByTestId } = render(
+        <ThemeProvider>
+          <WaggleFlightPath testID="static-waggle" animated={false} />
+        </ThemeProvider>
+      );
+
+      expect(getByTestId('static-waggle')).toBeTruthy();
+      expect(getByTestId('waggle-line-leading')).toBeTruthy();
+      expect(getByTestId('waggle-bee-trail')).toBeTruthy();
+      expect(getByTestId('waggle-line-trailing')).toBeTruthy();
     });
   });
 

@@ -51,13 +51,13 @@
 ## Task 3: Build CozyHoneyBackground with Floating Pollen & Watermark
 **Description:** Create `CozyHoneyBackground.tsx` rendering an ambient, cozy background featuring 8–10 floating golden pollen particles that drift with gentle opacity breathing, accompanied by a subtle hexagonal honeycomb watermark. The background must be pointer-transparent (`pointerEvents="none"`) and respect `prefers-reduced-motion`.
 **Acceptance criteria:**
-- [ ] Renders floating golden pollen specks with non-blocking absolute positioning.
-- [ ] Smooth CSS animation on Web and native `Animated` loop fallback on mobile (60fps, 0 jank).
-- [ ] Disables motion when `prefers-reduced-motion` is detected or when `animated={false}`.
-- [ ] Adapts smoothly across Light and Dark themes.
+- [x] Renders floating golden pollen specks with non-blocking absolute positioning.
+- [x] Smooth CSS animation on Web and native `Animated` loop fallback on mobile (60fps, 0 jank).
+- [x] Disables motion when `prefers-reduced-motion` is detected or when `animated={false}`.
+- [x] Adapts smoothly across Light and Dark themes.
 **Verification:**
-- [ ] Tests pass: `npm test -- frontend/__tests__/CozyHoneyBackground.test.tsx`
-- [ ] Storybook tests pass: `npm run test:storybook`
+- [x] Tests pass: `npm test -- frontend/__tests__/CozyHoneyBackground.test.tsx`
+- [x] Storybook tests pass: `npm run test:storybook`
 **Dependencies:** Task 1
 **Files likely touched:**
 - `frontend/src/components/CozyHoneyBackground.tsx`
@@ -71,13 +71,13 @@
 ## Task 4: Redesign MarketingShowcase with Honey Hero & Waggle Corridors
 **Description:** Redesign `frontend/src/components/MarketingShowcase.tsx` to embody "The Cozy Hive": warm honey-soaked hero banner, Mascot Trifecta showcase cards featuring Barnaby, Honey, and Bumble, and animated "Waggle Flight Paths" connecting Romanian transit corridors (`București Nord ⇄ Brașov`, `Constanța`, `Cluj`, `Viena`).
 **Acceptance criteria:**
-- [ ] Hero showcase adopts warm honey palette and friendly bee messaging ("Make a beeline across Romania & Europe").
-- [ ] Three pillar cards feature the Mascot Trifecta (Barnaby, Honey, Bumble) explaining the algorithmic value propositions.
-- [ ] Featured corridor cards display an animated/styled Waggle flight trail connecting origin and destination stations.
-- [ ] Retains all existing testIDs, corridor data, and interactive callbacks (`onExplorePress`, `onCorridorPress`).
+- [x] Hero showcase adopts warm honey palette and friendly bee messaging ("Make a beeline across Romania & Europe").
+- [x] Three pillar cards feature the Mascot Trifecta (Barnaby, Honey, Bumble) explaining the algorithmic value propositions.
+- [x] Featured corridor cards display an animated/styled Waggle flight trail connecting origin and destination stations.
+- [x] Retains all existing testIDs, corridor data, and interactive callbacks (`onExplorePress`, `onCorridorPress`).
 **Verification:**
-- [ ] Tests pass: `npm test -- frontend/__tests__/MarketingShowcase.test.tsx`
-- [ ] Storybook tests pass: `npm run test:storybook`
+- [x] Tests pass: `npm test -- frontend/__tests__/MarketingShowcase.test.tsx`
+- [x] Storybook tests pass: `npm run test:storybook`
 **Dependencies:** Tasks 1, 2, 3
 **Files likely touched:**
 - `frontend/src/components/MarketingShowcase.tsx`
@@ -88,9 +88,9 @@
 ---
 
 ## Checkpoint 2: Showcase & Motion Verification
-- [ ] Ambient background renders without layout reflows
-- [ ] Marketing showcase displays the Mascot Trifecta and Waggle flight trails
-- [ ] All corridor cards remain interactive with clean callbacks
+- [x] Ambient background renders without layout reflows
+- [x] Marketing showcase displays the Mascot Trifecta and Waggle flight trails
+- [x] All corridor cards remain interactive with clean callbacks
 
 ---
 
