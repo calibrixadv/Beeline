@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { BaseInput } from './BaseInput';
 import { BaseButton } from './BaseButton';
 import { BaseBadge } from './BaseBadge';
 import { IconButton } from './IconButton';
+import { MascotBee } from './MascotBee';
 
 export type TransportMode = 'Trains' | 'Metro' | 'Busses';
 
@@ -52,6 +53,8 @@ export interface TrifectaPreviewPillar {
   description: string;
   meta: string;
   testID: string;
+  mascotName: 'barnaby' | 'honey' | 'bumble';
+  mascot: React.ReactNode;
 }
 
 export const CURATED_TRIFECTA_PILLARS: TrifectaPreviewPillar[] = [
@@ -63,6 +66,8 @@ export const CURATED_TRIFECTA_PILLARS: TrifectaPreviewPillar[] = [
     description: 'Direct InterRegio / High-speed connection prioritizing minimum travel duration.',
     meta: 'Direct CFR IR / High-speed • Minimum transit duration',
     testID: 'trifecta-card-fastest',
+    mascotName: 'barnaby',
+    mascot: <MascotBee name="barnaby" size="sm" animated={false} />,
   },
   {
     id: 'best-value',
@@ -72,6 +77,8 @@ export const CURATED_TRIFECTA_PILLARS: TrifectaPreviewPillar[] = [
     description: 'Applying the €10/hour saved threshold rule ~50 RON/hr.',
     meta: '€10/hr threshold rule (~50 RON/hr) • Optimal cost-time balance',
     testID: 'trifecta-card-best-value',
+    mascotName: 'honey',
+    mascot: <MascotBee name="honey" size="sm" animated={false} />,
   },
   {
     id: 'most-reliable',
@@ -81,17 +88,20 @@ export const CURATED_TRIFECTA_PILLARS: TrifectaPreviewPillar[] = [
     description: 'Transfer Shield with generous 25–35 min buffers for Romanian network delay safety.',
     meta: 'Transfer Shield • 25-35m (25–35 min) buffer protection • Delay risk safety',
     testID: 'trifecta-card-most-reliable',
+    mascotName: 'bumble',
+    mascot: <MascotBee name="bumble" size="sm" animated={false} />,
   },
 ];
 
 export const normalizeStation = (station: string): string =>
   (station || '')
     .trim()
+    .toLowerCase()
+    .replace(/ß/g, 'ss')
     .replace(/[-_]+/g, ' ')
     .replace(/\s+/g, ' ')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
+    .replace(/[\u0300-\u036f]/g, '');
 
 export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
   initialOrigin = 'București Nord',
@@ -177,10 +187,6 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
     setSubmittedQuery(null);
   };
 
-  const dynamicCardBorder = useMemo(() => {
-    return isDark ? theme.colors.brandYellow : '#000000';
-  }, [isDark, theme.colors.brandYellow]);
-
   return (
     <BaseCard
       variant="elevated"
@@ -189,16 +195,16 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
       style={[
         styles.card,
         {
-          backgroundColor: isDark ? '#141416' : '#FFFFFF',
-          borderColor: dynamicCardBorder,
+          backgroundColor: theme.colors.surfaceWarm,
+          borderColor: theme.colors.honeyBorder,
         },
         style,
       ]}
     >
       {/* Header Badge & Subtitle */}
       <View style={styles.headerRow}>
-        <View style={[styles.badgeContainer, { backgroundColor: theme.colors.brandYellow }]}>
-          <Ionicons name="compass" size={13} color="#000000" />
+        <View style={[styles.badgeContainer, { backgroundColor: theme.colors.brandHoney }]}>
+          <Ionicons name="compass" size={13} color="#1C1917" />
           <Text style={styles.badgeText}>ROUTE SHORTHAND</Text>
         </View>
         <Text style={[styles.modeIndicator, { color: theme.colors.textMuted }]}>
@@ -207,14 +213,14 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
       </View>
 
       {/* Title */}
-      <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+      <Text style={[styles.title, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
         European Route Finder
       </Text>
-      <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+      <Text style={[styles.subtitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
         Quick 2-point routing across high-speed trains, urban metro, and regional busses.
       </Text>
 
-      {/* 2-Point Inputs with Swap Action */}
+      {/* 2-Point Inputs with Swap Action & Waggle Flight Connector */}
       <View style={styles.inputsContainer}>
         <View style={styles.inputRow}>
           <BaseInput
@@ -231,20 +237,41 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
               setValidationError(null);
               setSubmittedQuery(null);
             }}
-            leftIcon={<Ionicons name="navigate-circle-outline" size={18} color={theme.colors.brandYellow} />}
+            leftIcon={<Ionicons name="navigate-circle-outline" size={18} color={theme.colors.brandHoney} />}
             clearable
             testID="route-origin-input"
             accessibilityLabel="Origin point input"
           />
         </View>
 
-        {/* Swap Button */}
-        <View style={styles.swapRow}>
-          <View style={[styles.swapDivider, { backgroundColor: theme.colors.border }]} />
+        {/* Waggle Flight Connector flanking the swap button */}
+        <View
+          testID="route-waggle-connector"
+          style={styles.waggleConnectorContainer}
+          accessibilityLabel="Waggle flight connector between origin and destination"
+        >
+          <View style={styles.waggleFlankSide}>
+            <View
+              style={[
+                styles.waggleDashedLine,
+                { borderColor: isDark ? theme.colors.brandHoneyDark : theme.colors.honeyBorder },
+              ]}
+            />
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.waggleTrailGlyph,
+                { color: isDark ? theme.colors.brandHoney : theme.colors.brandAmber },
+              ]}
+            >
+              ── 🐝 ~ ~ ──
+            </Text>
+          </View>
+
           <IconButton
             iconName="swap-vertical"
             iconSize={18}
-            iconColor={isDark ? theme.colors.brandYellow : '#000000'}
+            iconColor={isDark ? theme.colors.brandHoney : theme.colors.brandHoneyDark}
             shape="circle"
             size="sm"
             variant="surface"
@@ -254,12 +281,29 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
             style={[
               styles.swapButton,
               {
-                backgroundColor: isDark ? '#27272A' : '#F4F4F5',
-                borderColor: theme.colors.border,
+                backgroundColor: isDark ? '#27272A' : '#FEF3C7',
+                borderColor: theme.colors.honeyBorder,
               },
             ]}
           />
-          <View style={[styles.swapDivider, { backgroundColor: theme.colors.border }]} />
+
+          <View style={styles.waggleFlankSide}>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.waggleTrailGlyph,
+                { color: isDark ? theme.colors.brandHoney : theme.colors.brandAmber },
+              ]}
+            >
+              ── ~ ~ 🐝 ──
+            </Text>
+            <View
+              style={[
+                styles.waggleDashedLine,
+                { borderColor: isDark ? theme.colors.brandHoneyDark : theme.colors.honeyBorder },
+              ]}
+            />
+          </View>
         </View>
 
         <View style={styles.inputRow}>
@@ -277,7 +321,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
               setValidationError(null);
               setSubmittedQuery(null);
             }}
-            leftIcon={<Ionicons name="location-outline" size={18} color={theme.colors.brandYellow} />}
+            leftIcon={<Ionicons name="location-outline" size={18} color={theme.colors.brandHoney} />}
             clearable
             testID="route-destination-input"
             accessibilityLabel="Destination point input"
@@ -304,7 +348,13 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                   <Ionicons
                     name={modeItem.icon}
                     size={14}
-                    color={isSelected ? '#000000' : theme.colors.textMuted}
+                    color={
+                      isSelected
+                        ? '#1C1917'
+                        : isDark
+                        ? theme.colors.textMuted
+                        : theme.colors.textSecondary
+                    }
                   />
                 }
                 onPress={() => handleToggleMode(modeItem.id)}
@@ -312,12 +362,23 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                 accessibilityLabel={`Filter by ${modeItem.label}`}
                 style={[
                   styles.modeBadge,
-                  isSelected && {
-                    backgroundColor: theme.colors.brandYellow,
-                    borderColor: theme.colors.brandYellowDark,
-                  },
+                  isSelected
+                    ? {
+                        backgroundColor: theme.colors.brandHoney,
+                        borderColor: theme.colors.brandHoneyDark,
+                      }
+                    : {
+                        backgroundColor: isDark ? '#27272A' : '#F8FAFC',
+                        borderColor: isDark ? '#3F3F46' : '#E2E8F0',
+                      },
                 ]}
-                textStyle={isSelected ? { color: '#000000', fontWeight: '800' } : undefined}
+                textStyle={
+                  isSelected
+                    ? { color: '#1C1917', fontWeight: '800' }
+                    : isDark
+                    ? { color: '#E4E4E7' }
+                    : undefined
+                }
               />
             );
           })}
@@ -341,14 +402,14 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           style={[
             styles.submissionFeedbackBox,
             {
-              backgroundColor: isDark ? '#141416' : '#F9FAFB',
-              borderColor: isDark ? theme.colors.brandYellow : '#E5E7EB',
+              backgroundColor: isDark ? '#1C1917' : '#FEF3C7',
+              borderColor: isDark ? theme.colors.brandHoney : theme.colors.brandAmber,
             },
           ]}
         >
           <View style={styles.feedbackHeader}>
             <View style={styles.feedbackTitleRow}>
-              <Ionicons name="sparkles" size={16} color={isDark ? theme.colors.brandYellow : '#D97706'} />
+              <Ionicons name="sparkles" size={16} color={isDark ? theme.colors.brandHoney : '#D97706'} />
               <Text style={[styles.feedbackTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
                 Route Search Prepared
               </Text>
@@ -371,7 +432,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
             Active filters: {submittedQuery.modes.join(', ')}
           </Text>
 
-          {/* Curated Trifecta 3 Preview Cards */}
+          {/* Curated Trifecta 3 Preview Cards with Mascot Companions */}
           <View style={styles.trifectaContainer}>
             {CURATED_TRIFECTA_PILLARS.map((pillar) => (
               <BaseCard
@@ -384,14 +445,19 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                   styles.trifectaCard,
                   {
                     backgroundColor: isDark ? '#27272A' : '#FFFFFF',
-                    borderColor: isDark ? '#3F3F46' : '#E4E4E7',
+                    borderColor: isDark ? '#3F3F46' : theme.colors.honeyBorder,
                   },
                 ]}
               >
                 <View style={styles.trifectaCardHeader}>
-                  <Text style={[styles.trifectaCardTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
-                    {pillar.title}
-                  </Text>
+                  <View style={styles.trifectaMascotGroup}>
+                    {pillar.mascot ?? (pillar.mascotName ? (
+                      <MascotBee name={pillar.mascotName} size="sm" animated={false} />
+                    ) : null)}
+                    <Text style={[styles.trifectaCardTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+                      {pillar.title}
+                    </Text>
+                  </View>
                   <BaseBadge
                     label={pillar.badgeLabel}
                     variant={pillar.badgeVariant}
@@ -429,18 +495,18 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
         variant="primary"
         size="lg"
         title="Find European Routes"
-        iconLeft={<Ionicons name="search" size={18} color="#000000" />}
+        iconLeft={<Ionicons name="search" size={18} color="#1C1917" />}
         onPress={handleSubmit}
         testID="route-finder-submit-btn"
         accessibilityLabel="Find European Routes"
         style={[
           styles.submitButton,
           {
-            backgroundColor: theme.colors.brandYellow,
-            borderColor: theme.colors.brandYellow,
+            backgroundColor: theme.colors.brandHoney,
+            borderColor: theme.colors.brandHoneyDark,
           },
         ]}
-        textStyle={{ color: '#000000', fontWeight: '800' }}
+        textStyle={{ color: '#1C1917', fontWeight: '800' }}
         fullWidth
       />
 
@@ -452,42 +518,42 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
         <TouchableOpacity
           style={[
             styles.corridorChip,
-            { backgroundColor: isDark ? '#27272A' : '#F4F4F5', borderColor: theme.colors.border },
+            { backgroundColor: isDark ? '#27272A' : '#FEF3C7', borderColor: theme.colors.honeyBorder },
           ]}
           onPress={() => handleSelectCorridor('Paris', 'Lyon')}
           accessibilityRole="button"
           accessibilityLabel="Quick corridor Paris to Lyon"
           testID="quick-corridor-paris-lyon"
         >
-          <Text style={[styles.corridorChipText, { color: theme.colors.textPrimary }]}>
+          <Text style={[styles.corridorChipText, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
             Paris ➔ Lyon
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.corridorChip,
-            { backgroundColor: isDark ? '#27272A' : '#F4F4F5', borderColor: theme.colors.border },
+            { backgroundColor: isDark ? '#27272A' : '#FEF3C7', borderColor: theme.colors.honeyBorder },
           ]}
           onPress={() => handleSelectCorridor('London', 'Paris')}
           accessibilityRole="button"
           accessibilityLabel="Quick corridor London to Paris"
           testID="quick-corridor-london-paris"
         >
-          <Text style={[styles.corridorChipText, { color: theme.colors.textPrimary }]}>
+          <Text style={[styles.corridorChipText, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
             London ➔ Paris
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.corridorChip,
-            { backgroundColor: isDark ? '#27272A' : '#F4F4F5', borderColor: theme.colors.border },
+            { backgroundColor: isDark ? '#27272A' : '#FEF3C7', borderColor: theme.colors.honeyBorder },
           ]}
           onPress={() => handleSelectCorridor('Milano', 'Roma')}
           accessibilityRole="button"
           accessibilityLabel="Quick corridor Milano to Roma"
           testID="quick-corridor-milano-roma"
         >
-          <Text style={[styles.corridorChipText, { color: theme.colors.textPrimary }]}>
+          <Text style={[styles.corridorChipText, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
             Milano ➔ Roma
           </Text>
         </TouchableOpacity>
@@ -548,19 +614,40 @@ const styles = StyleSheet.create({
   inputRow: {
     width: '100%',
   },
-  swapRow: {
+  waggleConnectorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 4,
+    gap: 6,
   },
-  swapDivider: {
+  waggleFlankSide: {
     flex: 1,
-    height: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    overflow: 'hidden',
+  },
+  waggleDashedLine: {
+    flex: 1,
+    height: 0,
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+  },
+  waggleTrailGlyph: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   swapButton: {
     marginHorizontal: 8,
     borderWidth: 1,
+  },
+  trifectaMascotGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   modesSection: {
     marginBottom: 16,

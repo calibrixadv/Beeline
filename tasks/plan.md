@@ -38,23 +38,23 @@ Implement "The Cozy Hive" redesign specified in `docs/ideas/cozy-bee-homepage-re
 - [x] `MarketingShowcase.test.tsx` and stories pass 100%
 
 ### Phase 3: Route Finder Alignment & Home Screen Integration
-- [ ] **Task 5**: Enhance `RouteFinderCard.tsx` with warm honey borders, waggle flight connector between origin/destination, and embed the Trifecta mascot companions in the submission preview banner (preserving zero-redirect).
-- [ ] **Task 6**: Integrate `CozyHoneyBackground` into `HomeScreen` (`frontend/app/index.tsx`) and harmonize layout, transitions, and dark mode toggling.
+- [x] **Task 5**: Enhance `RouteFinderCard.tsx` with warm honey borders, waggle flight connector between origin/destination, and embed the Trifecta mascot companions in the submission preview banner (preserving zero-redirect).
+- [x] **Task 6**: Integrate `CozyHoneyBackground` into `HomeScreen` (`frontend/app/index.tsx`) and harmonize layout, transitions, and dark mode toggling.
 
 ### Checkpoint 3: Full Integration Verification
-- [ ] Zero redirection executed on route finder submission
-- [ ] Zero map elements present on the screen
-- [ ] Light and Dark modes render with seamless visual warmth
+- [x] Zero redirection executed on route finder submission
+- [x] Zero map elements present on the screen
+- [x] Light and Dark modes render with seamless visual warmth
 
 ### Phase 4: Master Test Suite, Storybook & Documentation Sync
-- [ ] **Task 7**: Synchronize all Storybook CSF 3 interaction stories and Jest test suites (`storybookAuto.test.tsx`, `indexRoute.test.tsx`).
-- [ ] **Task 8**: Update `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` with the new component catalog and verification metrics.
+- [x] **Task 7**: Synchronize all Storybook CSF 3 interaction stories and Jest test suites (`storybookAuto.test.tsx`, `indexRoute.test.tsx`).
+- [x] **Task 8**: Update `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` with the new component catalog and verification metrics.
 
 ### Checkpoint 4: Complete & Clean Build
-- [ ] `npm test`: 100% passing test suites
-- [ ] `npm run test:storybook`: 100% passing automated story interaction tests
-- [ ] `npm run type-check`: 0 TypeScript compiler errors
-- [ ] `AI_LOG.md` remains strictly untouched
+- [x] `npm test`: 100% passing test suites
+- [x] `npm run test:storybook`: 100% passing automated story interaction tests
+- [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] `AI_LOG.md` remains strictly untouched
 
 ---
 

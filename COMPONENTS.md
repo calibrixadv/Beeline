@@ -26,11 +26,11 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
                               │     BaseBadge      │
                               └─────────┬──────────┘
                                         │
-             ┌──────────────────────────┴──────────────────────────┐
-             ▼                                                     ▼
-      ┌─────────────┐                                       ┌─────────────┐
-      │ StatusBadge │                                       │ AmenityBadge│
-      └─────────────┘                                       └─────────────┘
+             ┌──────────────────────────┼──────────────────────────┐
+             ▼                          ▼                          ▼
+      ┌─────────────┐            ┌─────────────┐            ┌──────────────────┐
+      │ StatusBadge │            │ AmenityBadge│            │ RouteRewardBadge │
+      └─────────────┘            └─────────────┘            └──────────────────┘
 
                               ┌────────────────────┐
                               │     BaseInput      │
@@ -59,6 +59,11 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
                                  ┌─────────────┐
                                  │ ScreenLoader│
                                  └─────────────┘
+
+      ┌────────────────────────┐                   ┌────────────────────────┐
+      │  CozyHoneyBackground   │                   │       MascotBee        │
+      │ (Ambient Atmosphere)   │                   │ (Vector Persona System)│
+      └────────────────────────┘                   └────────────────────────┘
 ```
 
 ### Golden Rule for All Agents
@@ -451,13 +456,13 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 
 ### 17. `RouteFinderCard`
 - **File**: [`frontend/src/components/RouteFinderCard.tsx`](frontend/src/components/RouteFinderCard.tsx)
-- **Lineage**: Extends `BaseCard`, composes `BaseInput`, `BaseBadge`, `BaseButton`, `IconButton`
-- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with transport mode filters ("Trains", "Metro", "Busses"), station swap action, diacritic-insensitive duplicate validation, and prepared submission feedback showcasing the **Curated Trifecta** (⚡ Fastest, 💰 Best Value with €10/hr rule, 🛡️ Most Reliable with 25-35m Transfer Shield buffer) without executing feature redirection.
+- **Lineage**: Extends `BaseCard`, composes `BaseInput`, `BaseBadge`, `BaseButton`, `IconButton`, `MascotBee`
+- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with transport mode filters ("Trains", "Metro", "Busses"), station swap action, diacritic-insensitive duplicate validation, stylized **Waggle flight dashed connector trail** (`[Origin] ── 🐝 ~ ~ ── [Destination]`) flanking the swap button (`testID="route-waggle-connector"`), warm honey palette styling (`surfaceWarm` `#FFFBEB` in light, `#1C1917` in dark; `honeyBorder` `#FDE68A` in light, `#3E3204` in dark), and prepared submission feedback showcasing the **Curated Trifecta** paired with their companion mascots (⚡ Fastest: Barnaby, 💰 Best Value: Honey, 🛡️ Most Reliable: Bumble) without executing feature redirection.
 - **States & Handlers**:
   - `origin` & `destination`: Controlled text inputs with clearable actions extending `BaseInput`. Modifying text immediately clears active preview feedback.
   - `swap`: Swaps origin and destination stations using `IconButton` (`swap-vertical`). Immediately dismisses active preview feedback.
-  - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`) extending `BaseBadge`. Retains at least 1 active mode; toggling dismisses active preview feedback.
-  - `onSubmitRoute`: Validates non-empty and distinct inputs, formats prepared query `{ origin, destination, modes }`, displays in-card Curated Trifecta preview cards, and invokes optional callback.
+  - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`) extending `BaseBadge` with `brandHoney` / `brandHoneyDark` selected styling. Retains at least 1 active mode; toggling dismisses active preview feedback.
+  - `onSubmitRoute`: Validates non-empty and distinct inputs, formats prepared query `{ origin, destination, modes }`, displays in-card Curated Trifecta preview cards with companion mascots, and invokes optional callback.
   - **Invariant**: Strictly does NOT execute router redirection.
 - **Props**:
   - `initialOrigin`?: string (default `'București Nord'`)
@@ -472,15 +477,73 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 
 ### 18. `MarketingShowcase`
 - **File**: [`frontend/src/components/MarketingShowcase.tsx`](frontend/src/components/MarketingShowcase.tsx)
-- **Lineage**: Composed Feature Component (built with `BaseCard`, `BaseBadge`, `BaseButton`)
-- **Description**: HomePage Role 2 clean marketing showcase placeholders promoting Beeline's capabilities, Romanian hub corridors, and cross-border European coverage. Contains hero banner, 3 pillars (Speed: 300+ km/h, Coverage: 15+ European countries, Capabilities: Multi-modal live sync & eco footprint analytics), 4 Curated Trifecta value propositions (⚡ High-Speed & Direct Romanian Corridors, 💰 Smart €10/Hour Value Engine, 🛡️ Romanian Transfer Shield with 25–35 min buffers, 🌿 Eco CO₂ Savings over DN1 and regional flights), featured Romanian hub corridors (`București Nord ⇄ Brașov`, `București Nord ⇄ Constanța`, `Cluj-Napoca ⇄ București Nord`, `București Nord ⇄ Viena Hbf`), and multi-operator trust metrics. Strictly contains NO map implementation.
+- **Lineage**: Composed Feature Component (built with `BaseCard`, `BaseBadge`, `BaseButton`, `MascotBee`)
+- **Description**: HomePage Role 2 clean marketing showcase embodying "The Cozy Hive": warm honey-soaked hero banner, 3 Mascot Trifecta pillar cards (Barnaby the Scout for Speed, Honey the Hive Saver for Value, Bumble the Buffer Guard for Reliability), animated Waggle flight paths connecting Romanian transit corridors (`București Nord ⇄ Brașov`, `București Nord ⇄ Constanța`, `Cluj-Napoca ⇄ București Nord`, `București Nord ⇄ Viena Hbf`), 4 Curated Trifecta value propositions (⚡ High-Speed Romanian Corridors, 💰 Smart €10/Hour Value Engine, 🛡️ Romanian Transfer Shield with 25–35 min buffers, 🌿 Eco CO₂ Savings over DN1 and regional flights), and multi-operator trust metrics. Strictly contains NO map implementation.
 - **Props**:
   - `onExplorePress`?: `() => void`
   - `onCorridorPress`?: `(corridor: FeaturedCorridor) => void`
+  - `animated`?: boolean (default `true`)
   - `style`?: StyleProp<ViewStyle>
   - `testID`?: string
 - **Helpers**: `getCorridorTestId(from: string, to: string): string` generates normalized test identifiers for featured corridor cards.
 - **When to Use**: HomePage marketing promotion and corridor discovery without loading heavy maps.
+
+---
+
+### 19. `MascotBee`
+- **File**: [`frontend/src/components/MascotBee.tsx`](frontend/src/components/MascotBee.tsx)
+- **Lineage**: Zero-Dependency Vector Mascot System (built with composite React Native primitives and `@expo/vector-icons`)
+- **Description**: Vector mascot persona component bringing "The Cozy Hive" characters to life without heavy binary or SVG dependencies. Supports Barnaby the Scout Bee (fastest routes with lightning antennae and rocket thruster), Honey the Hive Saver (smart value engine with scholar spectacles and embossed gold coin), and Bumble the Buffer Guard (Romanian transfer shield, cozy scarf, and heraldic crest).
+- **Features**:
+  - 4 Size Tiers: `sm` (24px), `md` (40px), `lg` (64px), `xl` (96px).
+  - Wing Oscillation Micro-Animation: Gentle 140ms wing flutter loop with auto-stop safeguard for test environments.
+  - Full Accessibility: Declares `image` or `button` role with descriptive persona announcements.
+  - Interactive callbacks: Optional `onPress`, `onHoverIn`, and `onHoverOut` support.
+- **Props**:
+  - `name`: `'barnaby' | 'honey' | 'bumble'`
+  - `size`?: `'sm' | 'md' | 'lg' | 'xl'` (default `'md'`)
+  - `animated`?: boolean (default `true`)
+  - `onPress`?: (event) => void
+  - `onHoverIn`?: () => void
+  - `onHoverOut`?: () => void
+  - `accessibilityRole`?: AccessibilityRole
+  - `accessibilityLabel`?: string
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: Brand hero banners, showcase cards, and route preview highlights.
+
+---
+
+### 20. `RouteRewardBadge`
+- **File**: [`frontend/src/components/RouteRewardBadge.tsx`](frontend/src/components/RouteRewardBadge.tsx)
+- **Lineage**: Extends `BaseBadge` pattern with specialized vector reward icons
+- **Description**: Compact reward badges stamped on qualifying train journey cards representing the Mascot Trifecta algorithmic pillars: Lightning Wing (`lightning` for fastest routes), Nectar Jar (`nectar` for best value under the €10/hr rule), and Honey Shield (`shield` for safe 25–35 min Romanian transfer buffers).
+- **Props**:
+  - `type`: `'lightning' | 'nectar' | 'shield'`
+  - `size`?: `'sm' | 'md'` (default `'md'`)
+  - `label`?: string (defaults to pillar title)
+  - `disabled`?: boolean
+  - `onPress`?: () => void
+  - `onHoverIn`?: () => void
+  - `onHoverOut`?: () => void
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: Stamped on timetable journey cards (`TrainCard`) to indicate qualifying Trifecta value pillars.
+
+---
+
+### 21. `CozyHoneyBackground`
+- **File**: [`frontend/src/components/CozyHoneyBackground.tsx`](frontend/src/components/CozyHoneyBackground.tsx)
+- **Lineage**: Ambient Atmosphere Wrapper Component
+- **Description**: Ambient background rendering 8–16 floating golden pollen particles with gentle opacity breathing and a subtle hexagonal honeycomb watermark. Built with pure CSS keyframes on Web and native `Animated` loops on mobile (60fps, 0 layout reflows), isolated in an absolute layer with `pointerEvents="none"` to prevent layout recalculation or interference with interactive elements. Respects `prefers-reduced-motion` and adapts automatically across Light (`#FFFDF7`) and Dark (`#121110`) modes.
+- **Props**:
+  - `children`?: ReactNode
+  - `animated`?: boolean (default `true`)
+  - `particleCount`?: number (default `8`)
+  - `pointerEvents`?: `'box-none' | 'none' | 'box-only' | 'auto'`
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: Full-screen and page background wrapper for warm honeycomb atmosphere.
 
 ---
 

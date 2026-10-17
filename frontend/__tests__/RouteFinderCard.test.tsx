@@ -1,6 +1,11 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
-import { RouteFinderCard, RouteSearchParams, normalizeStation } from '../src/components/RouteFinderCard';
+import {
+  RouteFinderCard,
+  RouteSearchParams,
+  normalizeStation,
+  CURATED_TRIFECTA_PILLARS,
+} from '../src/components/RouteFinderCard';
 import { ThemeProvider } from '../src/context/ThemeContext';
 import { useRouter } from 'expo-router';
 
@@ -32,6 +37,16 @@ describe('RouteFinderCard component', () => {
     expect(getByTestId('mode-filter-trains')).toBeTruthy();
     expect(getByTestId('mode-filter-metro')).toBeTruthy();
     expect(getByTestId('mode-filter-busses')).toBeTruthy();
+  });
+
+  it('renders stylized Waggle flight dashed connector trail between origin and destination inputs', () => {
+    const { getByTestId, getByText } = renderComponent();
+
+    const connector = getByTestId('route-waggle-connector');
+    expect(connector).toBeTruthy();
+    expect(getByTestId('route-swap-button')).toBeTruthy();
+    expect(getByText('── 🐝 ~ ~ ──')).toBeTruthy();
+    expect(getByText('── ~ ~ 🐝 ──')).toBeTruthy();
   });
 
   it('allows typing new origin and destination values', () => {
@@ -146,16 +161,19 @@ describe('RouteFinderCard component', () => {
 
     // 3 Curated Trifecta preview cards and shorthand disclaimer
     expect(getByTestId('trifecta-card-fastest')).toBeTruthy();
+    expect(getByTestId('mascot-bee-barnaby')).toBeTruthy();
     expect(getByText('⚡ Fastest Route')).toBeTruthy();
     expect(getByText('FASTEST')).toBeTruthy();
     expect(getByText('Direct InterRegio / High-speed connection prioritizing minimum travel duration.')).toBeTruthy();
 
     expect(getByTestId('trifecta-card-best-value')).toBeTruthy();
+    expect(getByTestId('mascot-bee-honey')).toBeTruthy();
     expect(getByText('💰 Best Value')).toBeTruthy();
     expect(getByText('BEST VALUE')).toBeTruthy();
     expect(getByText('Applying the €10/hour saved threshold rule ~50 RON/hr.')).toBeTruthy();
 
     expect(getByTestId('trifecta-card-most-reliable')).toBeTruthy();
+    expect(getByTestId('mascot-bee-bumble')).toBeTruthy();
     expect(getByText('🛡️ Most Reliable')).toBeTruthy();
     expect(getByText('MOST RELIABLE')).toBeTruthy();
     expect(getByText('Transfer Shield with generous 25–35 min buffers for Romanian network delay safety.')).toBeTruthy();
@@ -353,8 +371,11 @@ describe('RouteFinderCard component', () => {
     expect(getByText('Route Search Prepared')).toBeTruthy();
     expect(getByText('București Nord ➔ Brașov')).toBeTruthy();
     expect(getByTestId('trifecta-card-fastest')).toBeTruthy();
+    expect(getByTestId('mascot-bee-barnaby')).toBeTruthy();
     expect(getByTestId('trifecta-card-best-value')).toBeTruthy();
+    expect(getByTestId('mascot-bee-honey')).toBeTruthy();
     expect(getByTestId('trifecta-card-most-reliable')).toBeTruthy();
+    expect(getByTestId('mascot-bee-bumble')).toBeTruthy();
     expect(getByText('⚡ Fastest Route')).toBeTruthy();
     expect(getByText('💰 Best Value')).toBeTruthy();
     expect(getByText('🛡️ Most Reliable')).toBeTruthy();
@@ -389,21 +410,24 @@ describe('RouteFinderCard component', () => {
     expect(getByTestId('route-submission-feedback')).toBeTruthy();
     expect(getByText('THE CURATED TRIFECTA')).toBeTruthy();
 
-    // Pillar 1: ⚡ Fastest Route
+    // Pillar 1: ⚡ Fastest Route with Barnaby
     expect(getByTestId('trifecta-card-fastest')).toBeTruthy();
+    expect(getByTestId('mascot-bee-barnaby')).toBeTruthy();
     expect(getByText('⚡ Fastest Route')).toBeTruthy();
     expect(getByText('FASTEST')).toBeTruthy();
     expect(getByText('Direct InterRegio / High-speed connection prioritizing minimum travel duration.')).toBeTruthy();
 
-    // Pillar 2: 💰 Best Value with €10/hr rule
+    // Pillar 2: 💰 Best Value with Honey and €10/hr rule
     expect(getByTestId('trifecta-card-best-value')).toBeTruthy();
+    expect(getByTestId('mascot-bee-honey')).toBeTruthy();
     expect(getByText('💰 Best Value')).toBeTruthy();
     expect(getByText('BEST VALUE')).toBeTruthy();
     expect(getByText('Applying the €10/hour saved threshold rule ~50 RON/hr.')).toBeTruthy();
     expect(getByText(/€10\/hr threshold rule/i)).toBeTruthy();
 
-    // Pillar 3: 🛡️ Most Reliable with 25-35m buffer note
+    // Pillar 3: 🛡️ Most Reliable with Bumble and 25-35m buffer note
     expect(getByTestId('trifecta-card-most-reliable')).toBeTruthy();
+    expect(getByTestId('mascot-bee-bumble')).toBeTruthy();
     expect(getByText('🛡️ Most Reliable')).toBeTruthy();
     expect(getByText('MOST RELIABLE')).toBeTruthy();
     expect(getByText('Transfer Shield with generous 25–35 min buffers for Romanian network delay safety.')).toBeTruthy();
@@ -477,6 +501,37 @@ describe('RouteFinderCard component', () => {
     expect(originInput.props.value).toBe('Milano');
     expect(destInput.props.value).toBe('Roma');
   });
+
+  it('pairs each pillar in CURATED_TRIFECTA_PILLARS with its companion MascotBee element and name', () => {
+    const fastestPillar = CURATED_TRIFECTA_PILLARS.find((p) => p.id === 'fastest');
+    const bestValuePillar = CURATED_TRIFECTA_PILLARS.find((p) => p.id === 'best-value');
+    const mostReliablePillar = CURATED_TRIFECTA_PILLARS.find((p) => p.id === 'most-reliable');
+
+    expect(fastestPillar).toBeDefined();
+    expect(fastestPillar?.mascotName).toBe('barnaby');
+    expect(fastestPillar?.mascot).toBeDefined();
+
+    expect(bestValuePillar).toBeDefined();
+    expect(bestValuePillar?.mascotName).toBe('honey');
+    expect(bestValuePillar?.mascot).toBeDefined();
+
+    expect(mostReliablePillar).toBeDefined();
+    expect(mostReliablePillar?.mascotName).toBe('bumble');
+    expect(mostReliablePillar?.mascot).toBeDefined();
+  });
+
+  it('renders transport mode chips with dark palette background when unselected in dark mode', () => {
+    const { getByTestId } = render(
+      <ThemeProvider initialMode="dark">
+        <RouteFinderCard initialModes={['Trains']} />
+      </ThemeProvider>
+    );
+
+    const trainsChip = getByTestId('mode-filter-trains');
+    const metroChip = getByTestId('mode-filter-metro');
+    expect(trainsChip).toBeTruthy();
+    expect(metroChip).toBeTruthy();
+  });
 });
 
 describe('normalizeStation utility', () => {
@@ -508,6 +563,11 @@ describe('normalizeStation utility', () => {
   it('normalizes both comma-below and legacy cedilla Romanian letters identically', () => {
     expect(normalizeStation('Bucure\u0219ti')).toBe(normalizeStation('Bucure\u015Fti'));
     expect(normalizeStation('Constan\u021Ba')).toBe(normalizeStation('Constan\u0163a'));
+  });
+
+  it('normalizes German sharp S (ß) to ss', () => {
+    expect(normalizeStation('Groß')).toBe('gross');
+    expect(normalizeStation('Straßburg')).toBe('strassburg');
   });
 });
 

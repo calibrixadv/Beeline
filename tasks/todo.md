@@ -97,14 +97,14 @@
 ## Task 5: Enhance RouteFinderCard with Honey Accents & Mascot Preview
 **Description:** Update `frontend/src/components/RouteFinderCard.tsx` with warm honey borders, a subtle waggle flight connector between origin and destination inputs, and enhance the non-redirecting Curated Trifecta submission feedback banner to feature Barnaby, Honey, and Bumble companions.
 **Acceptance criteria:**
-- [ ] Inputs and transport filters (`Trains`, `Metro`, `Busses`) feature warm honey focus borders and chips.
-- [ ] Origin/destination fields include a styled waggle flight dashed trail indicator.
-- [ ] Submission banner presents the 3 Trifecta preview cards with the respective Mascot companion icons.
-- [ ] Strictly preserves the **zero-redirect** constraint on submission and diacritic-insensitive duplicate validation.
-- [ ] Modifying inputs immediately clears the preview banner.
+- [x] Inputs and transport filters (`Trains`, `Metro`, `Busses`) feature warm honey focus borders and chips.
+- [x] Origin/destination fields include a styled waggle flight dashed trail indicator.
+- [x] Submission banner presents the 3 Trifecta preview cards with the respective Mascot companion icons.
+- [x] Strictly preserves the **zero-redirect** constraint on submission and diacritic-insensitive duplicate validation.
+- [x] Modifying inputs immediately clears the preview banner.
 **Verification:**
-- [ ] Tests pass: `npm test -- frontend/__tests__/RouteFinderCard.test.tsx`
-- [ ] Storybook tests pass: `npm run test:storybook`
+- [x] Tests pass: `npm test -- frontend/__tests__/RouteFinderCard.test.tsx`
+- [x] Storybook tests pass: `npm run test:storybook`
 **Dependencies:** Tasks 1, 2
 **Files likely touched:**
 - `frontend/src/components/RouteFinderCard.tsx`
@@ -117,13 +117,13 @@
 ## Task 6: Integrate CozyHoneyBackground into HomeScreen & Theme Harmony
 **Description:** Integrate `CozyHoneyBackground` into `frontend/app/index.tsx`, harmonizing the screen layout with the warm honey palette, updating transitional loader messages with cozy bee references, and verifying zero map and zero redirect invariants.
 **Acceptance criteria:**
-- [ ] `HomeScreen` wraps scroll content in `CozyHoneyBackground`.
-- [ ] Preserves responsive mobile and web layout without any map element.
-- [ ] Transitions and active trip indicators harmonize across Light and Dark modes.
-- [ ] Submission handler remains strictly non-redirecting.
+- [x] `HomeScreen` wraps scroll content in `CozyHoneyBackground`.
+- [x] Preserves responsive mobile and web layout without any map element.
+- [x] Transitions and active trip indicators harmonize across Light and Dark modes.
+- [x] Submission handler remains strictly non-redirecting.
 **Verification:**
-- [ ] Tests pass: `npm test -- frontend/__tests__/indexRoute.test.tsx`
-- [ ] Build succeeds: `npm run build`
+- [x] Tests pass: `npm test -- frontend/__tests__/indexRoute.test.tsx`
+- [x] Build succeeds: `npm run build`
 **Dependencies:** Tasks 3, 4, 5
 **Files likely touched:**
 - `frontend/app/index.tsx`
@@ -133,22 +133,22 @@
 ---
 
 ## Checkpoint 3: Full Integration Verification
-- [ ] Zero redirection executed on route finder submission
-- [ ] Zero map elements present on the screen
-- [ ] Light and Dark modes render with seamless visual warmth
+- [x] Zero redirection executed on route finder submission
+- [x] Zero map elements present on the screen
+- [x] Light and Dark modes render with seamless visual warmth
 
 ---
 
 ## Task 7: Synchronize Storybook Stories & Automated Test Suite
 **Description:** Update automated Storybook interaction tests and full test suites to ensure 100% test coverage across all new and updated components.
 **Acceptance criteria:**
-- [ ] `storybookAuto.test.tsx` discovers and executes stories for `MascotBee`, `RouteRewardBadge`, `CozyHoneyBackground`, `MarketingShowcase`, and `RouteFinderCard`.
-- [ ] All 30+ test suites pass with 0 failures and 0 warnings.
-- [ ] TypeScript strict type check passes with 0 errors.
+- [x] `storybookAuto.test.tsx` discovers and executes stories for `MascotBee`, `RouteRewardBadge`, `CozyHoneyBackground`, `MarketingShowcase`, and `RouteFinderCard`.
+- [x] All 30+ test suites pass with 0 failures and 0 warnings.
+- [x] TypeScript strict type check passes with 0 errors.
 **Verification:**
-- [ ] `npm test`: All test suites pass
-- [ ] `npm run test:storybook`: All story interaction tests pass
-- [ ] `npm run type-check`: 0 errors
+- [x] `npm test`: All test suites pass
+- [x] `npm run test:storybook`: All story interaction tests pass
+- [x] `npm run type-check`: 0 errors
 **Dependencies:** Tasks 1-6
 **Files likely touched:**
 - `frontend/__tests__/storybookAuto.test.tsx`
@@ -160,12 +160,12 @@
 ## Task 8: Master Documentation & Catalog Synchronization
 **Description:** Update `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` documenting the new `MascotBee`, `RouteRewardBadge`, and `CozyHoneyBackground` components, the updated theme tokens, and verified test metrics.
 **Acceptance criteria:**
-- [ ] Documents `MascotBee`, `RouteRewardBadge`, and `CozyHoneyBackground` in component catalogs.
-- [ ] Updates test status matrices and design system documentation in `PLAN_AND_STATUS.md`.
-- [ ] `AI_LOG.md` remains strictly untouched.
+- [x] Documents `MascotBee`, `RouteRewardBadge`, and `CozyHoneyBackground` in component catalogs.
+- [x] Updates test status matrices and design system documentation in `PLAN_AND_STATUS.md`.
+- [x] `AI_LOG.md` remains strictly untouched.
 **Verification:**
-- [ ] Manual inspection of markdown links and tables
-- [ ] `git status` verifies clean tree
+- [x] Manual inspection of markdown links and tables
+- [x] `git status` verifies clean tree
 **Dependencies:** Tasks 1-7
 **Files likely touched:**
 - `COMPONENTS.md`
@@ -176,7 +176,7 @@
 ---
 
 ## Checkpoint 4: Complete & Clean Build
-- [ ] `npm test`: 100% test suites pass
-- [ ] `npm run test:storybook`: 100% story interaction tests pass
-- [ ] `npm run type-check`: 0 TypeScript compiler errors
-- [ ] Ready for review
+- [x] `npm test`: 100% test suites pass
+- [x] `npm run test:storybook`: 100% story interaction tests pass
+- [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] Ready for review
