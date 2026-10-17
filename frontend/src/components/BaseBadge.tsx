@@ -9,6 +9,7 @@ import {
   TextStyle,
   AccessibilityRole,
   GestureResponderEvent,
+  Platform,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -38,6 +39,9 @@ export interface BaseBadgeProps {
   /** Hover callbacks */
   onHoverIn?: () => void;
   onHoverOut?: () => void;
+  /** Focus callbacks */
+  onFocus?: () => void;
+  onBlur?: () => void;
   /** Style overrides */
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
@@ -56,6 +60,8 @@ export const BaseBadge: React.FC<BaseBadgeProps> = ({
   selected = false,
   onHoverIn,
   onHoverOut,
+  onFocus,
+  onBlur,
   style,
   textStyle,
   accessibilityRole,
@@ -63,10 +69,15 @@ export const BaseBadge: React.FC<BaseBadgeProps> = ({
   testID,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
+
   const isInteractive =
     typeof onPress === 'function' ||
     typeof onHoverIn === 'function' ||
-    typeof onHoverOut === 'function';
+    typeof onHoverOut === 'function' ||
+    typeof onFocus === 'function' ||
+    typeof onBlur === 'function';
 
   const handleHoverIn = () => {
     if (isInteractive) {
@@ -79,6 +90,20 @@ export const BaseBadge: React.FC<BaseBadgeProps> = ({
     if (isInteractive) {
       setIsHovered(false);
       onHoverOut?.();
+    }
+  };
+
+  const handleFocus = () => {
+    if (isInteractive) {
+      setIsFocused(true);
+      onFocus?.();
+    }
+  };
+
+  const handleBlur = () => {
+    if (isInteractive) {
+      setIsFocused(false);
+      onBlur?.();
     }
   };
 
@@ -102,7 +127,25 @@ export const BaseBadge: React.FC<BaseBadgeProps> = ({
         fontWeight: '700' as const,
       }
     : null;
+
+  const dynamicFocusStyle = isFocused && isInteractive
+    ? {
+        borderColor: theme.colors.brandHoney,
+        borderWidth: 1.5,
+        ...(Platform.OS === 'web'
+          ? ({
+              outlineColor: theme.colors.brandHoney,
+              outlineStyle: 'solid',
+              outlineWidth: 2,
+              outlineOffset: 1,
+              cursor: 'pointer',
+            } as any)
+          : {}),
+      }
+    : null;
+
   const hoverStyle = isHovered && isInteractive ? styles.hoverState : null;
+  const pressedStyle = isPressed && isInteractive ? styles.pressedState : null;
 
   const content = (
     <>
@@ -131,16 +174,23 @@ export const BaseBadge: React.FC<BaseBadgeProps> = ({
         accessibilityRole={resolvedRole}
         accessibilityLabel={resolvedA11yLabel}
         accessibilityState={selected !== undefined ? { selected } : undefined}
+        focusable={true}
         onPress={onPress}
+        onPressIn={() => setIsPressed(true)}
+        onPressOut={() => setIsPressed(false)}
         onHoverIn={handleHoverIn}
         onHoverOut={handleHoverOut}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={[
           styles.badge,
           sizeStyle,
           variantStyle,
           dynamicSelectedContainer,
-          hoverStyle,
           style,
+          hoverStyle,
+          pressedStyle,
+          dynamicFocusStyle,
         ]}
       >
         {content}
@@ -175,8 +225,12 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   hoverState: {
-    opacity: 0.85,
-    transform: [{ scale: 1.02 }],
+    opacity: 0.88,
+    transform: [{ translateY: -1 }],
+  },
+  pressedState: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }],
   },
   selectedContainer: {
     backgroundColor: '#EFF6FF',

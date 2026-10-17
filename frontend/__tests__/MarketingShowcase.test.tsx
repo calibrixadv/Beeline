@@ -252,4 +252,40 @@ describe('MarketingShowcase component', () => {
     expect(jsonString).not.toContain('MapView');
     expect(jsonString).not.toContain('react-native-maps');
   });
+
+  it('guarantees WCAG 2.1 AA text contrast tokens on light surfaces (>4.5:1 ratio)', () => {
+    const { getByText, getAllByText } = renderComponent();
+
+    // Metric numbers should use high-contrast #92400E in light mode
+    const metric300 = getByText('300+');
+    const flatMetricStyle = StyleSheet.flatten(metric300.props.style);
+    expect(flatMetricStyle.color).toBe('#92400E');
+
+    // Hero badge text should use #92400E for >4.5:1 contrast against amber-100
+    const heroBadgeText = getByText('Beeline High-Speed Transit');
+    const flatHeroBadge = StyleSheet.flatten(heroBadgeText.props.style);
+    expect(flatHeroBadge.color).toBe('#92400E');
+
+    // Pillar 3 role should use #15803D for >4.5:1 contrast against warm surface
+    const pillarRole = getByText('Multi-Modal & Live Sync');
+    const flatPillarRole = StyleSheet.flatten(pillarRole.props.style);
+    expect(flatPillarRole.color).toBe('#15803D');
+
+    // Waggle trail should use #92400E in light mode
+    const trails = getAllByText('~ ~')[0];
+    const flatTrail = StyleSheet.flatten(trails.props.style);
+    expect(flatTrail.color).toBe('#92400E');
+  });
+
+  it('provides comprehensive accessibility label and button role on corridor cards', () => {
+    const handlePress = jest.fn();
+    const { getByTestId } = renderComponent({ onCorridorPress: handlePress });
+
+    const card = getByTestId(getCorridorTestId('București Nord', 'Brașov'));
+    expect(card.props.accessibilityRole).toBe('button');
+    expect(card.props.accessibilityLabel).toContain('Explore route from București Nord to Brașov');
+    expect(card.props.accessibilityLabel).toContain('CFR IR / Astra Trans Carpatic');
+    expect(card.props.accessibilityLabel).toContain('2h 15m direct');
+    expect(card.props.accessibilityLabel).toContain('from 48 lei (~€9.60)');
+  });
 });

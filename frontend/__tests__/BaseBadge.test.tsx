@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { BaseBadge } from '../src/components/BaseBadge';
 
 describe('BaseBadge Component', () => {
@@ -48,5 +48,41 @@ describe('BaseBadge Component', () => {
 
     fireEvent(chip, 'hoverOut');
     expect(handleHoverOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles focus and blur events on interactive chip overriding style borderColor', () => {
+    const handleFocus = jest.fn();
+    const handleBlur = jest.fn();
+    const { getByRole } = render(
+      <BaseBadge
+        label="Focus Chip"
+        onPress={() => {}}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        style={{ borderColor: '#AAAAAA' }}
+      />
+    );
+
+    const chip = getByRole('button');
+    expect(chip.props.focusable).toBe(true);
+
+    const pressable = chip.parent?.parent;
+    expect(pressable?.props.onFocus).toBeDefined();
+    expect(pressable?.props.onBlur).toBeDefined();
+
+    act(() => {
+      pressable?.props.onFocus();
+    });
+    expect(handleFocus).toHaveBeenCalledTimes(1);
+
+    const flattened = Array.isArray(chip.props.style)
+      ? chip.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : chip.props.style;
+    expect(flattened.borderColor).toBe('#F59E0B');
+
+    act(() => {
+      pressable?.props.onBlur();
+    });
+    expect(handleBlur).toHaveBeenCalledTimes(1);
   });
 });

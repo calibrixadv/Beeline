@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   AccessibilityRole,
   GestureResponderEvent,
   Pressable,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -36,6 +37,9 @@ export interface MascotBeeProps {
   /** Hover callbacks */
   onHoverIn?: () => void;
   onHoverOut?: () => void;
+  /** Focus callbacks */
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
 const SIZE_MAP: Record<MascotSize, number> = {
@@ -62,8 +66,14 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
   onPress,
   onHoverIn,
   onHoverOut,
+  onFocus,
+  onBlur,
 }) => {
   const { theme } = useTheme();
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
+
   const sizePx = SIZE_MAP[size] ?? 40;
   const s = sizePx / 40; // Scale factor relative to md (40px)
 
@@ -114,7 +124,41 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
     outputRange: ['6deg', '24deg'],
   });
 
-  const isInteractive = typeof onPress === 'function' || typeof onHoverIn === 'function' || typeof onHoverOut === 'function';
+  const isInteractive =
+    typeof onPress === 'function' ||
+    typeof onHoverIn === 'function' ||
+    typeof onHoverOut === 'function' ||
+    typeof onFocus === 'function' ||
+    typeof onBlur === 'function';
+
+  const handleHoverIn = () => {
+    if (isInteractive) {
+      setIsHovered(true);
+      onHoverIn?.();
+    }
+  };
+
+  const handleHoverOut = () => {
+    if (isInteractive) {
+      setIsHovered(false);
+      onHoverOut?.();
+    }
+  };
+
+  const handleFocus = () => {
+    if (isInteractive) {
+      setIsFocused(true);
+      onFocus?.();
+    }
+  };
+
+  const handleBlur = () => {
+    if (isInteractive) {
+      setIsFocused(false);
+      onBlur?.();
+    }
+  };
+
   const resolvedRole = accessibilityRole ?? (isInteractive ? 'button' : 'image');
   const resolvedLabel = accessibilityLabel ?? DEFAULT_LABELS[name];
   const resolvedTestId = testID ?? `mascot-bee-${name}`;
@@ -817,16 +861,45 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
     </View>
   );
 
+  const dynamicFocusStyle = isFocused && isInteractive
+    ? {
+        borderRadius: sizePx * 0.35,
+        ...(Platform.OS === 'web'
+          ? ({
+              outlineColor: theme.colors.brandHoney,
+              outlineStyle: 'solid',
+              outlineWidth: 2,
+              outlineOffset: 2,
+              cursor: 'pointer',
+            } as any)
+          : {
+              borderColor: theme.colors.brandHoney,
+              borderWidth: 1.5,
+            }),
+      }
+    : null;
+
   if (isInteractive) {
     return (
       <Pressable
         testID={resolvedTestId}
         accessibilityRole={resolvedRole}
         accessibilityLabel={resolvedLabel}
+        focusable={true}
         onPress={onPress}
-        onHoverIn={onHoverIn}
-        onHoverOut={onHoverOut}
-        style={[styles.container, style]}
+        onPressIn={() => setIsPressed(true)}
+        onPressOut={() => setIsPressed(false)}
+        onHoverIn={handleHoverIn}
+        onHoverOut={handleHoverOut}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        style={[
+          styles.container,
+          style,
+          isHovered && styles.hoveredState,
+          isPressed && styles.pressedState,
+          dynamicFocusStyle,
+        ]}
       >
         {mascotVisual}
       </Pressable>
@@ -849,6 +922,13 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  hoveredState: {
+    transform: [{ translateY: -2 }],
+  },
+  pressedState: {
+    opacity: 0.85,
+    transform: [{ scale: 0.96 }],
   },
   mascotContainer: {
     position: 'relative',

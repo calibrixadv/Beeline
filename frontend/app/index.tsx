@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTripPlanner } from '../src/context/TripContext';
 import { useTheme } from '../src/context/ThemeContext';
@@ -14,6 +14,10 @@ export default function HomeScreen() {
   const { getTripItemCount } = useTripPlanner();
   const { navigateWithTransition } = useScreenTransition();
   const tripCount = getTripItemCount();
+
+  const [isTripHovered, setIsTripHovered] = useState(false);
+  const [isTripFocused, setIsTripFocused] = useState(false);
+  const [isTripPressed, setIsTripPressed] = useState(false);
 
   const handleNavigate = (path: string, message?: string) => {
     navigateWithTransition(path, { message: message || 'Buzzing to destination...' });
@@ -53,15 +57,36 @@ export default function HomeScreen() {
 
           {/* Active Trip Status Indicator (if trips exist in itinerary) */}
           {tripCount > 0 ? (
-            <TouchableOpacity
+            <Pressable
               style={[
                 styles.tripStatusCard,
                 {
                   backgroundColor: isDark ? '#1C1917' : '#FEF3C7',
                   borderColor: isDark ? theme.colors.brandHoneyDark : theme.colors.honeyBorder,
                 },
+                isTripHovered && styles.tripStatusCardHovered,
+                isTripPressed && styles.tripStatusCardPressed,
+                isTripFocused && [
+                  styles.tripStatusCardFocused,
+                  Platform.OS === 'web'
+                    ? ({
+                        outlineColor: theme.colors.brandHoney,
+                        outlineStyle: 'solid',
+                        outlineWidth: 2,
+                        outlineOffset: 2,
+                        cursor: 'pointer',
+                      } as any)
+                    : { borderColor: theme.colors.brandHoney, borderWidth: 2 },
+                ],
               ]}
+              focusable={true}
               onPress={() => handleNavigate('/my-trip', 'Buzzing to your active trip itinerary...')}
+              onPressIn={() => setIsTripPressed(true)}
+              onPressOut={() => setIsTripPressed(false)}
+              onHoverIn={() => setIsTripHovered(true)}
+              onHoverOut={() => setIsTripHovered(false)}
+              onFocus={() => setIsTripFocused(true)}
+              onBlur={() => setIsTripFocused(false)}
               accessibilityRole="button"
               accessibilityLabel="View Active Trip Itinerary"
               testID="home-active-trip-banner"
@@ -84,6 +109,8 @@ export default function HomeScreen() {
                 </View>
                 <View style={styles.tripStatusText}>
                   <Text
+                    accessibilityRole="header"
+                    aria-level={3}
                     style={[
                       styles.tripStatusTitle,
                       { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal },
@@ -94,7 +121,7 @@ export default function HomeScreen() {
                   <Text
                     style={[
                       styles.tripStatusSubtitle,
-                      { color: isDark ? theme.colors.brandHoney : theme.colors.brandHoneyDark },
+                      { color: isDark ? '#F59E0B' : '#92400E' },
                     ]}
                   >
                     {tripCount} {tripCount === 1 ? 'train journey' : 'train journeys'} currently selected
@@ -106,7 +133,7 @@ export default function HomeScreen() {
                 size={20}
                 color={isDark ? theme.colors.brandHoney : theme.colors.brandHoneyDark}
               />
-            </TouchableOpacity>
+            </Pressable>
           ) : null}
 
           {/* Role 2: Clean marketing showcase placeholders promoting Beeline capabilities, speed, and cross-border coverage */}
@@ -149,6 +176,21 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     marginBottom: 20,
     borderWidth: 1.5,
+  },
+  tripStatusCardHovered: {
+    transform: [{ translateY: -2 }],
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  tripStatusCardPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.99 }],
+  },
+  tripStatusCardFocused: {
+    borderColor: '#F59E0B',
   },
   tripStatusContent: {
     flexDirection: 'row',

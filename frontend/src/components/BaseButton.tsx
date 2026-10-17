@@ -10,6 +10,8 @@ import {
   AccessibilityRole,
   AccessibilityState,
   GestureResponderEvent,
+  Platform,
+  Insets,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -49,6 +51,9 @@ export interface BaseButtonProps {
   onHoverIn?: () => void;
   /** Hover out handler (web & pointer) */
   onHoverOut?: () => void;
+  /** Focus callbacks */
+  onFocus?: () => void;
+  onBlur?: () => void;
   /** Container style overrides */
   style?: StyleProp<ViewStyle>;
   /** Text style overrides */
@@ -63,6 +68,8 @@ export interface BaseButtonProps {
   testID?: string;
   /** Full width stretching */
   fullWidth?: boolean;
+  /** Inset hit slop for touch targets */
+  hitSlop?: Insets | number | null;
 }
 
 export const BaseButton: React.FC<BaseButtonProps> = ({
@@ -78,6 +85,8 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
   onPress,
   onHoverIn,
   onHoverOut,
+  onFocus,
+  onBlur,
   style,
   textStyle,
   accessibilityRole = 'button',
@@ -85,9 +94,11 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
   accessibilityState,
   testID,
   fullWidth = false,
+  hitSlop,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   const isInteractive = !disabled && !loading;
 
@@ -102,6 +113,20 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
     if (isInteractive) {
       setIsHovered(false);
       onHoverOut?.();
+    }
+  };
+
+  const handleFocus = () => {
+    if (isInteractive) {
+      setIsFocused(true);
+      onFocus?.();
+    }
+  };
+
+  const handleBlur = () => {
+    if (isInteractive) {
+      setIsFocused(false);
+      onBlur?.();
     }
   };
 
@@ -256,6 +281,22 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
 
   const resolvedSpinnerColor = dynamicStyles.spinnerColor;
 
+  const dynamicFocusStyle = isFocused && isInteractive
+    ? {
+        borderColor: theme.colors.brandHoney,
+        borderWidth: 2,
+        ...(Platform.OS === 'web'
+          ? ({
+              outlineColor: theme.colors.brandHoney,
+              outlineStyle: 'solid',
+              outlineWidth: 2,
+              outlineOffset: 2,
+              cursor: 'pointer',
+            } as any)
+          : {}),
+      }
+    : null;
+
   return (
     <Pressable
       testID={testID}
@@ -267,22 +308,27 @@ export const BaseButton: React.FC<BaseButtonProps> = ({
         ...accessibilityState,
       }}
       disabled={!isInteractive}
+      focusable={isInteractive}
+      hitSlop={hitSlop}
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       onHoverIn={handleHoverIn}
       onHoverOut={handleHoverOut}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       style={[
         styles.base,
         sizeContainerStyle,
         variantContainerStyle,
         dynamicStyles.container,
         fullWidthStyle,
+        disabledContainerStyle,
+        style,
         hoverStyle,
         isHovered && isInteractive && dynamicStyles.hover,
         pressedStyle,
-        disabledContainerStyle,
-        style,
+        dynamicFocusStyle,
       ]}
     >
       {loading ? (

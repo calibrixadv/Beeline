@@ -532,6 +532,38 @@ describe('RouteFinderCard component', () => {
     expect(trainsChip).toBeTruthy();
     expect(metroChip).toBeTruthy();
   });
+
+  it('provides WCAG AA compliant hitSlop on swap button and quick corridor chips', () => {
+    const { getByTestId } = renderComponent();
+
+    const swapBtn = getByTestId('route-swap-button');
+    expect(swapBtn.props.hitSlop).toEqual({ top: 8, bottom: 8, left: 8, right: 8 });
+
+    const corridorChip = getByTestId('quick-corridor-paris-lyon');
+    expect(corridorChip.props.hitSlop).toEqual({ top: 4, bottom: 4, left: 4, right: 4 });
+  });
+
+  it('guarantees WCAG 2.1 AA text contrast tokens on waggle connector and feedback banner', () => {
+    const { getByText, getByTestId } = renderComponent();
+
+    // Waggle connector trail glyphs should use #92400E in light mode (>4.5:1 ratio)
+    const waggleGlyph = getByText('── 🐝 ~ ~ ──');
+    const flatWaggle = Array.isArray(waggleGlyph.props.style)
+      ? waggleGlyph.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : waggleGlyph.props.style;
+    expect(flatWaggle.color).toBe('#92400E');
+
+    // Trigger submission
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    // Template note should use high-contrast #166534 (>6:1 ratio)
+    const templateNote = getByText('Template mode: submission handled; feature redirection disabled.');
+    const flatNote = Array.isArray(templateNote.props.style)
+      ? templateNote.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : templateNote.props.style;
+    expect(flatNote.color).toBe('#166534');
+  });
 });
 
 describe('normalizeStation utility', () => {

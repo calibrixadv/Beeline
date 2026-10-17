@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { BaseCard } from '../src/components/BaseCard';
 
 describe('BaseCard Component', () => {
@@ -60,5 +60,41 @@ describe('BaseCard Component', () => {
       );
       expect(getByTestId(`card-${v}`)).toBeTruthy();
     });
+  });
+
+  it('handles onFocus and onBlur events and applies focus indicators overriding custom style border', () => {
+    const handleFocus = jest.fn();
+    const handleBlur = jest.fn();
+    const { getByRole } = render(
+      <BaseCard
+        onPress={() => {}}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        style={{ borderColor: '#CCCCCC' }}
+      >
+        <Text>Focusable Card</Text>
+      </BaseCard>
+    );
+
+    const card = getByRole('button');
+    const pressable = card.parent?.parent;
+    expect(pressable?.props.onFocus).toBeDefined();
+    expect(pressable?.props.onBlur).toBeDefined();
+
+    act(() => {
+      pressable?.props.onFocus();
+    });
+    expect(handleFocus).toHaveBeenCalledTimes(1);
+
+    // Verify focus style applies and overrides custom style borderColor
+    const flattened = Array.isArray(card.props.style)
+      ? card.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : card.props.style;
+    expect(flattened.borderColor).toBe('#F59E0B');
+
+    act(() => {
+      pressable?.props.onBlur();
+    });
+    expect(handleBlur).toHaveBeenCalledTimes(1);
   });
 });

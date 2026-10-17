@@ -9,6 +9,7 @@ import {
   TextStyle,
   AccessibilityRole,
   GestureResponderEvent,
+  Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -30,6 +31,9 @@ export interface RouteRewardBadgeProps {
   /** Hover callbacks */
   onHoverIn?: () => void;
   onHoverOut?: () => void;
+  /** Focus callbacks */
+  onFocus?: () => void;
+  onBlur?: () => void;
   /** Style overrides for container */
   style?: StyleProp<ViewStyle>;
   /** Style overrides for text label */
@@ -56,14 +60,18 @@ export const RouteRewardBadge: React.FC<RouteRewardBadgeProps> = ({
   onPress,
   onHoverIn,
   onHoverOut,
+  onFocus,
+  onBlur,
   style,
   textStyle,
   accessibilityRole,
   accessibilityLabel,
   testID,
 }) => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
 
   const displayLabel = label ?? DEFAULT_LABELS[type];
   const resolvedTestId = testID ?? `reward-badge-${type}`;
@@ -71,7 +79,9 @@ export const RouteRewardBadge: React.FC<RouteRewardBadgeProps> = ({
     !disabled &&
     (typeof onPress === 'function' ||
       typeof onHoverIn === 'function' ||
-      typeof onHoverOut === 'function');
+      typeof onHoverOut === 'function' ||
+      typeof onFocus === 'function' ||
+      typeof onBlur === 'function');
 
   const resolvedRole = accessibilityRole ?? (isInteractive ? 'button' : 'text');
   const resolvedA11yLabel = accessibilityLabel ?? `${displayLabel} Route Reward`;
@@ -90,8 +100,23 @@ export const RouteRewardBadge: React.FC<RouteRewardBadgeProps> = ({
     }
   };
 
+  const handleFocus = () => {
+    if (isInteractive) {
+      setIsFocused(true);
+      onFocus?.();
+    }
+  };
+
+  const handleBlur = () => {
+    if (isInteractive) {
+      setIsFocused(false);
+      onBlur?.();
+    }
+  };
+
   const isSmall = size === 'sm';
   const iconSize = isSmall ? 12 : 15;
+  const honeyAccentColor = isDark ? theme.colors.brandHoney : '#92400E';
 
   const renderIcon = () => {
     if (type === 'lightning') {
@@ -99,7 +124,7 @@ export const RouteRewardBadge: React.FC<RouteRewardBadgeProps> = ({
         <Ionicons
           name="flash"
           size={iconSize}
-          color={theme.colors.brandHoneyDark}
+          color={honeyAccentColor}
           testID="badge-icon-lightning"
         />
       );
@@ -109,7 +134,7 @@ export const RouteRewardBadge: React.FC<RouteRewardBadgeProps> = ({
         <MaterialCommunityIcons
           name="bee-flower"
           size={iconSize}
-          color={theme.colors.brandHoneyDark}
+          color={honeyAccentColor}
           testID="badge-icon-nectar"
         />
       );
@@ -136,7 +161,7 @@ export const RouteRewardBadge: React.FC<RouteRewardBadgeProps> = ({
         style={[
           styles.text,
           isSmall ? styles.textSm : styles.textMd,
-          { color: theme.colors.textCharcoal },
+          { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal },
           textStyle,
         ]}
       >
@@ -145,16 +170,34 @@ export const RouteRewardBadge: React.FC<RouteRewardBadgeProps> = ({
     </>
   );
 
+  const dynamicFocusStyle = isFocused && isInteractive
+    ? {
+        borderColor: theme.colors.brandHoney,
+        borderWidth: 1.5,
+        ...(Platform.OS === 'web'
+          ? ({
+              outlineColor: theme.colors.brandHoney,
+              outlineStyle: 'solid',
+              outlineWidth: 2,
+              outlineOffset: 1,
+              cursor: 'pointer',
+            } as any)
+          : {}),
+      }
+    : null;
+
   const containerStyles = [
     styles.pill,
     isSmall ? styles.pillSm : styles.pillMd,
     {
-      backgroundColor: theme.colors.surfaceWarm,
-      borderColor: theme.colors.honeyBorder,
+      backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
+      borderColor: isDark ? '#3E3204' : theme.colors.honeyBorder,
     },
-    isHovered && styles.hovered,
     disabled && styles.disabled,
     style,
+    isHovered && styles.hovered,
+    isPressed && styles.pressed,
+    dynamicFocusStyle,
   ];
 
   if (isInteractive) {
@@ -164,9 +207,15 @@ export const RouteRewardBadge: React.FC<RouteRewardBadgeProps> = ({
         accessibilityRole={resolvedRole}
         accessibilityLabel={resolvedA11yLabel}
         accessibilityState={disabled ? { disabled: true } : undefined}
+        focusable={true}
+        hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         onPress={onPress}
+        onPressIn={() => setIsPressed(true)}
+        onPressOut={() => setIsPressed(false)}
         onHoverIn={handleHoverIn}
         onHoverOut={handleHoverOut}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={containerStyles}
       >
         {badgeContent}
@@ -201,13 +250,15 @@ const styles = StyleSheet.create({
   },
   pillSm: {
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 12,
+    minHeight: 28,
   },
   pillMd: {
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 16,
+    minHeight: 32,
   },
   iconContainer: {
     marginRight: 6,
@@ -231,7 +282,11 @@ const styles = StyleSheet.create({
   },
   hovered: {
     opacity: 0.88,
-    transform: [{ scale: 1.02 }],
+    transform: [{ translateY: -1 }],
+  },
+  pressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }],
   },
   disabled: {
     opacity: 0.55,

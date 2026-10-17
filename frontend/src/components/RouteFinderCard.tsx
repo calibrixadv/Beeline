@@ -5,10 +5,11 @@ import {
   StyleSheet,
   StyleProp,
   ViewStyle,
-  TouchableOpacity,
+  Pressable,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme, ThemeTokens } from '../context/ThemeContext';
 import { BaseCard } from './BaseCard';
 import { BaseInput } from './BaseInput';
 import { BaseButton } from './BaseButton';
@@ -102,6 +103,72 @@ export const normalizeStation = (station: string): string =>
     .replace(/\s+/g, ' ')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+
+interface QuickCorridorChipProps {
+  from: string;
+  to: string;
+  testID: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+  isDark: boolean;
+  theme: ThemeTokens;
+}
+
+const QuickCorridorChip: React.FC<QuickCorridorChipProps> = ({
+  from,
+  to,
+  testID,
+  accessibilityLabel,
+  onPress,
+  isDark,
+  theme,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
+
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      focusable={true}
+      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+      onPress={onPress}
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
+      onHoverIn={() => setIsHovered(true)}
+      onHoverOut={() => setIsHovered(false)}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => setIsFocused(false)}
+      style={[
+        styles.corridorChip,
+        {
+          backgroundColor: isDark ? '#27272A' : '#FEF3C7',
+          borderColor: theme.colors.honeyBorder,
+        },
+        isHovered && styles.corridorChipHovered,
+        isPressed && styles.corridorChipPressed,
+        isFocused && [
+          styles.corridorChipFocused,
+          Platform.OS === 'web'
+            ? ({
+                outlineColor: theme.colors.brandHoney,
+                outlineStyle: 'solid',
+                outlineWidth: 2,
+                outlineOffset: 2,
+                cursor: 'pointer',
+              } as any)
+            : { borderColor: theme.colors.brandHoney, borderWidth: 1.5 },
+        ],
+      ]}
+    >
+      <Text style={[styles.corridorChipText, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+        {from} ➔ {to}
+      </Text>
+    </Pressable>
+  );
+};
 
 export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
   initialOrigin = 'București Nord',
@@ -207,13 +274,17 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           <Ionicons name="compass" size={13} color="#1C1917" />
           <Text style={styles.badgeText}>ROUTE SHORTHAND</Text>
         </View>
-        <Text style={[styles.modeIndicator, { color: theme.colors.textMuted }]}>
+        <Text style={[styles.modeIndicator, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
           Template Mode • No Redirect
         </Text>
       </View>
 
       {/* Title */}
-      <Text style={[styles.title, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+      <Text
+        accessibilityRole="header"
+        aria-level={2}
+        style={[styles.title, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+      >
         European Route Finder
       </Text>
       <Text style={[styles.subtitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
@@ -261,7 +332,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
               numberOfLines={1}
               style={[
                 styles.waggleTrailGlyph,
-                { color: isDark ? theme.colors.brandHoney : theme.colors.brandAmber },
+                { color: isDark ? theme.colors.brandHoney : '#92400E' },
               ]}
             >
               ── 🐝 ~ ~ ──
@@ -276,6 +347,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
             size="sm"
             variant="surface"
             onPress={handleSwap}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             testID="route-swap-button"
             accessibilityLabel="Swap origin and destination"
             style={[
@@ -292,7 +364,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
               numberOfLines={1}
               style={[
                 styles.waggleTrailGlyph,
-                { color: isDark ? theme.colors.brandHoney : theme.colors.brandAmber },
+                { color: isDark ? theme.colors.brandHoney : '#92400E' },
               ]}
             >
               ── ~ ~ 🐝 ──
@@ -331,7 +403,14 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
 
       {/* Transport Mode Filter Chips ("Trains", "Metro", "Busses") */}
       <View style={styles.modesSection}>
-        <Text style={[styles.modesLabel, { color: theme.colors.textMuted }]}>
+        <Text
+          accessibilityRole="header"
+          aria-level={3}
+          style={[
+            styles.modesLabel,
+            { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted },
+          ]}
+        >
           TRANSPORT MODE FILTERS
         </Text>
         <View style={styles.modesRow}>
@@ -409,8 +488,12 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
         >
           <View style={styles.feedbackHeader}>
             <View style={styles.feedbackTitleRow}>
-              <Ionicons name="sparkles" size={16} color={isDark ? theme.colors.brandHoney : '#D97706'} />
-              <Text style={[styles.feedbackTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+              <Ionicons name="sparkles" size={16} color={isDark ? theme.colors.brandHoney : '#92400E'} />
+              <Text
+                accessibilityRole="header"
+                aria-level={3}
+                style={[styles.feedbackTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}
+              >
                 Route Search Prepared
               </Text>
             </View>
@@ -427,7 +510,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
-            style={[styles.feedbackModes, { color: isDark ? '#A1A1AA' : '#6B7280' }]}
+            style={[styles.feedbackModes, { color: isDark ? '#D4D4D8' : '#374151' }]}
           >
             Active filters: {submittedQuery.modes.join(', ')}
           </Text>
@@ -454,7 +537,11 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                     {pillar.mascot ?? (pillar.mascotName ? (
                       <MascotBee name={pillar.mascotName} size="sm" animated={false} />
                     ) : null)}
-                    <Text style={[styles.trifectaCardTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}>
+                    <Text
+                      accessibilityRole="header"
+                      aria-level={4}
+                      style={[styles.trifectaCardTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}
+                    >
                       {pillar.title}
                     </Text>
                   </View>
@@ -467,7 +554,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                 <Text style={[styles.trifectaCardDesc, { color: isDark ? '#D4D4D8' : '#3F3F46' }]}>
                   {pillar.description}
                 </Text>
-                <Text style={[styles.trifectaCardMeta, { color: isDark ? '#A1A1AA' : '#71717A' }]}>
+                <Text style={[styles.trifectaCardMeta, { color: isDark ? '#D4D4D8' : '#4B5563' }]}>
                   {pillar.meta}
                 </Text>
               </BaseCard>
@@ -475,15 +562,15 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           </View>
 
           <View style={styles.templateNoteRow}>
-            <Ionicons name="information-circle-outline" size={13} color={isDark ? '#34D399' : '#059669'} />
-            <Text style={[styles.templateNoteText, { color: isDark ? '#34D399' : '#059669' }]}>
+            <Ionicons name="information-circle-outline" size={13} color={isDark ? '#34D399' : '#166534'} />
+            <Text style={[styles.templateNoteText, { color: isDark ? '#34D399' : '#166534' }]}>
               Template mode: submission handled; feature redirection disabled.
             </Text>
           </View>
 
           <Text
             testID="trifecta-shorthand-disclaimer"
-            style={[styles.disclaimerText, { color: isDark ? '#A1A1AA' : '#4B5563' }]}
+            style={[styles.disclaimerText, { color: isDark ? '#D4D4D8' : '#4B5563' }]}
           >
             Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.
           </Text>
@@ -512,51 +599,43 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
 
       {/* Quick Corridor Selection Shortcuts */}
       <View style={styles.corridorsRow}>
-        <Text style={[styles.corridorsLabel, { color: theme.colors.textMuted }]}>
+        <Text
+          accessibilityRole="header"
+          aria-level={3}
+          style={[
+            styles.corridorsLabel,
+            { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted },
+          ]}
+        >
           Popular corridors:
         </Text>
-        <TouchableOpacity
-          style={[
-            styles.corridorChip,
-            { backgroundColor: isDark ? '#27272A' : '#FEF3C7', borderColor: theme.colors.honeyBorder },
-          ]}
-          onPress={() => handleSelectCorridor('Paris', 'Lyon')}
-          accessibilityRole="button"
-          accessibilityLabel="Quick corridor Paris to Lyon"
+        <QuickCorridorChip
+          from="Paris"
+          to="Lyon"
           testID="quick-corridor-paris-lyon"
-        >
-          <Text style={[styles.corridorChipText, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
-            Paris ➔ Lyon
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.corridorChip,
-            { backgroundColor: isDark ? '#27272A' : '#FEF3C7', borderColor: theme.colors.honeyBorder },
-          ]}
-          onPress={() => handleSelectCorridor('London', 'Paris')}
-          accessibilityRole="button"
-          accessibilityLabel="Quick corridor London to Paris"
+          accessibilityLabel="Quick corridor Paris to Lyon"
+          onPress={() => handleSelectCorridor('Paris', 'Lyon')}
+          isDark={isDark}
+          theme={theme}
+        />
+        <QuickCorridorChip
+          from="London"
+          to="Paris"
           testID="quick-corridor-london-paris"
-        >
-          <Text style={[styles.corridorChipText, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
-            London ➔ Paris
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[
-            styles.corridorChip,
-            { backgroundColor: isDark ? '#27272A' : '#FEF3C7', borderColor: theme.colors.honeyBorder },
-          ]}
-          onPress={() => handleSelectCorridor('Milano', 'Roma')}
-          accessibilityRole="button"
-          accessibilityLabel="Quick corridor Milano to Roma"
+          accessibilityLabel="Quick corridor London to Paris"
+          onPress={() => handleSelectCorridor('London', 'Paris')}
+          isDark={isDark}
+          theme={theme}
+        />
+        <QuickCorridorChip
+          from="Milano"
+          to="Roma"
           testID="quick-corridor-milano-roma"
-        >
-          <Text style={[styles.corridorChipText, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
-            Milano ➔ Roma
-          </Text>
-        </TouchableOpacity>
+          accessibilityLabel="Quick corridor Milano to Roma"
+          onPress={() => handleSelectCorridor('Milano', 'Roma')}
+          isDark={isDark}
+          theme={theme}
+        />
       </View>
     </BaseCard>
   );
@@ -577,6 +656,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 8,
   },
   badgeContainer: {
@@ -627,6 +708,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+    minWidth: 10,
     overflow: 'hidden',
   },
   waggleDashedLine: {
@@ -668,6 +750,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    minHeight: 32,
+    justifyContent: 'center',
   },
   errorBox: {
     flexDirection: 'row',
@@ -779,10 +863,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   corridorChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
+    minHeight: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  corridorChipHovered: {
+    opacity: 0.9,
+    transform: [{ translateY: -1 }],
+  },
+  corridorChipPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.97 }],
+  },
+  corridorChipFocused: {
+    borderColor: '#F59E0B',
   },
   corridorChipText: {
     fontSize: 12,

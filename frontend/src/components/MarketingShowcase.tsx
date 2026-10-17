@@ -6,6 +6,7 @@ import {
   StyleProp,
   ViewStyle,
   Animated,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -162,7 +163,7 @@ export const WaggleFlightPath: React.FC<WaggleFlightPathProps> = ({
         <Text
           style={[
             styles.waggleTrail,
-            { color: isDark ? theme.colors.brandHoney : theme.colors.brandAmber },
+            { color: isDark ? theme.colors.brandHoney : '#92400E' },
           ]}
         >
           ~ ~
@@ -188,6 +189,8 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
   testID = 'marketing-showcase',
 }) => {
   const { theme, isDark } = useTheme();
+  const { width } = useWindowDimensions();
+  const isNarrow = width < 520;
 
   return (
     <View testID={testID} style={[styles.container, style]}>
@@ -218,7 +221,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
             <Text
               style={[
                 styles.heroBadgeText,
-                { color: isDark ? theme.colors.brandHoney : theme.colors.brandHoneyDark },
+                { color: isDark ? theme.colors.brandHoney : '#92400E' },
               ]}
             >
               Beeline High-Speed Transit
@@ -227,15 +230,19 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
         </View>
 
         <Text
+          accessibilityRole="header"
+          aria-level={3}
           style={[
             styles.heroPreTitle,
-            { color: isDark ? theme.colors.brandHoney : theme.colors.brandHoneyDark },
+            { color: isDark ? theme.colors.brandHoney : '#92400E' },
           ]}
         >
           Plan Your European Rail Journey
         </Text>
 
         <Text
+          accessibilityRole="header"
+          aria-level={2}
           style={[
             styles.heroTitle,
             { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal },
@@ -275,7 +282,11 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
       </BaseCard>
 
       {/* 2. Three Pillars Showcase: Curated Trifecta Mascots */}
-      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
+      <Text
+        accessibilityRole="header"
+        aria-level={2}
+        style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}
+      >
         Why Plan With Beeline?
       </Text>
       <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
@@ -303,20 +314,24 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                 <Text style={[styles.pillarMascotName, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
                   Barnaby the Scout
                 </Text>
-                <Text style={[styles.pillarMascotRole, { color: theme.colors.brandHoneyDark }]}>
+                <Text style={[styles.pillarMascotRole, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
                   Direct High-Speed
                 </Text>
               </View>
             </View>
             <BaseBadge label="SPEED" variant="warning" size="sm" />
           </View>
-          <Text style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+          <Text
+            accessibilityRole="header"
+            aria-level={3}
+            style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+          >
             300+ km/h High-Speed
           </Text>
           <Text style={[styles.pillarDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
             City-center to city-center corridors engineered for maximum velocity with Barnaby. Direct Romanian & European rail connections up to 4x faster than air.
           </Text>
-          <Text style={[styles.pillarMetric, { color: theme.colors.brandHoneyDark }]}>
+          <Text style={[styles.pillarMetric, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
             ⚡ Instant timetable routing
           </Text>
         </BaseCard>
@@ -341,20 +356,24 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                 <Text style={[styles.pillarMascotName, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
                   Honey the Hive Saver
                 </Text>
-                <Text style={[styles.pillarMascotRole, { color: theme.colors.brandHoneyDark }]}>
+                <Text style={[styles.pillarMascotRole, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
                   15+ European Countries
                 </Text>
               </View>
             </View>
             <BaseBadge label="VALUE" variant="info" size="sm" />
           </View>
-          <Text style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+          <Text
+            accessibilityRole="header"
+            aria-level={3}
+            style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+          >
             Smart €10/Hour Value Engine
           </Text>
           <Text style={[styles.pillarDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
             Honey evaluates every journey against the smart €10/hour rule (~50 lei/hr). Faster trains outrank buses unless road savings beat the threshold.
           </Text>
-          <Text style={[styles.pillarMetric, { color: isDark ? theme.colors.brandHoney : theme.colors.brandHoneyDark }]}>
+          <Text style={[styles.pillarMetric, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
             💰 Honey's Nectar Jar savings
           </Text>
         </BaseCard>
@@ -379,20 +398,24 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                 <Text style={[styles.pillarMascotName, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
                   Bumble the Buffer Guard
                 </Text>
-                <Text style={[styles.pillarMascotRole, { color: theme.colors.success }]}>
+                <Text style={[styles.pillarMascotRole, { color: isDark ? theme.colors.success : '#15803D' }]}>
                   Multi-Modal & Live Sync
                 </Text>
               </View>
             </View>
             <BaseBadge label="RELIABILITY" variant="success" size="sm" />
           </View>
-          <Text style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+          <Text
+            accessibilityRole="header"
+            aria-level={3}
+            style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+          >
             Romanian Transfer Shield (25–35 min buffers)
           </Text>
           <Text style={[styles.pillarDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
             Bumble safeguards your trip with generous 25–35 min buffers at key Romanian junctions to safeguard against CFR delay vulnerabilities.
           </Text>
-          <Text style={[styles.pillarMetric, { color: theme.colors.success }]}>
+          <Text style={[styles.pillarMetric, { color: isDark ? theme.colors.success : '#15803D' }]}>
             🛡️ Bumble's safe transfer shield guarantee
           </Text>
         </BaseCard>
@@ -413,7 +436,11 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#EFF6FF' }]}>
             <Ionicons name="flash" size={20} color={isDark ? theme.colors.brandYellow : '#2563EB'} />
           </View>
-          <Text style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+          <Text
+            accessibilityRole="header"
+            aria-level={4}
+            style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+          >
             ⚡ High-Speed & Direct Romanian Corridors
           </Text>
           <Text style={[styles.featureDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
@@ -434,7 +461,11 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#FEF3C7' }]}>
             <Ionicons name="cash-outline" size={20} color={isDark ? theme.colors.brandYellow : '#B45309'} />
           </View>
-          <Text style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+          <Text
+            accessibilityRole="header"
+            aria-level={4}
+            style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+          >
             💰 Smart €10/Hour Value Engine
           </Text>
           <Text style={[styles.featureDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
@@ -455,7 +486,11 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#EFF6FF' }]}>
             <Ionicons name="shield-checkmark" size={20} color={isDark ? '#60A5FA' : '#2563EB'} />
           </View>
-          <Text style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+          <Text
+            accessibilityRole="header"
+            aria-level={4}
+            style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+          >
             🛡️ Romanian Transfer Shield (25–35 min buffers)
           </Text>
           <Text style={[styles.featureDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
@@ -476,7 +511,11 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#DCFCE7' }]}>
             <Ionicons name="leaf" size={20} color={isDark ? '#34D399' : '#166534'} />
           </View>
-          <Text style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+          <Text
+            accessibilityRole="header"
+            aria-level={4}
+            style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+          >
             🌿 Eco CO₂ Savings over DN1 and regional flights
           </Text>
           <Text style={[styles.featureDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
@@ -498,37 +537,41 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           },
         ]}
       >
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricNumber, { color: theme.colors.brandHoney }]}>300+</Text>
-          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textMuted : theme.colors.textCharcoalMuted }]}>
+        <View style={[styles.metricItem, isNarrow && styles.metricItemNarrow]}>
+          <Text style={[styles.metricNumber, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>300+</Text>
+          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
             km/h Speed
           </Text>
         </View>
-        <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricNumber, { color: theme.colors.brandHoney }]}>15+</Text>
-          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textMuted : theme.colors.textCharcoalMuted }]}>
+        {!isNarrow && <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />}
+        <View style={[styles.metricItem, isNarrow && styles.metricItemNarrow]}>
+          <Text style={[styles.metricNumber, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>15+</Text>
+          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
             EU Countries
           </Text>
         </View>
-        <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricNumber, { color: theme.colors.brandHoney }]}>10k+</Text>
-          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textMuted : theme.colors.textCharcoalMuted }]}>
+        {!isNarrow && <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />}
+        <View style={[styles.metricItem, isNarrow && styles.metricItemNarrow]}>
+          <Text style={[styles.metricNumber, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>10k+</Text>
+          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
             Stations
           </Text>
         </View>
-        <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />
-        <View style={styles.metricItem}>
-          <Text style={[styles.metricNumber, { color: theme.colors.brandHoney }]}>85%</Text>
-          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textMuted : theme.colors.textCharcoalMuted }]}>
+        {!isNarrow && <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />}
+        <View style={[styles.metricItem, isNarrow && styles.metricItemNarrow]}>
+          <Text style={[styles.metricNumber, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>85%</Text>
+          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
             Less CO₂
           </Text>
         </View>
       </BaseCard>
 
       {/* 5. Featured High-Speed Corridors & Waggle Flight Paths */}
-      <Text style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}>
+      <Text
+        accessibilityRole="header"
+        aria-level={2}
+        style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}
+      >
         Featured High-Speed Corridors
       </Text>
       <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
@@ -542,7 +585,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           padding="md"
           onPress={onCorridorPress ? () => onCorridorPress(corridor) : undefined}
           accessibilityRole={onCorridorPress ? 'button' : undefined}
-          accessibilityLabel={`Explore route from ${corridor.from} to ${corridor.to}`}
+          accessibilityLabel={`Explore route from ${corridor.from} to ${corridor.to}, ${corridor.operator}, ${corridor.duration}, ${corridor.price}`}
           testID={getCorridorTestId(corridor.from, corridor.to)}
           style={[
             styles.corridorCard,
@@ -553,11 +596,17 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           ]}
         >
           <View style={styles.corridorRoute}>
-            <Text style={[styles.corridorCity, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+            <Text
+              numberOfLines={1}
+              style={[styles.corridorCity, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+            >
               {corridor.from}
             </Text>
             <WaggleFlightPath testID="waggle-flight-path" animated={animated} />
-            <Text style={[styles.corridorCity, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+            <Text
+              numberOfLines={1}
+              style={[styles.corridorCity, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+            >
               {corridor.to}
             </Text>
           </View>
@@ -581,8 +630,12 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
         ]}
       >
         <View style={styles.trustHeader}>
-          <Ionicons name="shield-checkmark" size={18} color={theme.colors.brandHoney} />
-          <Text style={[styles.trustTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+          <Ionicons name="shield-checkmark" size={18} color={isDark ? theme.colors.brandHoney : '#92400E'} />
+          <Text
+            accessibilityRole="header"
+            aria-level={3}
+            style={[styles.trustTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+          >
             Unified European Rail Booking with Beeline
           </Text>
         </View>
@@ -661,11 +714,15 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   pillarsGrid: {
-    flexDirection: 'column',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 12,
     marginBottom: 20,
   },
   pillarCard: {
+    flexBasis: 280,
+    flexGrow: 1,
+    minWidth: 220,
     borderRadius: 14,
     borderWidth: 1,
   },
@@ -712,8 +769,9 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   featureItem: {
-    flexBasis: '47%',
+    flexBasis: 260,
     flexGrow: 1,
+    minWidth: 200,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
@@ -738,14 +796,24 @@ const styles = StyleSheet.create({
   metricsCard: {
     borderRadius: 14,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-around',
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    gap: 8,
   },
   metricItem: {
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    minWidth: 64,
+    flexGrow: 1,
+  },
+  metricItemNarrow: {
+    flexBasis: '44%',
   },
   metricNumber: {
     fontSize: 18,
@@ -768,12 +836,15 @@ const styles = StyleSheet.create({
   corridorRoute: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 6,
   },
   corridorCity: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
+    flexShrink: 1,
   },
   corridorMeta: {
     fontSize: 12,
@@ -783,9 +854,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingHorizontal: 4,
+    flexShrink: 1,
   },
   waggleLine: {
     width: 12,
+    minWidth: 4,
+    flexShrink: 1,
     height: 2,
     borderRadius: 1,
   },

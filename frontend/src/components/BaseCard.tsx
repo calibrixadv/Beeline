@@ -7,6 +7,7 @@ import {
   ViewStyle,
   AccessibilityRole,
   GestureResponderEvent,
+  Platform,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -23,6 +24,9 @@ export interface BaseCardProps {
   /** Hover callbacks (web/pointer) */
   onHoverIn?: () => void;
   onHoverOut?: () => void;
+  /** Focus callbacks (keyboard/web) */
+  onFocus?: () => void;
+  onBlur?: () => void;
   /** Container style overrides */
   style?: StyleProp<ViewStyle>;
   /** Card body content */
@@ -39,6 +43,8 @@ export const BaseCard: React.FC<BaseCardProps> = ({
   onPress,
   onHoverIn,
   onHoverOut,
+  onFocus,
+  onBlur,
   style,
   children,
   accessibilityRole,
@@ -46,10 +52,15 @@ export const BaseCard: React.FC<BaseCardProps> = ({
   testID,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
+
   const isInteractive =
     typeof onPress === 'function' ||
     typeof onHoverIn === 'function' ||
-    typeof onHoverOut === 'function';
+    typeof onHoverOut === 'function' ||
+    typeof onFocus === 'function' ||
+    typeof onBlur === 'function';
 
   const handleHoverIn = () => {
     if (isInteractive) {
@@ -62,6 +73,20 @@ export const BaseCard: React.FC<BaseCardProps> = ({
     if (isInteractive) {
       setIsHovered(false);
       onHoverOut?.();
+    }
+  };
+
+  const handleFocus = () => {
+    if (isInteractive) {
+      setIsFocused(true);
+      onFocus?.();
+    }
+  };
+
+  const handleBlur = () => {
+    if (isInteractive) {
+      setIsFocused(false);
+      onBlur?.();
     }
   };
 
@@ -91,12 +116,29 @@ export const BaseCard: React.FC<BaseCardProps> = ({
   }, [variant, theme, isDark]);
 
   const dynamicHoverStyle = isHovered && isInteractive
-    ? { borderColor: theme.colors.borderFocus }
+    ? { borderColor: theme.colors.brandHoney }
+    : null;
+
+  const dynamicFocusStyle = isFocused && isInteractive
+    ? {
+        borderColor: theme.colors.brandHoney,
+        borderWidth: 2,
+        ...(Platform.OS === 'web'
+          ? ({
+              outlineColor: theme.colors.brandHoney,
+              outlineStyle: 'solid',
+              outlineWidth: 2,
+              outlineOffset: 2,
+              cursor: 'pointer',
+            } as any)
+          : {}),
+      }
     : null;
 
   const variantStyle = styles[`variant_${variant}`];
   const paddingStyle = styles[`padding_${padding}`];
   const hoverStyle = isHovered && isInteractive ? styles.hoverState : null;
+  const pressedStyle = isPressed && isInteractive ? styles.pressedState : null;
 
   if (isInteractive) {
     return (
@@ -104,17 +146,24 @@ export const BaseCard: React.FC<BaseCardProps> = ({
         testID={testID}
         accessibilityRole={accessibilityRole ?? 'button'}
         accessibilityLabel={accessibilityLabel}
+        focusable={true}
         onPress={onPress}
+        onPressIn={() => setIsPressed(true)}
+        onPressOut={() => setIsPressed(false)}
         onHoverIn={handleHoverIn}
         onHoverOut={handleHoverOut}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={[
           styles.base,
           variantStyle,
           dynamicCardStyle,
           paddingStyle,
+          style,
           hoverStyle,
           dynamicHoverStyle,
-          style,
+          pressedStyle,
+          dynamicFocusStyle,
         ]}
       >
         {children}
@@ -140,8 +189,12 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   hoverState: {
-    borderColor: '#3B82F6',
     shadowOpacity: 0.12,
+    transform: [{ translateY: -2 }],
+  },
+  pressedState: {
+    opacity: 0.88,
+    transform: [{ scale: 0.99 }],
   },
 
   // Paddings

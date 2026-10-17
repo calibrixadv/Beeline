@@ -368,6 +368,7 @@ const styles = StyleSheet.create({
   container: {
     position: 'relative',
     width: '100%',
+    overflow: 'hidden',
   },
   watermarkContainer: {
     position: 'absolute',

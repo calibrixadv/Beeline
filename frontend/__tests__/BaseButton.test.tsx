@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, act } from '@testing-library/react-native';
 import { BaseButton } from '../src/components/BaseButton';
 
 describe('BaseButton Component', () => {
@@ -94,5 +94,42 @@ describe('BaseButton Component', () => {
       const { getByText } = render(<BaseButton title={`Size ${s}`} size={s} />);
       expect(getByText(`Size ${s}`)).toBeTruthy();
     });
+  });
+
+  it('supports hitSlop prop and handles focus/blur events', () => {
+    const handleFocus = jest.fn();
+    const handleBlur = jest.fn();
+    const { getByRole } = render(
+      <BaseButton
+        title="HitSlop Button"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onPress={() => {}}
+      />
+    );
+
+    const btn = getByRole('button');
+    expect(btn.props.hitSlop).toEqual({ top: 8, bottom: 8, left: 8, right: 8 });
+    expect(btn.props.focusable).toBe(true);
+
+    const pressable = btn.parent?.parent;
+    expect(pressable?.props.onFocus).toBeDefined();
+    expect(pressable?.props.onBlur).toBeDefined();
+
+    act(() => {
+      pressable?.props.onFocus();
+    });
+    expect(handleFocus).toHaveBeenCalledTimes(1);
+
+    const flattened = Array.isArray(btn.props.style)
+      ? btn.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : btn.props.style;
+    expect(flattened.borderColor).toBe('#F59E0B');
+
+    act(() => {
+      pressable?.props.onBlur();
+    });
+    expect(handleBlur).toHaveBeenCalledTimes(1);
   });
 });
