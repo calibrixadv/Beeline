@@ -19,6 +19,8 @@ import * as ScreenLoaderStories from '../src/components/stories/ScreenLoader.sto
 import * as NavbarStories from '../src/components/stories/Navbar.stories';
 import * as RouteFinderCardStories from '../src/components/stories/RouteFinderCard.stories';
 import * as MarketingShowcaseStories from '../src/components/stories/MarketingShowcase.stories';
+import * as MascotBeeStories from '../src/components/stories/MascotBee.stories';
+import * as RouteRewardBadgeStories from '../src/components/stories/RouteRewardBadge.stories';
 
 export const stories = [
   { name: 'BaseButton', module: BaseButtonStories },
@@ -42,5 +44,8 @@ export const stories = [
   { name: 'Navbar', module: NavbarStories },
   { name: 'RouteFinderCard', module: RouteFinderCardStories },
   { name: 'MarketingShowcase', module: MarketingShowcaseStories },
+  { name: 'MascotBee', module: MascotBeeStories },
+  { name: 'RouteRewardBadge', module: RouteRewardBadgeStories },
 ];
+
 

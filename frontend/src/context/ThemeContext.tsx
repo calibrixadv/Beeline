@@ -62,6 +62,17 @@ export interface ThemeColors {
   dangerBg: string;
   info: string;
   infoBg: string;
+
+  // Cozy Honey tokens
+  brandHoney: string;
+  brandHoneyLight: string;
+  brandHoneyDark: string;
+  brandAmber: string;
+  brandCream: string;
+  surfaceWarm: string;
+  honeyBorder: string;
+  textCharcoal: string;
+  textCharcoalMuted: string;
 }
 
 export interface ThemeTokens {
@@ -135,6 +146,17 @@ export const lightColors: ThemeColors = {
   dangerBg: '#FEE2E2',
   info: '#3B82F6',
   infoBg: '#DBEAFE',
+
+  // Cozy Honey tokens
+  brandHoney: '#F59E0B',
+  brandHoneyLight: '#FEF3C7',
+  brandHoneyDark: '#D97706',
+  brandAmber: '#D97706',
+  brandCream: '#FFFDF7',
+  surfaceWarm: '#FFFBEB',
+  honeyBorder: '#FDE68A',
+  textCharcoal: '#1C1917',
+  textCharcoalMuted: '#57534E',
 };
 
 export const darkColors: ThemeColors = {
@@ -189,6 +211,17 @@ export const darkColors: ThemeColors = {
   dangerBg: '#7F1D1D',
   info: '#60A5FA',
   infoBg: '#1E3A8A',
+
+  // Cozy Honey tokens
+  brandHoney: '#F59E0B',
+  brandHoneyLight: '#3E3204',
+  brandHoneyDark: '#D97706',
+  brandAmber: '#D97706',
+  brandCream: '#121110',
+  surfaceWarm: '#1C1917',
+  honeyBorder: '#3E3204',
+  textCharcoal: '#FFFFFF',
+  textCharcoalMuted: '#A1A1AA',
 };
 
 const commonSpacing = {

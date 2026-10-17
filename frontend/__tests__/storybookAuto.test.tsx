@@ -27,6 +27,8 @@ describe('Storybook Automated UI Component Testing Library', () => {
     expect(storyNames).toContain('Navbar');
     expect(storyNames).toContain('RouteFinderCard');
     expect(storyNames).toContain('MarketingShowcase');
+    expect(storyNames).toContain('MascotBee');
+    expect(storyNames).toContain('RouteRewardBadge');
   });
 
 
@@ -73,6 +75,8 @@ describe('Storybook Automated UI Component Testing Library', () => {
           'BaseBadge',
           'StatusBadge',
           'BaseCard',
+          'MascotBee',
+          'RouteRewardBadge',
         ].includes(storyGroup.name);
 
         if (isPressable) {
@@ -101,6 +105,8 @@ describe('Storybook Automated UI Component Testing Library', () => {
           'BaseCard',
           'BaseInput',
           'SearchInput',
+          'MascotBee',
+          'RouteRewardBadge',
         ].includes(storyGroup.name);
 
         if (isHoverable) {

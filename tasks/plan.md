@@ -1,59 +1,72 @@
-# Implementation Plan: Adapt HomePage Template to "The Curated Trifecta" (Romania Hub)
+# Implementation Plan: "The Cozy Hive" Frontpage & Honey Theme Redesign
 
 ## Overview
-Adapt the Beeline HomePage template to align with the refined specification in `docs/ideas/route-results-trifecta.md`. The HomePage serves as a fast shorthand entry point centered on Romania as the primary transit hub (CFR Călători, private operators, Metrorex, regional buses) and previews the upcoming "Curated Trifecta" results experience (Fastest, Best Value with €10/hr rule, Most Reliable with extended transfer buffers). In accordance with strict constraints, the full routing feature and actual screen redirect remain **disabled**, operating strictly as an interactive shorthand preview with validation.
+Implement "The Cozy Hive" redesign specified in `docs/ideas/cozy-bee-homepage-redesign.md`. The redesign shifts the Beeline visual language to a warm, dominant honey/amber palette, introduces the Trifecta Mascot Squad (Barnaby the Scout, Honey the Hive Saver, Bumble the Buffer Guard) with companion route reward badges, adds a zero-jank animated ambient background (floating golden pollen and subtle honeycomb watermarks), and brings animated "Waggle Flight Paths" to Romanian transit corridors. All existing scopes—the shorthand 2-point route search, diacritic-insensitive duplicate validation, zero page redirection, zero map, and Romanian transit corridor focus—are strictly preserved.
 
 ---
 
 ## Architecture Decisions
-- **Romania as Primary Hub**: Default origin/destination points and featured corridors pivot from generic Western Europe to major Romanian routes (`București Nord`, `Brașov`, `Constanța`, `Cluj-Napoca`, `Timișoara Nord`, and international gateway to `Vienna`).
-- **Shorthand "Curated Trifecta" Preview**: Upon route search submission in `RouteFinderCard`, instead of redirecting or showing a generic success box, the card presents a lightweight preview of the 3 Trifecta pillars that will be computed upon redirect (⚡ Fastest, 💰 Best Value, 🛡️ Most Reliable with 25-35m buffer warning).
-- **Strict Invariant Maintenance**:
+- **Zero-Dependency Vector Mascot System**: Implement `MascotBee` and `RouteRewardBadge` using composite React Native primitives (`View`, `Text`, `StyleSheet`) and `@expo/vector-icons` (`MaterialCommunityIcons`, `Ionicons`). This avoids heavy external binary libraries (e.g. Lottie, full SVG parsers) and guarantees 100% compatibility across Expo Web, iOS, Android, Jest, and Storybook without native build linking risks.
+- **Global "Cozy Honey" Theme Extension**: Enhance `ThemeContext.tsx` with dedicated honey/amber tokens (`brandHoney`, `brandAmber`, `brandCream`, `surfaceWarm`, `textCharcoal`) while maintaining full backwards compatibility with existing `brandYellow`, `primary`, and `surface` tokens.
+- **Performant Ambient Background (`CozyHoneyBackground`)**: Render floating golden pollen particles using lightweight CSS keyframe animations on Web and `Animated.timing` loops on native platforms, isolated in an absolute layer with `pointerEvents="none"` to prevent layout recalculation or interference with interactive cards. Respect `prefers-reduced-motion`.
+- **Mascots on Home ➔ Reward Badges on Routes**: On the HomePage, full companion mascots explain the value props. Downstream (prepared in `RouteRewardBadge`), mascots transform into sleek reward badges (Lightning Wing, Nectar Jar, Honey Shield) stamped on qualifying route results.
+- **Strict Invariants Preserved**:
   - ZERO map on HomePage.
-  - ZERO screen redirection on route search submission (`onSubmitRoute` remains an inert callback for future navigation).
-  - 100% theme adaptability (Beeline Yellow / White / Dark Mode).
-  - All components remain testable with Storybook CSF 3 stories and Jest automated tests.
+  - ZERO page redirection on `RouteFinderCard` submission.
+  - 100% test suite pass rate (Jest unit tests + Storybook automated story tests).
 
 ---
 
 ## Task List
 
-### Phase 1: Foundation & Shorthand Adaptation
-- [x] **Task 1**: Update `RouteFinderCard` default stations to Romanian hub (`București Nord` ⇄ `Brașov`) and configure quick corridor helper presets.
-- [x] **Task 2**: Enhance `RouteFinderCard` non-redirecting submission feedback to display the "Curated Trifecta" preview pillars (Fastest, Best Value €10/hr rule, Most Reliable buffer alert).
+### Phase 1: Foundation (Theme Tokens & Mascot Primitives)
+- [x] **Task 1**: Extend `ThemeContext.tsx` with "Cozy Honey" tokens for Light and Dark modes with full backwards compatibility and updated theme unit tests.
+- [x] **Task 2**: Build `MascotBee.tsx` (Barnaby, Honey, Bumble) and `RouteRewardBadge.tsx` with micro-motions, Storybook CSF 3 stories, and unit tests.
 
-### Checkpoint 1: Shorthand Validation
-- [x] Unit tests pass in `RouteFinderCard.test.tsx`
-- [x] Storybook stories updated with Romanian corridor fixtures
-- [x] Zero redirection executed on submission
+### Checkpoint 1: Foundation Verification
+- [x] All theme and mascot unit tests pass
+- [x] Storybook renders all mascot and badge variants cleanly
+- [x] Zero TypeScript compiler errors under strict mode
 
-### Phase 2: Marketing Showcase & HomePage Integration
-- [x] **Task 3**: Update `MarketingShowcase` featured corridors to Romanian domestic & international gateways (București-Brașov, București-Constanța, București-Cluj, București-Vienna) and highlight the Curated Trifecta value proposition.
-- [x] **Task 4**: Update `frontend/app/index.tsx` corridor handlers and labels to match the Romanian hub presets.
+### Phase 2: Ambient Atmosphere & Marketing Showcase Redesign
+- [ ] **Task 3**: Build `CozyHoneyBackground.tsx` with floating golden pollen particles, subtle honeycomb watermark, and reduced-motion support.
+- [ ] **Task 4**: Redesign `MarketingShowcase.tsx` with honey-soaked hero banner, Waggle flight paths for Romanian corridors, and the Mascot Trifecta showcase cards.
 
-### Checkpoint 2: Full Screen Verification
-- [x] `indexRoute.test.tsx` and `MarketingShowcase.test.tsx` pass cleanly
-- [x] Visual harmony across Light and Dark themes
+### Checkpoint 2: Showcase & Motion Verification
+- [ ] Ambient background renders at 60fps without layout reflows
+- [ ] Corridor cards display animated waggle paths and respond to interaction
+- [ ] `MarketingShowcase.test.tsx` and stories pass 100%
 
-### Phase 3: Documentation & Storybook Sync
-- [x] **Task 5**: Update `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` reflecting the adapted HomePage template and Curated Trifecta preview.
+### Phase 3: Route Finder Alignment & Home Screen Integration
+- [ ] **Task 5**: Enhance `RouteFinderCard.tsx` with warm honey borders, waggle flight connector between origin/destination, and embed the Trifecta mascot companions in the submission preview banner (preserving zero-redirect).
+- [ ] **Task 6**: Integrate `CozyHoneyBackground` into `HomeScreen` (`frontend/app/index.tsx`) and harmonize layout, transitions, and dark mode toggling.
 
-### Checkpoint 3: Complete & Clean Build
-- [x] `npm test`: All test suites pass (30 suites, 337 tests)
-- [x] `npm run type-check`: 0 TypeScript compiler errors under strict mode
-- [x] `npm run test:storybook`: All component story tests pass (156 tests)
-- [x] Ready for review
+### Checkpoint 3: Full Integration Verification
+- [ ] Zero redirection executed on route finder submission
+- [ ] Zero map elements present on the screen
+- [ ] Light and Dark modes render with seamless visual warmth
+
+### Phase 4: Master Test Suite, Storybook & Documentation Sync
+- [ ] **Task 7**: Synchronize all Storybook CSF 3 interaction stories and Jest test suites (`storybookAuto.test.tsx`, `indexRoute.test.tsx`).
+- [ ] **Task 8**: Update `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` with the new component catalog and verification metrics.
+
+### Checkpoint 4: Complete & Clean Build
+- [ ] `npm test`: 100% passing test suites
+- [ ] `npm run test:storybook`: 100% passing automated story interaction tests
+- [ ] `npm run type-check`: 0 TypeScript compiler errors
+- [ ] `AI_LOG.md` remains strictly untouched
 
 ---
 
 ## Risks and Mitigations
 | Risk | Impact | Mitigation |
 | :--- | :---: | :--- |
-| **Accidental Redirection**: Downstream agents might connect a `router.push('/trains')` on submit | High | Retain explicit unit tests asserting that `router.push` is NOT called when `onSubmitRoute` triggers |
-| **Stale Submission Feedback**: Changing inputs while viewing Trifecta preview | Med | Existing state invalidation (`setSubmittedQuery(null)`) automatically clears preview on text/swap/filter changes |
-| **Diacritic Inconsistencies**: Romanian station names (e.g., `București` vs `Bucuresti`) | Med | Standardize on Unicode NFC normalization and diacritic-insensitive equality |
+| **Animation Performance / Janks** | High | Use pure CSS keyframes on web and native driver on mobile; keep particle count low (8–10 dots); set `pointerEvents="none"` |
+| **WCAG Contrast on Dominant Yellow** | High | Enforce roasted charcoal (`#1C1917`) on warm yellow/honey surfaces; never place white text on yellow |
+| **Test Suite Regressions** | Med | Extend `ThemeColors` rather than replacing existing keys; maintain existing testIDs on key interactive elements |
+| **Accidental Route Redirection** | High | Retain explicit unit tests in `RouteFinderCard.test.tsx` and `indexRoute.test.tsx` asserting `router.push` is NOT called |
 
 ---
 
 ## Open Questions
-- None. Requirements, domain trade-offs (€10/hr threshold), network risk profiles (extended buffers for Romania), and non-redirecting shorthand constraints are fully specified.
+- None. Requirements, mascot personalities, palette tokens, and motion strategies are fully specified in `docs/ideas/cozy-bee-homepage-redesign.md`.

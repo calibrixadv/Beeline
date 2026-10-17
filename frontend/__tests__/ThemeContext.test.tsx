@@ -15,6 +15,15 @@ const ThemeConsumer: React.FC = () => {
       <Text testID="theme-isDark">{String(isDark)}</Text>
       <Text testID="theme-brandYellow">{theme.colors.brandYellow}</Text>
       <Text testID="theme-bg">{theme.colors.background}</Text>
+      <Text testID="theme-brandHoney">{theme.colors.brandHoney}</Text>
+      <Text testID="theme-brandHoneyLight">{theme.colors.brandHoneyLight}</Text>
+      <Text testID="theme-brandHoneyDark">{theme.colors.brandHoneyDark}</Text>
+      <Text testID="theme-brandAmber">{theme.colors.brandAmber}</Text>
+      <Text testID="theme-brandCream">{theme.colors.brandCream}</Text>
+      <Text testID="theme-surfaceWarm">{theme.colors.surfaceWarm}</Text>
+      <Text testID="theme-honeyBorder">{theme.colors.honeyBorder}</Text>
+      <Text testID="theme-textCharcoal">{theme.colors.textCharcoal}</Text>
+      <Text testID="theme-textCharcoalMuted">{theme.colors.textCharcoalMuted}</Text>
       <TouchableOpacity testID="toggle-btn" onPress={toggleTheme}>
         <Text>Toggle</Text>
       </TouchableOpacity>
@@ -40,6 +49,17 @@ describe('ThemeContext and ThemeProvider', () => {
     expect(getByTestId('theme-isDark').props.children).toBe('false');
     expect(getByTestId('theme-brandYellow').props.children).toBe('#FFC700');
     expect(getByTestId('theme-bg').props.children).toBe('#FFFFFF');
+
+    // Cozy Honey tokens in light mode
+    expect(getByTestId('theme-brandHoney').props.children).toBe('#F59E0B');
+    expect(getByTestId('theme-brandHoneyLight').props.children).toBe('#FEF3C7');
+    expect(getByTestId('theme-brandHoneyDark').props.children).toBe('#D97706');
+    expect(getByTestId('theme-brandAmber').props.children).toBe('#D97706');
+    expect(getByTestId('theme-brandCream').props.children).toBe('#FFFDF7');
+    expect(getByTestId('theme-surfaceWarm').props.children).toBe('#FFFBEB');
+    expect(getByTestId('theme-honeyBorder').props.children).toBe('#FDE68A');
+    expect(getByTestId('theme-textCharcoal').props.children).toBe('#1C1917');
+    expect(getByTestId('theme-textCharcoalMuted').props.children).toBe('#57534E');
   });
 
   it('toggles mode from light to dark cleanly', () => {
@@ -56,8 +76,20 @@ describe('ThemeContext and ThemeProvider', () => {
     expect(getByTestId('theme-isDark').props.children).toBe('true');
     expect(getByTestId('theme-bg').props.children).toBe('#09090B');
 
+    // Cozy Honey tokens in dark mode
+    expect(getByTestId('theme-brandHoney').props.children).toBe('#F59E0B');
+    expect(getByTestId('theme-brandHoneyLight').props.children).toBe('#3E3204');
+    expect(getByTestId('theme-brandHoneyDark').props.children).toBe('#D97706');
+    expect(getByTestId('theme-brandAmber').props.children).toBe('#D97706');
+    expect(getByTestId('theme-brandCream').props.children).toBe('#121110');
+    expect(getByTestId('theme-surfaceWarm').props.children).toBe('#1C1917');
+    expect(getByTestId('theme-honeyBorder').props.children).toBe('#3E3204');
+    expect(getByTestId('theme-textCharcoal').props.children).toBe('#FFFFFF');
+    expect(getByTestId('theme-textCharcoalMuted').props.children).toBe('#A1A1AA');
+
     fireEvent.press(toggleBtn);
     expect(getByTestId('theme-mode').props.children).toBe('light');
+    expect(getByTestId('theme-brandCream').props.children).toBe('#FFFDF7');
   });
 
   it('allows setting explicit mode', () => {
