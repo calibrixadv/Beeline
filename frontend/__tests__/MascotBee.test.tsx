@@ -6,8 +6,8 @@ import { RouteRewardBadge } from '../src/components/RouteRewardBadge';
 import { ThemeProvider } from '../src/context/ThemeContext';
 
 describe('MascotBee component', () => {
-  it('renders Barnaby the Scout Bee persona with lightning accessory and focused expression', () => {
-    const { getByTestId } = render(
+  it('renders Barnaby the Scout Bee persona with aviator goggles, supersonic booster accessory, and focused expression', () => {
+    const { getByTestId, queryByTestId } = render(
       <ThemeProvider>
         <MascotBee name="barnaby" />
       </ThemeProvider>
@@ -18,14 +18,22 @@ describe('MascotBee component', () => {
     expect(mascot.props.accessibilityRole).toBe('image');
     expect(getByTestId('mascot-wing-left')).toBeTruthy();
     expect(getByTestId('mascot-wing-right')).toBeTruthy();
+    expect(getByTestId('mascot-goggles-barnaby')).toBeTruthy();
     expect(getByTestId('mascot-accessory-barnaby')).toBeTruthy();
     expect(getByTestId('mascot-mouth')).toBeTruthy();
     expect(getByTestId('mascot-mouth').props.children).toBe('▾');
     expect(mascot.props.accessibilityLabel).toContain('Barnaby the Scout Bee');
+
+    // Does not have Honey's or Bumble's persona gear
+    expect(queryByTestId('mascot-glasses-honey')).toBeNull();
+    expect(queryByTestId('mascot-accessory-honey')).toBeNull();
+    expect(queryByTestId('mascot-coin-honey')).toBeNull();
+    expect(queryByTestId('mascot-accessory-bumble')).toBeNull();
+    expect(queryByTestId('mascot-scarf-bumble')).toBeNull();
   });
 
-  it('renders Honey the Hive Saver persona with nectar jar accessory, coin sparkle, and sweet smile', () => {
-    const { getByTestId } = render(
+  it('renders Honey the Hive Saver persona with banker glasses, gold coin with nectar sparkle, and sweet smile', () => {
+    const { getByTestId, queryByTestId } = render(
       <ThemeProvider>
         <MascotBee name="honey" />
       </ThemeProvider>
@@ -33,15 +41,22 @@ describe('MascotBee component', () => {
 
     const mascot = getByTestId('mascot-bee-honey');
     expect(mascot).toBeTruthy();
+    expect(getByTestId('mascot-glasses-honey')).toBeTruthy();
     expect(getByTestId('mascot-accessory-honey')).toBeTruthy();
     expect(getByTestId('mascot-coin-honey')).toBeTruthy();
     expect(getByTestId('mascot-mouth')).toBeTruthy();
     expect(getByTestId('mascot-mouth').props.children).toBe('◡');
     expect(mascot.props.accessibilityLabel).toContain('Honey the Hive Saver');
+
+    // Does not have Barnaby's or Bumble's persona gear
+    expect(queryByTestId('mascot-goggles-barnaby')).toBeNull();
+    expect(queryByTestId('mascot-accessory-barnaby')).toBeNull();
+    expect(queryByTestId('mascot-accessory-bumble')).toBeNull();
+    expect(queryByTestId('mascot-scarf-bumble')).toBeNull();
   });
 
-  it('renders Bumble the Buffer Guard persona with cozy scarf, shield accessory, and relaxed smile', () => {
-    const { getByTestId } = render(
+  it('renders Bumble the Buffer Guard persona with cozy scarf, prominent guard shield, and relaxed smile', () => {
+    const { getByTestId, queryByTestId } = render(
       <ThemeProvider>
         <MascotBee name="bumble" />
       </ThemeProvider>
@@ -54,9 +69,16 @@ describe('MascotBee component', () => {
     expect(getByTestId('mascot-mouth')).toBeTruthy();
     expect(getByTestId('mascot-mouth').props.children).toBe('‿');
     expect(mascot.props.accessibilityLabel).toContain('Bumble the Buffer Guard');
+
+    // Does not have Barnaby's or Honey's persona gear
+    expect(queryByTestId('mascot-goggles-barnaby')).toBeNull();
+    expect(queryByTestId('mascot-accessory-barnaby')).toBeNull();
+    expect(queryByTestId('mascot-glasses-honey')).toBeNull();
+    expect(queryByTestId('mascot-accessory-honey')).toBeNull();
+    expect(queryByTestId('mascot-coin-honey')).toBeNull();
   });
 
-  it('renders all size variants cleanly (sm, md, lg, xl)', () => {
+  it('renders all size variants cleanly (sm, md, lg, xl) with distinct visual elements scaled', () => {
     const { getByTestId } = render(
       <ThemeProvider>
         <MascotBee name="barnaby" size="sm" testID="bee-sm" />
@@ -129,18 +151,61 @@ describe('MascotBee component', () => {
     expect(handleHoverOut).toHaveBeenCalledTimes(1);
   });
 
-  it('renders harmoniously under dark mode theme tokens', () => {
+  it('renders harmoniously under dark mode theme tokens for all personas', () => {
     const { getByTestId } = render(
       <ThemeProvider initialMode="dark">
         <MascotBee name="bumble" testID="dark-bumble" />
+        <MascotBee name="barnaby" testID="dark-barnaby" />
+        <MascotBee name="honey" testID="dark-honey" />
       </ThemeProvider>
     );
 
-    const mascot = getByTestId('dark-bumble');
-    expect(mascot).toBeTruthy();
-    expect(getByTestId('mascot-wing-left')).toBeTruthy();
+    expect(getByTestId('dark-bumble')).toBeTruthy();
     expect(getByTestId('mascot-accessory-bumble')).toBeTruthy();
+    expect(getByTestId('mascot-scarf-bumble')).toBeTruthy();
+
+    expect(getByTestId('dark-barnaby')).toBeTruthy();
+    expect(getByTestId('mascot-goggles-barnaby')).toBeTruthy();
+    expect(getByTestId('mascot-accessory-barnaby')).toBeTruthy();
+
+    expect(getByTestId('dark-honey')).toBeTruthy();
+    expect(getByTestId('mascot-glasses-honey')).toBeTruthy();
+    expect(getByTestId('mascot-accessory-honey')).toBeTruthy();
+    expect(getByTestId('mascot-coin-honey')).toBeTruthy();
   });
+
+  it.each(['sm', 'md', 'lg', 'xl'] as const)(
+    'preserves unmistakable persona visual gear at %s size',
+    (size) => {
+      const { getByTestId: getBarnaby } = render(
+        <ThemeProvider>
+          <MascotBee name="barnaby" size={size} testID={`barnaby-${size}`} />
+        </ThemeProvider>
+      );
+      expect(getBarnaby(`barnaby-${size}`)).toBeTruthy();
+      expect(getBarnaby('mascot-goggles-barnaby')).toBeTruthy();
+      expect(getBarnaby('mascot-accessory-barnaby')).toBeTruthy();
+
+      const { getByTestId: getHoney } = render(
+        <ThemeProvider>
+          <MascotBee name="honey" size={size} testID={`honey-${size}`} />
+        </ThemeProvider>
+      );
+      expect(getHoney(`honey-${size}`)).toBeTruthy();
+      expect(getHoney('mascot-glasses-honey')).toBeTruthy();
+      expect(getHoney('mascot-accessory-honey')).toBeTruthy();
+      expect(getHoney('mascot-coin-honey')).toBeTruthy();
+
+      const { getByTestId: getBumble } = render(
+        <ThemeProvider>
+          <MascotBee name="bumble" size={size} testID={`bumble-${size}`} />
+        </ThemeProvider>
+      );
+      expect(getBumble(`bumble-${size}`)).toBeTruthy();
+      expect(getBumble('mascot-scarf-bumble')).toBeTruthy();
+      expect(getBumble('mascot-accessory-bumble')).toBeTruthy();
+    }
+  );
 });
 
 describe('RouteRewardBadge component', () => {

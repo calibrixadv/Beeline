@@ -10,7 +10,7 @@ import {
   GestureResponderEvent,
   Pressable,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
 export type MascotName = 'barnaby' | 'honey' | 'bumble';
@@ -131,101 +131,206 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
   const stingerH = 3 * s;
   const stingerW = 4 * s;
   const stripeH = 3 * s;
-  const accessorySize = Math.max(10 * s, 10);
-  const iconSize = Math.max(Math.round(8 * s), 7);
 
   const renderAccessory = () => {
     if (name === 'barnaby') {
+      const boosterW = Math.max(Math.round(14 * s), 8.5);
+      const boosterH = Math.max(Math.round(17.5 * s), 10.5);
+      const rocketIconSize = Math.max(Math.round(7.5 * s), 5);
       return (
         <View
           testID="mascot-accessory-barnaby"
           style={[
-            styles.accessoryContainer,
+            styles.boosterContainer,
             {
-              width: accessorySize,
-              height: accessorySize,
-              borderRadius: accessorySize / 2,
-              backgroundColor: theme.colors.brandHoneyLight,
-              borderColor: theme.colors.brandHoneyDark,
-              borderWidth: Math.max(1 * s, 1),
-              bottom: 0,
-              right: 0,
+              width: boosterW,
+              height: boosterH,
+              bottom: sizePx * 0.04,
+              right: sizePx * 0.02,
             },
           ]}
         >
-          <Ionicons name="flash" size={iconSize} color={theme.colors.brandHoneyDark} />
+          {/* Rocket booster capsule body */}
+          <View
+            style={[
+              styles.boosterBody,
+              {
+                width: boosterW,
+                height: boosterH * 0.7,
+                borderRadius: boosterW * 0.35,
+                backgroundColor: '#EA580C',
+                borderColor: '#FED7AA',
+                borderWidth: Math.max(1 * s, 1),
+              },
+            ]}
+          >
+            <Ionicons
+              name="rocket"
+              size={rocketIconSize}
+              color="#FFFFFF"
+            />
+          </View>
+          {/* Exhaust thruster flame plume & speed dash */}
+          <View
+            style={[
+              styles.thrusterFlame,
+              {
+                width: boosterW * 0.65,
+                height: Math.max(4.5 * s, 3),
+                borderBottomLeftRadius: 2.5 * s,
+                borderBottomRightRadius: 2.5 * s,
+                backgroundColor: '#F97316',
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.innerFlame,
+                {
+                  width: boosterW * 0.35,
+                  height: Math.max(2.5 * s, 1.8),
+                  borderBottomLeftRadius: 1.5 * s,
+                  borderBottomRightRadius: 1.5 * s,
+                  backgroundColor: '#FDE047',
+                },
+              ]}
+            />
+          </View>
         </View>
       );
     }
 
     if (name === 'honey') {
+      const coinSize = Math.max(Math.round(15 * s), 9);
+      const currencyFontSize = Math.max(Math.round(7.5 * s), 5);
+      const sparkleBoxSize = Math.max(4.8 * s, 3.5);
+      const sparkleIconSize = Math.max(Math.round(3.5 * s), 2.5);
       return (
         <View
           testID="mascot-accessory-honey"
           style={[
-            styles.accessoryContainer,
+            styles.moneyContainer,
             {
-              width: accessorySize,
-              height: accessorySize,
-              borderRadius: accessorySize / 2,
-              backgroundColor: theme.colors.brandHoneyLight,
-              borderColor: theme.colors.brandHoney,
-              borderWidth: Math.max(1 * s, 1),
-              bottom: 0,
-              right: 0,
+              width: coinSize,
+              height: coinSize,
+              bottom: sizePx * 0.04,
+              right: sizePx * 0.02,
             },
           ]}
         >
-          <MaterialCommunityIcons name="bee-flower" size={iconSize} color={theme.colors.brandHoneyDark} />
+          {/* Big shiny gold coin */}
           <View
             testID="mascot-coin-honey"
             style={[
-              styles.coinSparkle,
+              styles.goldCoin,
               {
-                width: Math.max(7 * s, 7),
-                height: Math.max(7 * s, 7),
-                borderRadius: Math.max(3.5 * s, 3.5),
-                backgroundColor: theme.colors.brandHoney,
-                borderColor: theme.colors.brandHoneyDark,
-                borderWidth: Math.max(0.5 * s, 0.5),
+                width: coinSize,
+                height: coinSize,
+                borderRadius: coinSize / 2,
+                backgroundColor: '#F59E0B',
+                borderColor: '#B45309',
+                borderWidth: Math.max(1.2 * s, 1),
               },
             ]}
           >
-            <Text
+            {/* Inner coin rim for embossed look */}
+            <View
               style={[
-                styles.coinText,
+                styles.coinInnerRim,
                 {
-                  fontSize: Math.max(4.5 * s, 4),
-                  lineHeight: Math.max(5.5 * s, 5),
+                  width: coinSize * 0.76,
+                  height: coinSize * 0.76,
+                  borderRadius: (coinSize * 0.76) / 2,
+                  borderColor: '#FCD34D',
+                  borderWidth: Math.max(0.6 * s, 0.5),
                 },
               ]}
             >
-              ¢
-            </Text>
+              {/* Currency symbol (€) without overriding lineHeight for natural flex centering */}
+              <Text
+                style={[
+                  styles.currencySymbol,
+                  {
+                    fontSize: currencyFontSize,
+                  },
+                ]}
+              >
+                €
+              </Text>
+            </View>
+
+            {/* Nectar sparkle at top-right corner of coin */}
+            <View
+              style={[
+                styles.nectarSparkle,
+                {
+                  width: sparkleBoxSize,
+                  height: sparkleBoxSize,
+                  borderRadius: sparkleBoxSize / 2,
+                  top: -1.2 * s,
+                  right: -1.2 * s,
+                  backgroundColor: '#FEF08A',
+                  borderColor: '#F59E0B',
+                  borderWidth: Math.max(0.5 * s, 0.5),
+                },
+              ]}
+            >
+              <Ionicons
+                name="sparkles"
+                size={sparkleIconSize}
+                color="#B45309"
+              />
+            </View>
           </View>
         </View>
       );
     }
 
     if (name === 'bumble') {
+      const shieldW = Math.max(Math.round(15 * s), 9);
+      const shieldH = Math.max(Math.round(18.5 * s), 11.5);
+      const shieldIconSize = Math.max(Math.round(8 * s), 5);
       return (
         <View
           testID="mascot-accessory-bumble"
           style={[
-            styles.accessoryContainer,
+            styles.shieldContainer,
             {
-              width: accessorySize,
-              height: accessorySize,
-              borderRadius: accessorySize / 2,
+              width: shieldW,
+              height: shieldH,
+              borderTopLeftRadius: shieldW * 0.25,
+              borderTopRightRadius: shieldW * 0.25,
+              borderBottomLeftRadius: shieldW * 0.5,
+              borderBottomRightRadius: shieldW * 0.5,
               backgroundColor: theme.colors.successBg,
               borderColor: theme.colors.success,
-              borderWidth: Math.max(1 * s, 1),
-              bottom: 0,
-              right: 0,
+              borderWidth: Math.max(1.5 * s, 1.2),
+              bottom: sizePx * 0.04,
+              right: sizePx * 0.02,
             },
           ]}
         >
-          <Ionicons name="shield-checkmark" size={iconSize} color={theme.colors.success} />
+          {/* Inner heraldic shield crest */}
+          <View
+            style={[
+              styles.shieldCrest,
+              {
+                width: shieldW * 0.74,
+                height: shieldH * 0.72,
+                borderTopLeftRadius: shieldW * 0.18,
+                borderTopRightRadius: shieldW * 0.18,
+                borderBottomLeftRadius: shieldW * 0.42,
+                borderBottomRightRadius: shieldW * 0.42,
+                backgroundColor: theme.colors.success,
+              },
+            ]}
+          >
+            <Ionicons
+              name="shield-checkmark"
+              size={shieldIconSize}
+              color="#FFFFFF"
+            />
+          </View>
         </View>
       );
     }
@@ -360,50 +465,228 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
             },
           ]}
         >
-          {/* Eyes with reflections */}
-          <View style={[styles.eyesRow, { width: headSize * 0.72 }]}>
-            <View
-              style={[
-                styles.eye,
-                {
-                  width: eyeSize,
-                  height: eyeSize,
-                  borderRadius: eyeSize / 2,
-                },
-              ]}
-            >
+          {/* Eyes with reflections & Persona Head Gear (Goggles / Glasses) */}
+          <View style={[styles.eyesArea, { marginTop: Math.max(Math.round(2 * s), 1.2) }]}>
+            <View style={[styles.eyesRow, { width: headSize * 0.72 }]}>
               <View
                 style={[
-                  styles.eyeGlint,
+                  styles.eye,
                   {
-                    width: eyeGlint,
-                    height: eyeGlint,
-                    borderRadius: eyeGlint / 2,
+                    width: eyeSize,
+                    height: eyeSize,
+                    borderRadius: eyeSize / 2,
                   },
                 ]}
-              />
-            </View>
-            <View
-              style={[
-                styles.eye,
-                {
-                  width: eyeSize,
-                  height: eyeSize,
-                  borderRadius: eyeSize / 2,
-                },
-              ]}
-            >
+              >
+                <View
+                  style={[
+                    styles.eyeGlint,
+                    {
+                      width: eyeGlint,
+                      height: eyeGlint,
+                      borderRadius: eyeGlint / 2,
+                    },
+                  ]}
+                />
+              </View>
               <View
                 style={[
-                  styles.eyeGlint,
+                  styles.eye,
                   {
-                    width: eyeGlint,
-                    height: eyeGlint,
-                    borderRadius: eyeGlint / 2,
+                    width: eyeSize,
+                    height: eyeSize,
+                    borderRadius: eyeSize / 2,
                   },
                 ]}
-              />
+              >
+                <View
+                  style={[
+                    styles.eyeGlint,
+                    {
+                      width: eyeGlint,
+                      height: eyeGlint,
+                      borderRadius: eyeGlint / 2,
+                    },
+                  ]}
+                />
+              </View>
             </View>
+
+            {/* Sleek aviator/racer goggles for Barnaby */}
+            {name === 'barnaby' && (
+              <View
+                testID="mascot-goggles-barnaby"
+                pointerEvents="none"
+                style={[
+                  styles.gogglesOverlay,
+                  {
+                    width: headSize * 1.15,
+                    height: eyeSize * 1.6,
+                  },
+                ]}
+              >
+                {/* Elastic racer strap across head */}
+                <View
+                  style={[
+                    styles.goggleStrap,
+                    {
+                      width: headSize * 1.18,
+                      height: Math.max(1.8 * s, 1.2),
+                      borderRadius: 1 * s,
+                      backgroundColor: '#0F172A',
+                    },
+                  ]}
+                />
+                {/* Aerodynamic racer goggles frame */}
+                <View
+                  style={[
+                    styles.goggleLensesRow,
+                    {
+                      width: headSize * 0.72 + eyeSize * 0.45,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.goggleLens,
+                      {
+                        width: eyeSize * 1.45,
+                        height: eyeSize * 1.45,
+                        borderRadius: (eyeSize * 1.45) / 2,
+                        borderColor: '#0284C7',
+                        borderWidth: Math.max(1 * s, 1),
+                        backgroundColor: 'rgba(56, 189, 248, 0.45)',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={{
+                        width: eyeGlint * 1.3,
+                        height: eyeGlint * 1.3,
+                        borderRadius: (eyeGlint * 1.3) / 2,
+                        backgroundColor: '#FFFFFF',
+                      }}
+                    />
+                  </View>
+                  <View
+                    style={{
+                      width: 2.2 * s,
+                      height: Math.max(1.2 * s, 1),
+                      backgroundColor: '#0F172A',
+                    }}
+                  />
+                  <View
+                    style={[
+                      styles.goggleLens,
+                      {
+                        width: eyeSize * 1.45,
+                        height: eyeSize * 1.45,
+                        borderRadius: (eyeSize * 1.45) / 2,
+                        borderColor: '#0284C7',
+                        borderWidth: Math.max(1 * s, 1),
+                        backgroundColor: 'rgba(56, 189, 248, 0.45)',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={{
+                        width: eyeGlint * 1.3,
+                        height: eyeGlint * 1.3,
+                        borderRadius: (eyeGlint * 1.3) / 2,
+                        backgroundColor: '#FFFFFF',
+                      }}
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Cute round scholar/banker glasses for Honey */}
+            {name === 'honey' && (
+              <View
+                testID="mascot-glasses-honey"
+                pointerEvents="none"
+                style={[
+                  styles.glassesOverlay,
+                  {
+                    width: headSize * 1.15,
+                    height: eyeSize * 1.6,
+                  },
+                ]}
+              >
+                {/* Thin bronze wire frame temples behind spectacles */}
+                <View
+                  style={[
+                    styles.glassesTemple,
+                    {
+                      width: headSize * 1.15,
+                      height: Math.max(1 * s, 0.8),
+                      backgroundColor: '#78350F',
+                    },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.glassesRow,
+                    {
+                      width: headSize * 0.72 + eyeSize * 0.45,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.glassesRim,
+                      {
+                        width: eyeSize * 1.45,
+                        height: eyeSize * 1.45,
+                        borderRadius: (eyeSize * 1.45) / 2,
+                        borderWidth: Math.max(1 * s, 1),
+                        borderColor: '#78350F',
+                        backgroundColor: 'rgba(254, 243, 199, 0.25)',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={{
+                        width: eyeGlint,
+                        height: eyeGlint,
+                        borderRadius: eyeGlint / 2,
+                        backgroundColor: '#FFFFFF',
+                      }}
+                    />
+                  </View>
+                  <View
+                    style={{
+                      width: 2.2 * s,
+                      height: Math.max(1 * s, 0.8),
+                      backgroundColor: '#78350F',
+                    }}
+                  />
+                  <View
+                    style={[
+                      styles.glassesRim,
+                      {
+                        width: eyeSize * 1.45,
+                        height: eyeSize * 1.45,
+                        borderRadius: (eyeSize * 1.45) / 2,
+                        borderWidth: Math.max(1 * s, 1),
+                        borderColor: '#78350F',
+                        backgroundColor: 'rgba(254, 243, 199, 0.25)',
+                      },
+                    ]}
+                  >
+                    <View
+                      style={{
+                        width: eyeGlint,
+                        height: eyeGlint,
+                        borderRadius: eyeGlint / 2,
+                        backgroundColor: '#FFFFFF',
+                      }}
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Rosy Cheeks & Expressive Mouth */}
@@ -451,13 +734,27 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
           style={[
             styles.scarf,
             {
-              width: headSize * 1.15,
-              height: Math.max(3.5 * s, 3),
+              width: headSize * 1.2,
+              height: Math.max(3.8 * s, 3.2),
               borderRadius: 2 * s,
               top: sizePx * 0.38,
             },
           ]}
-        />
+        >
+          {/* Cozy hanging scarf knot/tail */}
+          <View
+            style={[
+              styles.scarfTail,
+              {
+                width: Math.max(3.5 * s, 3),
+                height: Math.max(5 * s, 4),
+                borderRadius: 1.5 * s,
+                left: headSize * 0.15,
+                top: Math.max(2 * s, 1.5),
+              },
+            ]}
+          />
+        </View>
       )}
 
       {/* Torso with Honey & Charcoal Stripes */}
@@ -606,7 +903,6 @@ const styles = StyleSheet.create({
   eyesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 2,
   },
   eye: {
     backgroundColor: '#1C1917',
@@ -630,6 +926,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#0284C7',
     zIndex: 4,
     alignSelf: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 1,
+  },
+  scarfTail: {
+    position: 'absolute',
+    backgroundColor: '#0369A1',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,
@@ -659,38 +963,122 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderTopColor: '#1C1917',
   },
-  accessoryContainer: {
-    position: 'absolute',
-    zIndex: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 3,
-  },
   mouth: {
     color: '#1C1917',
     fontWeight: '700',
     textAlign: 'center',
     marginTop: -1,
   },
-  coinSparkle: {
+  eyesArea: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  gogglesOverlay: {
     position: 'absolute',
-    top: -3,
-    right: -3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 6,
+  },
+  goggleStrap: {
+    position: 'absolute',
+  },
+  goggleLensesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 2,
+  },
+  goggleLens: {
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    padding: 0.5,
+  },
+  glassesOverlay: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 6,
+  },
+  glassesTemple: {
+    position: 'absolute',
+  },
+  glassesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  glassesRim: {
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    padding: 0.5,
+  },
+  shieldContainer: {
+    position: 'absolute',
+    zIndex: 5,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
+    shadowOpacity: 0.18,
+    shadowRadius: 2,
+    elevation: 3,
   },
-  coinText: {
-    color: '#1C1917',
+  shieldCrest: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  boosterContainer: {
+    position: 'absolute',
+    zIndex: 5,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  boosterBody: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thrusterFlame: {
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginTop: -0.5,
+  },
+  innerFlame: {
+    marginTop: 0,
+  },
+  moneyContainer: {
+    position: 'absolute',
+    zIndex: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.18,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  goldCoin: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  coinInnerRim: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  currencySymbol: {
+    color: '#78350F',
     fontWeight: '900',
     textAlign: 'center',
+  },
+  nectarSparkle: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
