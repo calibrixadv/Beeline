@@ -661,3 +661,44 @@ When asked to create a new component `NewWidget`:
    - Verify `storybookAuto.test.tsx` passes automatically.
 5. **Update This Document**:
    - Add the new component to the inheritance tree, catalog, and instructions in this Markdown file.
+
+---
+
+## 7. FastAPI Backend & Enterprise Authentication System
+
+### Architecture & Service Layer
+- **Root Directory**: [`backend/`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/)
+- **Application Entrypoint**: [`backend/app/main.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/main.py)
+- **Core Configuration**: [`backend/app/core/config.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/config.py)
+- **Database Engine**: [`backend/app/core/database.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/database.py) (Async SQLAlchemy + aiosqlite / PostgreSQL)
+- **Security & Cryptography**: [`backend/app/core/security.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/security.py) (Native bcrypt, JWT HS256, SHA-256 token hashing)
+
+### Authentication & MFA Features
+- **Sign Up & Login**: `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`
+- **Guest Account Lifecycle**:
+  - `POST /api/v1/auth/guest`: 1-tap ephemeral session provisioning.
+  - `POST /api/v1/auth/guest/convert`: Seamlessly upgrades guest to permanent user, retaining all saved itineraries and trip history.
+- **Session-Based Interface**:
+  - `GET /api/v1/users/me/sessions`: Lists active sessions with device/IP info.
+  - `DELETE /api/v1/users/me/sessions/{session_id}`: Revokes a specific remote device session.
+  - `DELETE /api/v1/users/me/sessions`: Revokes all sessions except current.
+- **JWT Refresh Token Rotation**:
+  - `POST /api/v1/auth/refresh`: Immediately invalidates the consumed refresh token and issues a new access/refresh pair (strict replay attack defense).
+- **Multi-Factor Authentication (MFA)**:
+  - `POST /api/v1/auth/mfa/setup`: Provisions RFC 6238 TOTP base32 secret, `otpauth://` URI, base64 QR code image, and 8 single-use emergency backup recovery codes.
+  - `POST /api/v1/auth/mfa/verify`: Activates MFA upon valid 6-digit verification code.
+  - `POST /api/v1/auth/mfa/challenge`: Authenticates login challenge using TOTP code or burns a single-use backup recovery code.
+  - `POST /api/v1/auth/mfa/disable`: Disables MFA with password verification.
+- **Password Reset**:
+  - `POST /api/v1/auth/forgot-password` & `POST /api/v1/auth/reset-password`: Resets password and revokes all active sessions.
+
+### Standard Route Contract Facilitation
+- **Route Planning**: `POST /api/v1/routes/plan` delivering the complete [`TransitRoutePlan`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/schemas/route_plan.py) contract with GeoJSON `LineString` geometries, multi-modal legs (e.g. *Galați Micro 19 ➔ București Piața Unirii*), and the **Romanian Transfer Shield** risk scoring engine.
+- **Schedules**: `GET /api/v1/schedules` serving Metrorex, Transurb Galați, STB, CFR Călători, Astra Trans Carpatic, and TFC.
+- **Trip Wallet**: `POST /api/v1/routes/saved`, `GET /api/v1/routes/saved`, `DELETE /api/v1/routes/saved/{id}`.
+
+### Frontend Integration Layer
+- **Client**: [`frontend/src/services/apiClient.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/services/apiClient.ts) (Automated Bearer token injection, storage management, and automatic 401 refresh interceptor).
+- **Context**: [`frontend/src/context/AuthContext.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/context/AuthContext.tsx) (Global user, guest status, login, signup, guest conversion, and MFA modal challenge state).
+- **Types**: [`frontend/src/types/auth.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/types/auth.ts).
+

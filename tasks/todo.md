@@ -330,3 +330,29 @@
 - [x] `npm run type-check`: 0 TypeScript compiler errors
 - [x] `AI_LOG.md`: Strictly untouched
 
+
+
+---
+
+## Task 14: FastAPI Backend with Route Contract & Enterprise Auth System
+**Description:** Build a production-grade FastAPI backend for Beeline/VoyageRail that facilitates the standardized `TransitRoutePlan` contract of the main feature and provides a comprehensive authentication & session system (Sign Up, Login, Guest accounts, Guest-to-Permanent conversion, JWT rotation, Session management, TOTP MFA, Password Reset).
+**Acceptance criteria:**
+- [x] Create `backend/requirements.txt` and core configuration in `backend/app/core/config.py`.
+- [x] Configure async SQLAlchemy database layer in `backend/app/core/database.py` with auto-table initialization (`init_db`).
+- [x] Implement native bcrypt hashing and JWT token management with rotating refresh tokens in `backend/app/core/security.py`.
+- [x] Implement RFC 6238 TOTP MFA service with base64 QR code and 8 emergency backup codes in `backend/app/services/mfa_service.py`.
+- [x] Implement SQLAlchemy models (`User`, `UserSession`, `MFACredential`, `PasswordResetToken`, `SavedRoute`) in `backend/app/models/`.
+- [x] Implement Pydantic v2 schemas strictly mirroring the TypeScript `TransitRoutePlan` and auth schemas in `backend/app/schemas/`.
+- [x] Implement `routing_service.py` with multi-modal door-to-door journey calculation (*Galați Micro 19 ➔ București Piața Unirii*) and Romanian Transfer Shield risk scoring engine.
+- [x] Implement Romanian transit schedule service in `backend/app/services/schedule_service.py`.
+- [x] Implement FastAPI endpoints for Auth, MFA, Users/Sessions, Route Planning, and Schedules in `backend/app/api/v1/`.
+- [x] Implement frontend integration client `apiClient.ts` with auto-refresh interceptor and `AuthContext.tsx`.
+- [x] Build pytest automated test suite with 18 comprehensive tests across auth, MFA, password reset, routes, and schedules.
+- [x] Update documentation in `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `pytest backend/tests/ -v`: 18 tests passed (100%)
+- [x] `npm test`: 40 suites, 508 tests passed (100%)
+- [x] `npm run test:storybook`: 207 story interaction tests passed (100%)
+- [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] `npm run build:web`: Export succeeded
+- [x] `AI_LOG.md`: Strictly untouched

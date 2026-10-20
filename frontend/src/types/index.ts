@@ -9,3 +9,4 @@ export type {
 } from './schedule';
 export * from './train';
 export * from './trip';
+export * from './auth';
