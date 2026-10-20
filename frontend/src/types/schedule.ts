@@ -1,4 +1,6 @@
-export type TransitMode = 'METRO' | 'TRAM' | 'BUS' | 'TRAIN';
+import { TransitMode } from './routePlan';
+
+export { TransitMode };
 export type ScheduleSection = 'URBAN' | 'TRAIN';
 
 export interface TransitProvider {

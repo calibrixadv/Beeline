@@ -240,6 +240,24 @@
 
 ---
 
+## Task 13: Standardized Transit Route & Multi-Modal Itinerary Contract
+**Description:** Establish a reusable, future-proof JSON and TypeScript contract (`TransitRoutePlan`) with mandatory coordinates (GeoJSON LineString compliant), entity naming hierarchies, transportation modes, multi-factor risk scores (Romanian Transfer Shield), multi-carrier fares, and carbon benchmarks.
+**Acceptance criteria:**
+- [x] Create `frontend/src/types/routePlan.ts` with root contract `TransitRoutePlan`, `TransitLeg`, `LegNames`, `LegCoordinates`, `RouteRiskAnalysis`, `EcoBenchmark`, and `RouteFareSummary`.
+- [x] Create `frontend/src/types/index.ts` consolidating and re-exporting all type modules cleanly.
+- [x] Create `frontend/src/services/riskScoreCalculator.ts` implementing the Romanian Transfer Shield risk engine.
+- [x] Create `frontend/src/data/sampleRoutePlans.ts` providing canonical fixtures for multi-modal travel (`Micro 19 Galați ➔ Piața Unirii București`) and direct rail corridors (`București Nord ➔ Gara Brașov`).
+- [x] Add unit tests in `riskScoreCalculator.test.ts` and `sampleRoutePlans.test.ts`.
+- [x] Update `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `npm test`: 38 suites, 495 tests passed (100%)
+- [x] `npm run test:storybook`: 206 story tests passed
+- [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] `AI_LOG.md`: Strictly untouched
+
+
+---
+
 ## Task 10: Streamline Marketing Showcase & Remove Invented Behaviour on HomeScreen
 **Description:** Remove redundant feature grids, fabricated metrics, fake aggregator claims, and fake timetable loading transitions; rewrite hero and mascot pillars with clean, authentic copy.
 **Acceptance criteria:**
@@ -294,3 +312,21 @@
 - [x] `npm run type-check`: 0 errors
 - [x] `npm run build:web`: Export succeeded
 - [x] `AI_LOG.md`: Strictly untouched
+
+---
+
+## Task 13: Standardized Transit Route & Multi-Modal Itinerary Contract
+**Description:** Establish a reusable, future-proof JSON and TypeScript contract (`TransitRoutePlan`) with mandatory coordinates (GeoJSON LineString compliant), entity naming hierarchies, transportation modes, multi-factor risk scores (Romanian Transfer Shield), multi-carrier fares, and carbon benchmarks.
+**Acceptance criteria:**
+- [x] Create `frontend/src/types/routePlan.ts` with root contract `TransitRoutePlan`, `TransitLeg`, `LegNames`, `LegCoordinates`, `RouteRiskAnalysis`, `EcoBenchmark`, and `RouteFareSummary`.
+- [x] Create `frontend/src/types/index.ts` consolidating and re-exporting all type modules cleanly.
+- [x] Create `frontend/src/services/riskScoreCalculator.ts` implementing the Romanian Transfer Shield risk engine.
+- [x] Create `frontend/src/data/sampleRoutePlans.ts` providing canonical fixtures for multi-modal travel (`Micro 19 Galați ➔ Piața Unirii București`) and direct rail corridors (`București Nord ➔ Gara Brașov`).
+- [x] Add unit tests in `riskScoreCalculator.test.ts` and `sampleRoutePlans.test.ts`.
+- [x] Update `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `npm test`: 38 suites, 495 tests passed (100%)
+- [x] `npm run test:storybook`: 206 story tests passed
+- [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] `AI_LOG.md`: Strictly untouched
+

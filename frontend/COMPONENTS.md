@@ -625,7 +625,24 @@ npm run build:web
 
 ---
 
-## 5. Guide: Creating and Extending Components for Future Agents
+## 5. Standardized Data & Multi-Modal Itinerary Contract
+
+### Standard Contract Architecture
+- **Location**: [`frontend/src/types/routePlan.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/types/routePlan.ts)
+- **Primary Contract**: `TransitRoutePlan`
+- **Core Entities**:
+  - `TransitLeg`: Sequential multi-modal journey legs with mandatory `coords` (GeoJSON `LineString` compatible), `names`, `transportType`, `timings`, and `risk`.
+  - `RouteRiskAnalysis` & `LegRiskProfile`: Punctuality, buffer adequacy, hazard factors, and connection risk score.
+  - `RouteFareSummary`: Aggregated multi-carrier ticket costs in LEI and EUR.
+  - `EcoBenchmark`: CO₂ footprint vs driving on Romanian national roads (DN1/DN25).
+- **Service**:
+  - [`frontend/src/services/riskScoreCalculator.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/services/riskScoreCalculator.ts): Evaluates the *Romanian Transfer Shield* buffer margin (25-35 min buffer rule).
+- **Canonical Reference Data**:
+  - [`frontend/src/data/sampleRoutePlans.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/data/sampleRoutePlans.ts): Canonical fixtures including Galați Micro 19 ➔ București Piața Unirii.
+
+---
+
+## 6. Guide: Creating and Extending Components for Future Agents
 
 When asked to create a new component `NewWidget`:
 1. **Search Catalog**:
