@@ -49,6 +49,7 @@ Implement "The Cozy Hive" redesign specified in `docs/ideas/cozy-bee-homepage-re
 ### Phase 4: Master Test Suite, Storybook & Documentation Sync
 - [x] **Task 7**: Synchronize all Storybook CSF 3 interaction stories and Jest test suites (`storybookAuto.test.tsx`, `indexRoute.test.tsx`).
 - [x] **Task 8**: Update `COMPONENTS.md`, `frontend/COMPONENTS.md`, and `PLAN_AND_STATUS.md` with the new component catalog and verification metrics.
+- [x] **Task 9**: Resolve text overlaps, connector wrapping, and dark mode contrast discordances on HomeScreen.
 
 ### Checkpoint 4: Complete & Clean Build
 - [x] `npm test`: 100% passing test suites

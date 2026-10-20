@@ -180,3 +180,20 @@
 - [x] `npm run test:storybook`: 100% story interaction tests pass
 - [x] `npm run type-check`: 0 TypeScript compiler errors
 - [x] Ready for review
+
+---
+
+## Task 9: Resolve Text Overlaps, Connector Wrapping, and Theme Contrast Discordances on HomeScreen
+**Description:** Eliminate text clipping, awkward wrapping breaks, and illegible dark-mode tokens on `HomeScreen`, `RouteFinderCard`, and `MarketingShowcase`.
+**Acceptance criteria:**
+- [x] Remove awkward `flexWrap: 'wrap'` on flight paths and waggle connectors; use `flexShrink: 0` for glyphs/icons and `flex: 1` / `flexShrink: 1` for cities and labels.
+- [x] Fix low-contrast dark tokens: ensure Curated Trifecta card metadata (`trifectaCardMeta`) uses `#F59E0B` in dark mode (>5.4:1 contrast ratio against `#292524`), not unreadable dark brown `#3E3204`.
+- [x] Replace residual cold zinc `#27272A` with warm stone `#292524`.
+- [x] Enforce consistent line heights (`lineHeight`) across all headers and labels preventing text overlap/clipping on compact devices.
+- [x] Add tests asserting `flexShrink`, high contrast colors in dark mode, and layout stability.
+- [x] Verify 100% pass rate across Jest, Storybook, and TypeScript strict checks.
+**Verification:**
+- [x] `npm test`: 32 suites, 418 tests passed
+- [x] `npm run test:storybook`: 188 story tests passed
+- [x] `npm run type-check`: 0 errors
+- [x] `AI_LOG.md`: Strictly untouched

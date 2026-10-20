@@ -564,6 +564,48 @@ describe('RouteFinderCard component', () => {
       : templateNote.props.style;
     expect(flatNote.color).toBe('#166534');
   });
+
+  it('guarantees Cozy Honey warm dark tokens and layout breathing without text clipping', () => {
+    const { getByTestId, getByText } = render(
+      <ThemeProvider initialMode="dark">
+        <RouteFinderCard />
+      </ThemeProvider>
+    );
+
+    // 1. QuickCorridorChip uses warm stone #292524 in dark mode (no cold zinc #27272A)
+    const chip = getByTestId('quick-corridor-paris-lyon');
+    const flatChip = Array.isArray(chip.props.style)
+      ? chip.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : chip.props.style;
+    expect(flatChip.backgroundColor).toBe('#292524');
+
+    // 2. Waggle connector glyph has flexShrink: 0 to prevent being crushed by dashed line
+    const waggleGlyph = getByText('── 🐝 ~ ~ ──');
+    const flatWaggle = Array.isArray(waggleGlyph.props.style)
+      ? waggleGlyph.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : waggleGlyph.props.style;
+    expect(flatWaggle.flexShrink).toBe(0);
+
+    // 3. Trigger submit to verify trifectaCardMeta high-contrast in dark mode
+    const submitBtn = getByTestId('route-finder-submit-btn');
+    fireEvent.press(submitBtn);
+
+    const fastestCard = getByTestId('trifecta-card-fastest');
+    expect(fastestCard).toBeTruthy();
+    // In dark mode, meta text must use warm honey #F59E0B (>5:1 contrast against #292524) rather than invisible #3E3204
+    const metaText = getByText(/Direct CFR IR \/ High-speed • Minimum transit duration/);
+    const flatMeta = Array.isArray(metaText.props.style)
+      ? metaText.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : metaText.props.style;
+    expect(flatMeta.color).toBe('#F59E0B');
+
+    // 4. Template note text has flex: 1 to wrap neatly next to the icon
+    const templateNote = getByText('Template mode: submission handled; feature redirection disabled.');
+    const flatNote = Array.isArray(templateNote.props.style)
+      ? templateNote.props.style.filter(Boolean).reduce((acc: any, s: any) => ({ ...acc, ...s }), {})
+      : templateNote.props.style;
+    expect(flatNote.flex).toBe(1);
+  });
 });
 
 describe('normalizeStation utility', () => {

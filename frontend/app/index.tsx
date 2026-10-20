@@ -111,6 +111,8 @@ export default function HomeScreen() {
                   <Text
                     accessibilityRole="header"
                     aria-level={3}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                     style={[
                       styles.tripStatusTitle,
                       { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal },
@@ -119,6 +121,8 @@ export default function HomeScreen() {
                     Active Trip in Progress
                   </Text>
                   <Text
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                     style={[
                       styles.tripStatusSubtitle,
                       { color: isDark ? '#F59E0B' : '#92400E' },
@@ -172,6 +176,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
     padding: 16,
     borderRadius: 14,
     marginBottom: 20,
@@ -179,7 +184,7 @@ const styles = StyleSheet.create({
   },
   tripStatusCardHovered: {
     transform: [{ translateY: -2 }],
-    shadowColor: '#000000',
+    shadowColor: '#1C1917',
     shadowOpacity: 0.12,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,
@@ -205,6 +210,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
+    flexShrink: 0,
   },
   tripStatusText: {
     flex: 1,
@@ -212,10 +218,14 @@ const styles = StyleSheet.create({
   tripStatusTitle: {
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 20,
+    flexShrink: 1,
   },
   tripStatusSubtitle: {
     fontSize: 12,
     marginTop: 2,
     fontWeight: '600',
+    lineHeight: 16,
+    flexShrink: 1,
   },
 });

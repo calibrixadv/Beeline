@@ -288,4 +288,27 @@ describe('MarketingShowcase component', () => {
     expect(card.props.accessibilityLabel).toContain('2h 15m direct');
     expect(card.props.accessibilityLabel).toContain('from 48 lei (~€9.60)');
   });
+
+  it('guarantees text breathing and robust flex layout without awkward wrapping splits', () => {
+    const { getByText, getAllByText, getAllByTestId } = renderComponent();
+
+    // 1. Corridor cities have flexShrink: 1 and WaggleFlightPath has flexShrink: 0
+    const city = getAllByText('București Nord')[0];
+    const flatCity = StyleSheet.flatten(city.props.style);
+    expect(flatCity.flexShrink).toBe(1);
+
+    const waggleContainers = getAllByTestId('waggle-flight-path');
+    const flatWaggle = StyleSheet.flatten(waggleContainers[0].props.style);
+    expect(flatWaggle.flexShrink).toBe(0);
+
+    // 2. Trust title has flex: 1 to wrap naturally without overflowing or wrapping below shield icon
+    const trustTitle = getByText('Unified European Rail Booking with Beeline');
+    const flatTrust = StyleSheet.flatten(trustTitle.props.style);
+    expect(flatTrust.flex).toBe(1);
+
+    // 3. Hero badge text has flexShrink: 1 to prevent pushing past mobile card padding
+    const heroBadge = getByText('Beeline High-Speed Transit');
+    const flatBadge = StyleSheet.flatten(heroBadge.props.style);
+    expect(flatBadge.flexShrink).toBe(1);
+  });
 });

@@ -144,7 +144,7 @@ const QuickCorridorChip: React.FC<QuickCorridorChipProps> = ({
       style={[
         styles.corridorChip,
         {
-          backgroundColor: isDark ? '#27272A' : '#FEF3C7',
+          backgroundColor: isDark ? '#292524' : '#FEF3C7',
           borderColor: theme.colors.honeyBorder,
         },
         isHovered && styles.corridorChipHovered,
@@ -353,7 +353,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
             style={[
               styles.swapButton,
               {
-                backgroundColor: isDark ? '#27272A' : '#FEF3C7',
+                backgroundColor: isDark ? '#292524' : '#FEF3C7',
                 borderColor: theme.colors.honeyBorder,
               },
             ]}
@@ -430,9 +430,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                     color={
                       isSelected
                         ? '#1C1917'
-                        : isDark
-                        ? theme.colors.textMuted
-                        : theme.colors.textSecondary
+                        : theme.colors.textCharcoalMuted
                     }
                   />
                 }
@@ -447,16 +445,16 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                         borderColor: theme.colors.brandHoneyDark,
                       }
                     : {
-                        backgroundColor: isDark ? '#27272A' : '#F8FAFC',
-                        borderColor: isDark ? '#3F3F46' : '#E2E8F0',
+                        backgroundColor: isDark ? '#292524' : theme.colors.brandCream,
+                        borderColor: isDark ? theme.colors.honeyBorder : theme.colors.honeyBorder,
                       },
                 ]}
                 textStyle={
                   isSelected
                     ? { color: '#1C1917', fontWeight: '800' }
                     : isDark
-                    ? { color: '#E4E4E7' }
-                    : undefined
+                    ? { color: '#FFFFFF' }
+                    : { color: theme.colors.textCharcoalMuted, fontWeight: '600' }
                 }
               />
             );
@@ -481,8 +479,8 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           style={[
             styles.submissionFeedbackBox,
             {
-              backgroundColor: isDark ? '#1C1917' : '#FEF3C7',
-              borderColor: isDark ? theme.colors.brandHoney : theme.colors.brandAmber,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
+              borderColor: isDark ? theme.colors.brandHoney : theme.colors.honeyBorder,
             },
           ]}
         >
@@ -492,73 +490,130 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
               <Text
                 accessibilityRole="header"
                 aria-level={3}
-                style={[styles.feedbackTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}
+                style={[styles.feedbackTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
               >
                 Route Search Prepared
               </Text>
             </View>
-            <BaseBadge label="THE CURATED TRIFECTA" variant="warning" size="sm" />
+            <BaseBadge
+              label="THE CURATED TRIFECTA"
+              variant="warning"
+              size="sm"
+              style={{
+                backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7',
+                borderColor: isDark ? '#D97706' : '#FDE68A',
+                borderWidth: 1,
+              }}
+              textStyle={{ color: isDark ? theme.colors.brandHoney : '#92400E' }}
+            />
           </View>
 
           <Text
             numberOfLines={2}
             ellipsizeMode="tail"
-            style={[styles.feedbackDetails, { color: isDark ? '#E4E4E7' : '#1F2937' }]}
+            style={[styles.feedbackDetails, { color: isDark ? theme.colors.brandHoney : theme.colors.textCharcoal }]}
           >
             {submittedQuery.origin} ➔ {submittedQuery.destination}
           </Text>
           <Text
             numberOfLines={1}
             ellipsizeMode="tail"
-            style={[styles.feedbackModes, { color: isDark ? '#D4D4D8' : '#374151' }]}
+            style={[styles.feedbackModes, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
           >
             Active filters: {submittedQuery.modes.join(', ')}
           </Text>
 
           {/* Curated Trifecta 3 Preview Cards with Mascot Companions */}
           <View style={styles.trifectaContainer}>
-            {CURATED_TRIFECTA_PILLARS.map((pillar) => (
-              <BaseCard
-                key={pillar.id}
-                variant="outlined"
-                padding="sm"
-                testID={pillar.testID}
-                accessibilityLabel={`${pillar.title} - ${pillar.badgeLabel}: ${pillar.description}`}
-                style={[
-                  styles.trifectaCard,
-                  {
-                    backgroundColor: isDark ? '#27272A' : '#FFFFFF',
-                    borderColor: isDark ? '#3F3F46' : theme.colors.honeyBorder,
-                  },
-                ]}
-              >
-                <View style={styles.trifectaCardHeader}>
-                  <View style={styles.trifectaMascotGroup}>
-                    {pillar.mascot ?? (pillar.mascotName ? (
-                      <MascotBee name={pillar.mascotName} size="sm" animated={false} />
-                    ) : null)}
-                    <Text
-                      accessibilityRole="header"
-                      aria-level={4}
-                      style={[styles.trifectaCardTitle, { color: isDark ? '#F9FAFB' : '#111827' }]}
-                    >
-                      {pillar.title}
-                    </Text>
+            {CURATED_TRIFECTA_PILLARS.map((pillar) => {
+              const isBestValue = pillar.id === 'best-value';
+              const isMostReliable = pillar.id === 'most-reliable';
+
+              const badgeBg = isDark
+                ? isMostReliable
+                  ? 'rgba(16, 185, 129, 0.2)'
+                  : isBestValue
+                  ? 'rgba(234, 179, 8, 0.2)'
+                  : 'rgba(245, 158, 11, 0.2)'
+                : isMostReliable
+                ? '#DCFCE7'
+                : isBestValue
+                ? '#FEF9C3'
+                : '#FEF3C7';
+
+              const badgeBorder = isDark
+                ? isMostReliable
+                  ? '#059669'
+                  : isBestValue
+                  ? '#CA8A04'
+                  : '#D97706'
+                : isMostReliable
+                ? '#86EFAC'
+                : isBestValue
+                ? '#FDE047'
+                : '#FDE68A';
+
+              const badgeTextColor = isDark
+                ? isMostReliable
+                  ? '#34D399'
+                  : isBestValue
+                  ? '#FDE047'
+                  : theme.colors.brandHoney
+                : isMostReliable
+                ? '#166534'
+                : isBestValue
+                ? '#854D0E'
+                : '#92400E';
+
+              return (
+                <BaseCard
+                  key={pillar.id}
+                  variant="outlined"
+                  padding="sm"
+                  testID={pillar.testID}
+                  accessibilityLabel={`${pillar.title} - ${pillar.badgeLabel}: ${pillar.description}`}
+                  style={[
+                    styles.trifectaCard,
+                    {
+                      backgroundColor: isDark ? '#292524' : '#FFFDF7',
+                      borderColor: isDark ? theme.colors.honeyBorder : theme.colors.honeyBorder,
+                    },
+                  ]}
+                >
+                  <View style={styles.trifectaCardHeader}>
+                    <View style={styles.trifectaMascotGroup}>
+                      {pillar.mascot ?? (pillar.mascotName ? (
+                        <MascotBee name={pillar.mascotName} size="sm" animated={false} />
+                      ) : null)}
+                      <Text
+                        accessibilityRole="header"
+                        aria-level={4}
+                        style={[styles.trifectaCardTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
+                      >
+                        {pillar.title}
+                      </Text>
+                    </View>
+                    <BaseBadge
+                      label={pillar.badgeLabel}
+                      variant={pillar.badgeVariant}
+                      size="sm"
+                      style={{
+                        backgroundColor: badgeBg,
+                        borderColor: badgeBorder,
+                        borderWidth: 1,
+                      }}
+                      textStyle={{ color: badgeTextColor }}
+                    />
                   </View>
-                  <BaseBadge
-                    label={pillar.badgeLabel}
-                    variant={pillar.badgeVariant}
-                    size="sm"
-                  />
-                </View>
-                <Text style={[styles.trifectaCardDesc, { color: isDark ? '#D4D4D8' : '#3F3F46' }]}>
-                  {pillar.description}
-                </Text>
-                <Text style={[styles.trifectaCardMeta, { color: isDark ? '#D4D4D8' : '#4B5563' }]}>
-                  {pillar.meta}
-                </Text>
-              </BaseCard>
-            ))}
+                  <Text style={[styles.trifectaCardDesc, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
+                    {pillar.description}
+                  </Text>
+                  <Text style={[styles.trifectaCardMeta, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
+                    {pillar.meta}
+                  </Text>
+                </BaseCard>
+              );
+            })}
           </View>
 
           <View style={styles.templateNoteRow}>
@@ -570,7 +625,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
 
           <Text
             testID="trifecta-shorthand-disclaimer"
-            style={[styles.disclaimerText, { color: isDark ? '#D4D4D8' : '#4B5563' }]}
+            style={[styles.disclaimerText, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
           >
             Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.
           </Text>
@@ -646,7 +701,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     marginBottom: 20,
-    shadowColor: '#000000',
+    shadowColor: '#1C1917',
     shadowOpacity: 0.12,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
@@ -671,18 +726,21 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 10,
     fontWeight: '900',
-    color: '#000000',
+    color: '#1C1917',
     letterSpacing: 0.5,
+    lineHeight: 14,
   },
   modeIndicator: {
     fontSize: 11,
     fontWeight: '600',
+    lineHeight: 16,
   },
   title: {
     fontSize: 22,
     fontWeight: '900',
     letterSpacing: -0.4,
     marginBottom: 4,
+    lineHeight: 28,
   },
   subtitle: {
     fontSize: 13,
@@ -699,7 +757,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 4,
+    marginVertical: 6,
     gap: 6,
   },
   waggleFlankSide: {
@@ -721,6 +779,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
+    lineHeight: 16,
+    flexShrink: 0,
   },
   swapButton: {
     marginHorizontal: 8,
@@ -730,6 +790,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 1,
   },
   modesSection: {
     marginBottom: 16,
@@ -739,6 +800,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.8,
     marginBottom: 8,
+    lineHeight: 14,
   },
   modesRow: {
     flexDirection: 'row',
@@ -766,6 +828,7 @@ const styles = StyleSheet.create({
     color: '#EF4444',
     fontSize: 12,
     fontWeight: '700',
+    lineHeight: 16,
     flex: 1,
   },
   submissionFeedbackBox: {
@@ -779,26 +842,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 4,
   },
   feedbackTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flexShrink: 1,
   },
   feedbackTitle: {
     fontSize: 13,
     fontWeight: '800',
+    lineHeight: 18,
   },
   feedbackDetails: {
     fontSize: 14,
     fontWeight: '700',
-    marginBottom: 1,
+    lineHeight: 20,
+    marginBottom: 2,
   },
   feedbackModes: {
     fontSize: 12,
     fontWeight: '600',
-    marginBottom: 4,
+    lineHeight: 16,
+    marginBottom: 6,
   },
   trifectaContainer: {
     gap: 8,
@@ -819,10 +888,12 @@ const styles = StyleSheet.create({
   trifectaCardTitle: {
     fontSize: 13,
     fontWeight: '800',
+    lineHeight: 18,
+    flexShrink: 1,
   },
   trifectaCardDesc: {
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 17,
     fontWeight: '500',
     marginBottom: 4,
   },
@@ -834,19 +905,21 @@ const styles = StyleSheet.create({
   templateNoteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+    gap: 6,
+    marginTop: 6,
   },
   templateNoteText: {
     fontSize: 11,
     fontWeight: '600',
+    lineHeight: 15,
+    flex: 1,
   },
   disclaimerText: {
     fontSize: 11,
-    lineHeight: 15,
+    lineHeight: 16,
     fontWeight: '500',
     fontStyle: 'italic',
-    marginTop: 2,
+    marginTop: 4,
   },
   submitButton: {
     borderRadius: 10,
@@ -861,6 +934,7 @@ const styles = StyleSheet.create({
   corridorsLabel: {
     fontSize: 11,
     fontWeight: '600',
+    lineHeight: 16,
   },
   corridorChip: {
     paddingHorizontal: 12,
@@ -885,5 +959,6 @@ const styles = StyleSheet.create({
   corridorChipText: {
     fontSize: 12,
     fontWeight: '700',
+    lineHeight: 16,
   },
 });

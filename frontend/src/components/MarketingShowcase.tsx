@@ -285,11 +285,11 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
       <Text
         accessibilityRole="header"
         aria-level={2}
-        style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}
+        style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
       >
         Why Plan With Beeline?
       </Text>
-      <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
+      <Text style={[styles.sectionSubtitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
         Meet the Mascot Trifecta — engineered for speed, smart value intelligence, and reliable Romanian transfer protection.
       </Text>
 
@@ -302,7 +302,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           style={[
             styles.pillarCard,
             {
-              backgroundColor: isDark ? theme.colors.surface : theme.colors.surfaceWarm,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
               borderColor: theme.colors.honeyBorder,
             },
           ]}
@@ -319,7 +319,17 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                 </Text>
               </View>
             </View>
-            <BaseBadge label="SPEED" variant="warning" size="sm" />
+            <BaseBadge
+              label="SPEED"
+              variant="warning"
+              size="sm"
+              style={{
+                backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7',
+                borderColor: isDark ? '#D97706' : '#FDE68A',
+                borderWidth: 1,
+              }}
+              textStyle={{ color: isDark ? theme.colors.brandHoney : '#92400E' }}
+            />
           </View>
           <Text
             accessibilityRole="header"
@@ -344,7 +354,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           style={[
             styles.pillarCard,
             {
-              backgroundColor: isDark ? theme.colors.surface : theme.colors.surfaceWarm,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
               borderColor: theme.colors.honeyBorder,
             },
           ]}
@@ -361,7 +371,17 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                 </Text>
               </View>
             </View>
-            <BaseBadge label="VALUE" variant="info" size="sm" />
+            <BaseBadge
+              label="VALUE"
+              variant="warning"
+              size="sm"
+              style={{
+                backgroundColor: isDark ? 'rgba(234, 179, 8, 0.2)' : '#FEF9C3',
+                borderColor: isDark ? '#CA8A04' : '#FDE047',
+                borderWidth: 1,
+              }}
+              textStyle={{ color: isDark ? '#FDE047' : '#854D0E' }}
+            />
           </View>
           <Text
             accessibilityRole="header"
@@ -386,7 +406,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           style={[
             styles.pillarCard,
             {
-              backgroundColor: isDark ? theme.colors.surface : theme.colors.surfaceWarm,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
               borderColor: theme.colors.honeyBorder,
             },
           ]}
@@ -403,7 +423,17 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                 </Text>
               </View>
             </View>
-            <BaseBadge label="RELIABILITY" variant="success" size="sm" />
+            <BaseBadge
+              label="RELIABILITY"
+              variant="success"
+              size="sm"
+              style={{
+                backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7',
+                borderColor: isDark ? '#059669' : '#86EFAC',
+                borderWidth: 1,
+              }}
+              textStyle={{ color: isDark ? '#34D399' : '#15803D' }}
+            />
           </View>
           <Text
             accessibilityRole="header"
@@ -428,13 +458,13 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           style={[
             styles.featureItem,
             {
-              backgroundColor: isDark ? theme.colors.surface : theme.colors.surfaceWarm,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
               borderColor: theme.colors.honeyBorder,
             },
           ]}
         >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#EFF6FF' }]}>
-            <Ionicons name="flash" size={20} color={isDark ? theme.colors.brandYellow : '#2563EB'} />
+          <View style={[styles.featureIconBox, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7' }]}>
+            <Ionicons name="flash" size={20} color={isDark ? theme.colors.brandHoney : '#D97706'} />
           </View>
           <Text
             accessibilityRole="header"
@@ -453,13 +483,13 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           style={[
             styles.featureItem,
             {
-              backgroundColor: isDark ? theme.colors.surface : theme.colors.surfaceWarm,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
               borderColor: theme.colors.honeyBorder,
             },
           ]}
         >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#FEF3C7' }]}>
-            <Ionicons name="cash-outline" size={20} color={isDark ? theme.colors.brandYellow : '#B45309'} />
+          <View style={[styles.featureIconBox, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7' }]}>
+            <Ionicons name="cash-outline" size={20} color={isDark ? theme.colors.brandHoney : '#B45309'} />
           </View>
           <Text
             accessibilityRole="header"
@@ -478,13 +508,13 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           style={[
             styles.featureItem,
             {
-              backgroundColor: isDark ? theme.colors.surface : theme.colors.surfaceWarm,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
               borderColor: theme.colors.honeyBorder,
             },
           ]}
         >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#EFF6FF' }]}>
-            <Ionicons name="shield-checkmark" size={20} color={isDark ? '#60A5FA' : '#2563EB'} />
+          <View style={[styles.featureIconBox, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
+            <Ionicons name="shield-checkmark" size={20} color={isDark ? '#34D399' : '#15803D'} />
           </View>
           <Text
             accessibilityRole="header"
@@ -503,12 +533,12 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           style={[
             styles.featureItem,
             {
-              backgroundColor: isDark ? theme.colors.surface : theme.colors.surfaceWarm,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
               borderColor: theme.colors.honeyBorder,
             },
           ]}
         >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? '#27272A' : '#DCFCE7' }]}>
+          <View style={[styles.featureIconBox, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
             <Ionicons name="leaf" size={20} color={isDark ? '#34D399' : '#166534'} />
           </View>
           <Text
@@ -532,7 +562,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
         style={[
           styles.metricsCard,
           {
-            backgroundColor: isDark ? '#18181B' : theme.colors.surfaceWarm,
+            backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
             borderColor: theme.colors.honeyBorder,
           },
         ]}
@@ -570,11 +600,11 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
       <Text
         accessibilityRole="header"
         aria-level={2}
-        style={[styles.sectionTitle, { color: theme.colors.textPrimary }]}
+        style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
       >
         Featured High-Speed Corridors
       </Text>
-      <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
+      <Text style={[styles.sectionSubtitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
         Direct routes connecting major Romanian metropolitan hubs and European gateways.
       </Text>
 
@@ -590,7 +620,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           style={[
             styles.corridorCard,
             {
-              backgroundColor: isDark ? theme.colors.surface : theme.colors.surfaceWarm,
+              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
               borderColor: theme.colors.honeyBorder,
             },
           ]}
@@ -624,7 +654,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
         style={[
           styles.trustCard,
           {
-            backgroundColor: isDark ? '#141416' : theme.colors.surfaceWarm,
+            backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
             borderColor: theme.colors.honeyBorder,
           },
         ]}
@@ -665,6 +695,7 @@ const styles = StyleSheet.create({
   heroBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     marginBottom: 10,
   },
   heroBadge: {
@@ -679,6 +710,8 @@ const styles = StyleSheet.create({
   heroBadgeText: {
     fontSize: 12,
     fontWeight: '700',
+    lineHeight: 16,
+    flexShrink: 1,
   },
   heroPreTitle: {
     fontSize: 13,
@@ -686,16 +719,17 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 4,
+    lineHeight: 18,
   },
   heroTitle: {
     fontSize: 24,
     fontWeight: '800',
-    lineHeight: 30,
+    lineHeight: 32,
     marginBottom: 8,
   },
   heroSubtitle: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
     marginBottom: 20,
   },
   heroButton: {
@@ -707,11 +741,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 10,
     marginBottom: 4,
+    lineHeight: 26,
   },
   sectionSubtitle: {
     fontSize: 13,
     marginBottom: 14,
-    lineHeight: 18,
+    lineHeight: 19,
   },
   pillarsGrid: {
     flexDirection: 'row',
@@ -730,37 +765,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 10,
   },
   pillarMascotWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flexShrink: 1,
   },
   pillarMascotInfo: {
     flexDirection: 'column',
+    flexShrink: 1,
   },
   pillarMascotName: {
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 18,
+    flexShrink: 1,
   },
   pillarMascotRole: {
     fontSize: 11,
     fontWeight: '600',
+    lineHeight: 15,
+    flexShrink: 1,
   },
   pillarTitle: {
     fontSize: 16,
     fontWeight: '800',
+    lineHeight: 22,
     marginBottom: 4,
   },
   pillarDescription: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     marginBottom: 10,
   },
   pillarMetric: {
     fontSize: 12,
     fontWeight: '700',
+    lineHeight: 17,
   },
   featureGrid: {
     flexDirection: 'row',
@@ -783,15 +828,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
+    flexShrink: 0,
   },
   featureTitle: {
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 20,
     marginBottom: 4,
   },
   featureDescription: {
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   metricsCard: {
     borderRadius: 14,
@@ -801,12 +848,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     borderWidth: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
     gap: 8,
   },
   metricItem: {
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 4,
     paddingHorizontal: 8,
     minWidth: 64,
@@ -818,11 +866,14 @@ const styles = StyleSheet.create({
   metricNumber: {
     fontSize: 18,
     fontWeight: '900',
+    lineHeight: 24,
     marginBottom: 2,
   },
   metricLabel: {
     fontSize: 11,
     fontWeight: '600',
+    lineHeight: 16,
+    textAlign: 'center',
   },
   metricDivider: {
     width: 1,
@@ -837,27 +888,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 6,
   },
   corridorCity: {
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 20,
     flexShrink: 1,
   },
   corridorMeta: {
     fontSize: 12,
+    lineHeight: 18,
   },
   waggleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 4,
     paddingHorizontal: 4,
-    flexShrink: 1,
+    flexShrink: 0,
   },
   waggleLine: {
-    width: 12,
+    width: 14,
     minWidth: 4,
     flexShrink: 1,
     height: 2,
@@ -867,14 +920,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+    flexShrink: 0,
   },
   waggleBee: {
     fontSize: 13,
+    lineHeight: 16,
   },
   waggleTrail: {
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: -1,
+    lineHeight: 15,
   },
   trustCard: {
     borderRadius: 12,
@@ -885,14 +941,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   trustTitle: {
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 20,
+    flex: 1,
   },
   trustSubtitle: {
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 18,
   },
 });
