@@ -32,11 +32,10 @@ describe('MarketingShowcase component', () => {
     });
 
     expect(getByTestId('marketing-hero-card')).toBeTruthy();
-    expect(getByText('Beeline High-Speed Transit')).toBeTruthy();
-    expect(getByText('Plan Your European Rail Journey')).toBeTruthy();
-    expect(getByText('Make a beeline across Romania & Europe')).toBeTruthy();
+    expect(getByText('Beeline Rail Transit')).toBeTruthy();
+    expect(getByText('Plan your European rail journey')).toBeTruthy();
     expect(
-      getByText(/Fast, sweet, stress-free rail journeys\. High-speed corridors, live status tracking/)
+      getByText('Search direct train corridors, check schedules, and explore routes across Romania and Europe.')
     ).toBeTruthy();
 
     // Verify inline Barnaby mascot preview in hero badge
@@ -44,86 +43,65 @@ describe('MarketingShowcase component', () => {
     expect(barnabyMascots.length).toBeGreaterThanOrEqual(1);
 
     const exploreBtn = getByTestId('marketing-explore-btn');
+    expect(exploreBtn.props.accessibilityLabel).toBe('Explore Trains');
     fireEvent.press(exploreBtn);
 
     expect(handleExplore).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the 3 Mascot Trifecta pillar cards (Speed with Barnaby, Value with Honey, Reliability with Bumble)', () => {
+  it('renders the 3 companion pillar cards (Speed with Barnaby, Value with Honey, Reliability with Bumble)', () => {
     const { getByTestId, getByText } = renderComponent();
+
+    expect(getByText('Why Beeline?')).toBeTruthy();
+    expect(getByText('Thoughtful rail travel planning with our companion guides.')).toBeTruthy();
 
     // Pillar 1: Speed with Barnaby
     expect(getByTestId('pillar-speed-card')).toBeTruthy();
-    expect(getByText('300+ km/h High-Speed')).toBeTruthy();
+    expect(getByText('Direct Rail Connections')).toBeTruthy();
     expect(getByText('SPEED')).toBeTruthy();
     expect(getByText('Barnaby the Scout')).toBeTruthy();
-    expect(getByText('Direct High-Speed')).toBeTruthy();
-    expect(getByText(/City-center to city-center corridors engineered for maximum velocity with Barnaby/)).toBeTruthy();
-    expect(getByText('⚡ Instant timetable routing')).toBeTruthy();
+    expect(getByText('Direct Routes')).toBeTruthy();
+    expect(getByText(/Fast point-to-point connections prioritizing direct travel and minimal station stops\./)).toBeTruthy();
+    expect(getByText('⚡ Direct corridor routing')).toBeTruthy();
 
     // Pillar 2: Value with Honey
     expect(getByTestId('pillar-coverage-card')).toBeTruthy();
-    expect(getByText('Smart €10/Hour Value Engine')).toBeTruthy();
+    expect(getByText('Clear Fares & Schedules')).toBeTruthy();
     expect(getByText('VALUE')).toBeTruthy();
     expect(getByText('Honey the Hive Saver')).toBeTruthy();
-    expect(getByText('15+ European Countries')).toBeTruthy();
-    expect(getByText(/Honey evaluates every journey against the smart €10\/hour rule/)).toBeTruthy();
-    expect(getByText("💰 Honey's Nectar Jar savings")).toBeTruthy();
+    expect(getByText('Transparent Pricing')).toBeTruthy();
+    expect(getByText(/Upfront pricing with no hidden booking fees, helping you compare and find the best value/)).toBeTruthy();
+    expect(getByText('💰 Upfront fare comparisons')).toBeTruthy();
     expect(getByTestId('mascot-bee-honey')).toBeTruthy();
 
     // Pillar 3: Reliability with Bumble
     expect(getByTestId('pillar-capabilities-card')).toBeTruthy();
-    expect(getByText('Romanian Transfer Shield (25–35 min buffers)')).toBeTruthy();
+    expect(getByText('Protected Transfer Buffers')).toBeTruthy();
     expect(getByText('RELIABILITY')).toBeTruthy();
     expect(getByText('Bumble the Buffer Guard')).toBeTruthy();
-    expect(getByText('Multi-Modal & Live Sync')).toBeTruthy();
-    expect(getByText(/Bumble safeguards your trip with generous 25–35 min buffers/)).toBeTruthy();
-    expect(getByText("🛡️ Bumble's safe transfer shield guarantee")).toBeTruthy();
+    expect(getByText('Comfortable Transfers')).toBeTruthy();
+    expect(getByText(/Sensible connection windows at major transfer stations so you can switch trains without rushing\./)).toBeTruthy();
+    expect(getByText('🛡️ Generous connection buffers')).toBeTruthy();
     expect(getByTestId('mascot-bee-bumble')).toBeTruthy();
   });
 
-  it('renders feature highlights showcasing the Curated Trifecta value propositions', () => {
-    const { getByText, getByTestId } = renderComponent();
+  it('does NOT render redundant feature cards, fabricated metrics, or aggregator claims', () => {
+    const { queryByTestId } = renderComponent();
 
-    expect(getByText('Why Plan With Beeline?')).toBeTruthy();
-    expect(getByTestId('marketing-feature-grid')).toBeTruthy();
+    expect(queryByTestId('marketing-feature-grid')).toBeNull();
+    expect(queryByTestId('feature-card-direct-corridors')).toBeNull();
+    expect(queryByTestId('feature-card-value-engine')).toBeNull();
+    expect(queryByTestId('feature-card-transfer-shield')).toBeNull();
+    expect(queryByTestId('feature-card-eco-savings')).toBeNull();
 
-    expect(getByTestId('feature-card-direct-corridors')).toBeTruthy();
-    expect(getByText('⚡ High-Speed & Direct Romanian Corridors')).toBeTruthy();
-
-    expect(getByTestId('feature-card-value-engine')).toBeTruthy();
-    expect(getByText('💰 Smart €10/Hour Value Engine')).toBeTruthy();
-
-    expect(getByTestId('feature-card-transfer-shield')).toBeTruthy();
-    expect(getByText('🛡️ Romanian Transfer Shield (25–35 min buffers)')).toBeTruthy();
-
-    expect(getByTestId('feature-card-eco-savings')).toBeTruthy();
-    expect(getByText('🌿 Eco CO₂ Savings over DN1 and regional flights')).toBeTruthy();
+    expect(queryByTestId('marketing-metrics-card')).toBeNull();
+    expect(queryByTestId('marketing-trust-card')).toBeNull();
   });
 
-  it('renders metrics bar and trust guarantees with Romanian operators', () => {
-    const { getByTestId, getByText } = renderComponent();
+  it('renders all featured Romanian corridors with Waggle Flight Paths as static informational cards', () => {
+    const { getByTestId, getAllByTestId, getByText, getAllByText } = renderComponent();
 
-    expect(getByTestId('marketing-metrics-card')).toBeTruthy();
-    expect(getByText('300+')).toBeTruthy();
-    expect(getByText('15+')).toBeTruthy();
-    expect(getByText('10k+')).toBeTruthy();
-    expect(getByText('85%')).toBeTruthy();
-
-    expect(getByTestId('marketing-trust-card')).toBeTruthy();
-    expect(getByText('Unified European Rail Booking with Beeline')).toBeTruthy();
-    expect(
-      getByText(/Aggregating CFR Călători, Astra Trans Carpatic, Transferoviar Călători, ÖBB/)
-    ).toBeTruthy();
-  });
-
-  it('renders all featured Romanian corridors with Waggle Flight Paths and responds to clicks', () => {
-    const handleCorridorPress = jest.fn();
-    const { getByTestId, getAllByTestId, getByText, getAllByText } = renderComponent({
-      onCorridorPress: handleCorridorPress,
-    });
-
-    expect(getByText('Featured High-Speed Corridors')).toBeTruthy();
+    expect(getByText('Featured Corridors')).toBeTruthy();
     expect(
       getByText('Direct routes connecting major Romanian metropolitan hubs and European gateways.')
     ).toBeTruthy();
@@ -133,9 +111,10 @@ describe('MarketingShowcase component', () => {
     expect(wagglePaths.length).toBe(FEATURED_CORRIDORS.length);
 
     FEATURED_CORRIDORS.forEach((corridor) => {
-      expect(
-        getByTestId(getCorridorTestId(corridor.from, corridor.to))
-      ).toBeTruthy();
+      const card = getByTestId(getCorridorTestId(corridor.from, corridor.to));
+      expect(card).toBeTruthy();
+      // Ensure card is a static informational card without button role
+      expect(card.props.accessibilityRole).toBeUndefined();
     });
 
     // Check Romanian domestic corridors and European gateway connections
@@ -154,19 +133,6 @@ describe('MarketingShowcase component', () => {
     expect(getByText(/from 115 lei/)).toBeTruthy();
     expect(getByText(/Dacia EuroNight 346/)).toBeTruthy();
     expect(getByText(/from €39\.00/)).toBeTruthy();
-
-    // Click each corridor card to assert callback is invoked for each route
-    FEATURED_CORRIDORS.forEach((corridor, idx) => {
-      const card = getByTestId(getCorridorTestId(corridor.from, corridor.to));
-      fireEvent.press(card);
-      expect(handleCorridorPress).toHaveBeenNthCalledWith(idx + 1, corridor);
-    });
-  });
-
-  it('renders cleanly without error when callbacks are omitted', () => {
-    const { getByTestId } = renderComponent();
-    const card = getByTestId(getCorridorTestId('București Nord', 'Brașov'));
-    expect(() => fireEvent.press(card)).not.toThrow();
   });
 
   it('renders properly under dark theme mode', () => {
@@ -256,18 +222,13 @@ describe('MarketingShowcase component', () => {
   it('guarantees WCAG 2.1 AA text contrast tokens on light surfaces (>4.5:1 ratio)', () => {
     const { getByText, getAllByText } = renderComponent();
 
-    // Metric numbers should use high-contrast #92400E in light mode
-    const metric300 = getByText('300+');
-    const flatMetricStyle = StyleSheet.flatten(metric300.props.style);
-    expect(flatMetricStyle.color).toBe('#92400E');
-
     // Hero badge text should use #92400E for >4.5:1 contrast against amber-100
-    const heroBadgeText = getByText('Beeline High-Speed Transit');
+    const heroBadgeText = getByText('Beeline Rail Transit');
     const flatHeroBadge = StyleSheet.flatten(heroBadgeText.props.style);
     expect(flatHeroBadge.color).toBe('#92400E');
 
     // Pillar 3 role should use #15803D for >4.5:1 contrast against warm surface
-    const pillarRole = getByText('Multi-Modal & Live Sync');
+    const pillarRole = getByText('Comfortable Transfers');
     const flatPillarRole = StyleSheet.flatten(pillarRole.props.style);
     expect(flatPillarRole.color).toBe('#15803D');
 
@@ -277,13 +238,11 @@ describe('MarketingShowcase component', () => {
     expect(flatTrail.color).toBe('#92400E');
   });
 
-  it('provides comprehensive accessibility label and button role on corridor cards', () => {
-    const handlePress = jest.fn();
-    const { getByTestId } = renderComponent({ onCorridorPress: handlePress });
+  it('provides clean accessibility labels on corridor cards', () => {
+    const { getByTestId } = renderComponent();
 
     const card = getByTestId(getCorridorTestId('București Nord', 'Brașov'));
-    expect(card.props.accessibilityRole).toBe('button');
-    expect(card.props.accessibilityLabel).toContain('Explore route from București Nord to Brașov');
+    expect(card.props.accessibilityLabel).toContain('București Nord to Brașov');
     expect(card.props.accessibilityLabel).toContain('CFR IR / Astra Trans Carpatic');
     expect(card.props.accessibilityLabel).toContain('2h 15m direct');
     expect(card.props.accessibilityLabel).toContain('from 48 lei (~€9.60)');
@@ -301,13 +260,8 @@ describe('MarketingShowcase component', () => {
     const flatWaggle = StyleSheet.flatten(waggleContainers[0].props.style);
     expect(flatWaggle.flexShrink).toBe(0);
 
-    // 2. Trust title has flex: 1 to wrap naturally without overflowing or wrapping below shield icon
-    const trustTitle = getByText('Unified European Rail Booking with Beeline');
-    const flatTrust = StyleSheet.flatten(trustTitle.props.style);
-    expect(flatTrust.flex).toBe(1);
-
-    // 3. Hero badge text has flexShrink: 1 to prevent pushing past mobile card padding
-    const heroBadge = getByText('Beeline High-Speed Transit');
+    // 2. Hero badge text has flexShrink: 1 to prevent pushing past mobile card padding
+    const heroBadge = getByText('Beeline Rail Transit');
     const flatBadge = StyleSheet.flatten(heroBadge.props.style);
     expect(flatBadge.flexShrink).toBe(1);
   });

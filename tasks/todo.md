@@ -197,3 +197,20 @@
 - [x] `npm run test:storybook`: 188 story tests passed
 - [x] `npm run type-check`: 0 errors
 - [x] `AI_LOG.md`: Strictly untouched
+
+---
+
+## Task 10: Streamline Marketing Showcase & Remove Invented Behaviour on HomeScreen
+**Description:** Remove redundant feature grids, fabricated metrics, fake aggregator claims, and fake timetable loading transitions; rewrite hero and mascot pillars with clean, authentic copy.
+**Acceptance criteria:**
+- [x] Remove duplicate 4-card feature grid (`marketing-feature-grid`).
+- [x] Remove fabricated metrics bar (`marketing-metrics-card`) and aggregator trust banner (`marketing-trust-card`).
+- [x] Transform Featured Corridors into static informative route cards without fake loading messages or navigation.
+- [x] Replace developer path CTA (`Explore /trains Route`) with `Explore Trains`.
+- [x] Rewrite companion mascot descriptions without promotional engineering jargon.
+- [x] Update documentation in `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `npm test`: 32 suites, 415 tests passed
+- [x] `npm run test:storybook`: 188 story tests passed
+- [x] `npm run type-check`: 0 errors
+- [x] `AI_LOG.md`: Strictly untouched

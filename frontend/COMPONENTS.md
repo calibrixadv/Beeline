@@ -478,13 +478,13 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 ### 18. `MarketingShowcase`
 - **File**: [`frontend/src/components/MarketingShowcase.tsx`](frontend/src/components/MarketingShowcase.tsx)
 - **Lineage**: Composed Feature Component (built with `BaseCard`, `BaseBadge`, `BaseButton`, `MascotBee`)
-- **Description**: HomePage Role 2 clean marketing showcase embodying "The Cozy Hive": warm honey-soaked hero banner, 3 Mascot Trifecta pillar cards (Barnaby the Scout for Speed, Honey the Hive Saver for Value, Bumble the Buffer Guard for Reliability), animated Waggle flight paths connecting Romanian transit corridors (`București Nord ⇄ Brașov`, `București Nord ⇄ Constanța`, `Cluj-Napoca ⇄ București Nord`, `București Nord ⇄ Viena Hbf`), 4 Curated Trifecta value propositions (⚡ High-Speed Romanian Corridors, 💰 Smart €10/Hour Value Engine, 🛡️ Romanian Transfer Shield with 25–35 min buffers, 🌿 Eco CO₂ Savings over DN1 and regional flights), and multi-operator trust metrics. Strictly contains NO map implementation.
+- **Description**: HomePage Role 2 streamlined marketing showcase embodying "The Cozy Hive": warm honey-accented hero banner ("Plan your European rail journey"), 3 companion pillar cards (Barnaby the Scout for Direct Rail Connections, Honey the Hive Saver for Clear Fares, Bumble the Buffer Guard for Protected Transfers), and animated Waggle flight paths connecting Romanian transit corridors (`București Nord ⇄ Brașov`, `București Nord ⇄ Constanța`, `Cluj-Napoca ⇄ București Nord`, `București Nord ⇄ Viena Hbf`) as static informative route cards. Strictly contains NO map implementation and NO fake redirection.
 - **Props**:
--  `onExplorePress`?: `() => void`
--  `onCorridorPress`?: `(corridor: FeaturedCorridor) => void`
--  `animated`?: boolean (default `true`)
--  `style`?: StyleProp<ViewStyle>
--  `testID`?: string
+  - `onExplorePress`?: `() => void`
+  - `onCorridorPress`?: `(corridor: FeaturedCorridor) => void`
+  - `animated`?: boolean (default `true`)
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
 - **Helpers**: `getCorridorTestId(from: string, to: string): string` generates normalized test identifiers for featured corridor cards.
 - **When to Use**: HomePage marketing promotion and corridor discovery without loading heavy maps.
 

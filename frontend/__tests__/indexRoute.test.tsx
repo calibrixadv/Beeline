@@ -4,7 +4,7 @@ import { render, fireEvent, within } from '@testing-library/react-native';
 import HomeScreen from '../app/index';
 import { TripProvider } from '../src/context/TripContext';
 import { ScreenTransitionProvider, useScreenTransition } from '../src/context/ScreenTransitionContext';
-import { getCorridorTestId, FEATURED_CORRIDORS } from '../src/components/MarketingShowcase';
+import { getCorridorTestId } from '../src/components/MarketingShowcase';
 import { useRouter } from 'expo-router';
 
 describe('HomeScreen route integration', () => {
@@ -12,7 +12,7 @@ describe('HomeScreen route integration', () => {
     jest.clearAllMocks();
   });
 
-  it('renders title, hero card and explore button with Romanian transition message', () => {
+  it('renders title, hero card and explore button with transition message', () => {
     const router = useRouter();
     const TransitionStatusWatcher: React.FC = () => {
       const { transitionMessage } = useScreenTransition();
@@ -28,74 +28,37 @@ describe('HomeScreen route integration', () => {
       </ScreenTransitionProvider>
     );
 
-    expect(getByText('Plan Your European Rail Journey')).toBeTruthy();
-    expect(getByText('Explore /trains Route')).toBeTruthy();
+    expect(getByText('Plan your European rail journey')).toBeTruthy();
+    expect(getByText('Explore Trains')).toBeTruthy();
 
-    const exploreBtn = getByText('Explore /trains Route');
+    const exploreBtn = getByText('Explore Trains');
     fireEvent.press(exploreBtn);
 
     expect(getByTestId('active-transition-msg').props.children).toBe(
-      'Exploring Romanian & European rail corridors...'
+      'Exploring train routes...'
     );
     expect(router.push).toHaveBeenCalledWith('/trains');
   });
 
-  it('renders features and popular Romanian corridor shortcuts', () => {
-    const router = useRouter();
+  it('renders companion pillars and popular Romanian corridor cards as static informative guides', () => {
     const { getByText, getAllByText, getByTestId } = render(
       <TripProvider>
         <HomeScreen />
       </TripProvider>
     );
 
-    expect(getByText('Why Plan With Beeline?')).toBeTruthy();
-    expect(getByText('⚡ High-Speed & Direct Romanian Corridors')).toBeTruthy();
-    expect(getByText('💰 Smart €10/Hour Value Engine')).toBeTruthy();
-    expect(getByText('🛡️ Romanian Transfer Shield (25–35 min buffers)')).toBeTruthy();
-    expect(getByText('🌿 Eco CO₂ Savings over DN1 and regional flights')).toBeTruthy();
-    expect(getByText('Featured High-Speed Corridors')).toBeTruthy();
+    expect(getByText('Why Beeline?')).toBeTruthy();
+    expect(getByText('Direct Rail Connections')).toBeTruthy();
+    expect(getByText('Clear Fares & Schedules')).toBeTruthy();
+    expect(getByText('Protected Transfer Buffers')).toBeTruthy();
+    expect(getByText('Featured Corridors')).toBeTruthy();
 
     const bucurestiItems = getAllByText('București Nord');
     expect(bucurestiItems.length).toBeGreaterThan(0);
 
     const corridorCard = getByTestId(getCorridorTestId('București Nord', 'Brașov'));
-    fireEvent.press(corridorCard);
-
-    expect(router.push).toHaveBeenCalledWith('/trains');
-  });
-
-  it('triggers transition loader with Romanian corridor route message when clicking featured cards', () => {
-    const router = useRouter();
-    const TransitionStatusWatcher: React.FC = () => {
-      const { transitionMessage, isTransitioning } = useScreenTransition();
-      return (
-        <>
-          <Text testID="active-transition-msg">{transitionMessage}</Text>
-          <Text testID="active-is-transitioning">{String(isTransitioning)}</Text>
-        </>
-      );
-    };
-
-    const { getByTestId } = render(
-      <ScreenTransitionProvider defaultDurationMs={100}>
-        <TripProvider>
-          <TransitionStatusWatcher />
-          <HomeScreen />
-        </TripProvider>
-      </ScreenTransitionProvider>
-    );
-
-    // Verify all 4 Romanian hub corridors trigger appropriate transition messages
-    FEATURED_CORRIDORS.forEach((corridor) => {
-      const card = getByTestId(getCorridorTestId(corridor.from, corridor.to));
-      fireEvent.press(card);
-
-      expect(getByTestId('active-transition-msg').props.children).toBe(
-        `Loading ${corridor.from} to ${corridor.to} timetable...`
-      );
-    });
-
-    expect(router.push).toHaveBeenCalledWith('/trains');
+    expect(corridorCard).toBeTruthy();
+    expect(corridorCard.props.accessibilityRole).toBeUndefined();
   });
 
   it('fulfills Role 1: integrates RouteFinderCard shorthand with filters, Trifecta preview, and STRICTLY NO REDIRECT on submit', () => {
@@ -153,15 +116,15 @@ describe('HomeScreen route integration', () => {
 
     // Promotes speed
     expect(getByTestId('pillar-speed-card')).toBeTruthy();
-    expect(getByText('300+ km/h High-Speed')).toBeTruthy();
+    expect(getByText('Direct Rail Connections')).toBeTruthy();
 
-    // Promotes cross-border European coverage
+    // Promotes value
     expect(getByTestId('pillar-coverage-card')).toBeTruthy();
-    expect(getByText('15+ European Countries')).toBeTruthy();
+    expect(getByText('Clear Fares & Schedules')).toBeTruthy();
 
-    // Promotes app capabilities
+    // Promotes reliability
     expect(getByTestId('pillar-capabilities-card')).toBeTruthy();
-    expect(getByText('Multi-Modal & Live Sync')).toBeTruthy();
+    expect(getByText('Protected Transfer Buffers')).toBeTruthy();
 
     // Explicit restriction: strictly no map implementation
     expect(queryByTestId('map-view')).toBeNull();

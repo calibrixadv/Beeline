@@ -6,7 +6,7 @@ import { useTheme } from '../src/context/ThemeContext';
 import { useScreenTransition } from '../src/context/ScreenTransitionContext';
 import { TripSummaryBanner } from '../src/components/TripSummaryBanner';
 import { RouteFinderCard, RouteSearchParams } from '../src/components/RouteFinderCard';
-import { MarketingShowcase, FeaturedCorridor } from '../src/components/MarketingShowcase';
+import { MarketingShowcase } from '../src/components/MarketingShowcase';
 import { CozyHoneyBackground } from '../src/components/CozyHoneyBackground';
 
 export default function HomeScreen() {
@@ -31,14 +31,7 @@ export default function HomeScreen() {
   };
 
   const handleExploreTrains = () => {
-    handleNavigate('/trains', 'Exploring Romanian & European rail corridors...');
-  };
-
-  const handleCorridorExplore = (corridor: FeaturedCorridor) => {
-    const routeMsg = corridor?.from && corridor?.to
-      ? `Loading ${corridor.from} to ${corridor.to} timetable...`
-      : 'Loading timetable...';
-    handleNavigate('/trains', routeMsg);
+    handleNavigate('/trains', 'Exploring train routes...');
   };
 
   return (
@@ -140,11 +133,10 @@ export default function HomeScreen() {
             </Pressable>
           ) : null}
 
-          {/* Role 2: Clean marketing showcase placeholders promoting Beeline capabilities, speed, and cross-border coverage */}
+          {/* Role 2: Clean marketing showcase promoting Beeline speed, coverage, and companion guides */}
           <MarketingShowcase
             testID="home-marketing-showcase"
             onExplorePress={handleExploreTrains}
-            onCorridorPress={handleCorridorExplore}
           />
         </ScrollView>
       </CozyHoneyBackground>

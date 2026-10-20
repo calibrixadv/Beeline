@@ -6,7 +6,6 @@ import {
   StyleProp,
   ViewStyle,
   Animated,
-  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -26,7 +25,7 @@ export interface FeaturedCorridor {
 export interface MarketingShowcaseProps {
   /** Callback when user clicks the primary hero CTA */
   onExplorePress?: () => void;
-  /** Callback when user clicks a featured corridor card */
+  /** Optional corridor press callback (kept for backward compatibility) */
   onCorridorPress?: (corridor: FeaturedCorridor) => void;
   /** Whether waggle flight paths and mascots animate. Defaults to true. */
   animated?: boolean;
@@ -183,18 +182,15 @@ export const WaggleFlightPath: React.FC<WaggleFlightPathProps> = ({
 
 export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
   onExplorePress,
-  onCorridorPress,
   animated = true,
   style,
   testID = 'marketing-showcase',
 }) => {
   const { theme, isDark } = useTheme();
-  const { width } = useWindowDimensions();
-  const isNarrow = width < 520;
 
   return (
     <View testID={testID} style={[styles.container, style]}>
-      {/* 1. Hero Showcase Card in Warm Honey Palette */}
+      {/* 1. Hero Showcase Card */}
       <BaseCard
         variant="elevated"
         padding="lg"
@@ -224,21 +220,10 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                 { color: isDark ? theme.colors.brandHoney : '#92400E' },
               ]}
             >
-              Beeline High-Speed Transit
+              Beeline Rail Transit
             </Text>
           </View>
         </View>
-
-        <Text
-          accessibilityRole="header"
-          aria-level={3}
-          style={[
-            styles.heroPreTitle,
-            { color: isDark ? theme.colors.brandHoney : '#92400E' },
-          ]}
-        >
-          Plan Your European Rail Journey
-        </Text>
 
         <Text
           accessibilityRole="header"
@@ -248,7 +233,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
             { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal },
           ]}
         >
-          Make a beeline across Romania & Europe
+          Plan your European rail journey
         </Text>
 
         <Text
@@ -257,14 +242,14 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
             { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted },
           ]}
         >
-          Fast, sweet, stress-free rail journeys. High-speed corridors, live status tracking, stop-by-stop itineraries, and transparent eco-impact data.
+          Search direct train corridors, check schedules, and explore routes across Romania and Europe.
         </Text>
 
         {/* Primary CTA */}
         <BaseButton
           variant="primary"
           size="lg"
-          title="Explore /trains Route"
+          title="Explore Trains"
           onPress={onExplorePress}
           iconLeft={<Ionicons name="train" size={20} color="#1C1917" />}
           iconRight={<Ionicons name="arrow-forward" size={16} color="#1C1917" />}
@@ -276,21 +261,21 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
             },
           ]}
           textStyle={{ color: '#1C1917', fontWeight: '800' }}
-          accessibilityLabel="Explore /trains Route"
+          accessibilityLabel="Explore Trains"
           testID="marketing-explore-btn"
         />
       </BaseCard>
 
-      {/* 2. Three Pillars Showcase: Curated Trifecta Mascots */}
+      {/* 2. Three Pillars Showcase: Companion Guides */}
       <Text
         accessibilityRole="header"
         aria-level={2}
         style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
       >
-        Why Plan With Beeline?
+        Why Beeline?
       </Text>
       <Text style={[styles.sectionSubtitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-        Meet the Mascot Trifecta — engineered for speed, smart value intelligence, and reliable Romanian transfer protection.
+        Thoughtful rail travel planning with our companion guides.
       </Text>
 
       <View style={styles.pillarsGrid}>
@@ -315,7 +300,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                   Barnaby the Scout
                 </Text>
                 <Text style={[styles.pillarMascotRole, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
-                  Direct High-Speed
+                  Direct Routes
                 </Text>
               </View>
             </View>
@@ -336,13 +321,13 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
             aria-level={3}
             style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
           >
-            300+ km/h High-Speed
+            Direct Rail Connections
           </Text>
           <Text style={[styles.pillarDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            City-center to city-center corridors engineered for maximum velocity with Barnaby. Direct Romanian & European rail connections up to 4x faster than air.
+            Fast point-to-point connections prioritizing direct travel and minimal station stops.
           </Text>
           <Text style={[styles.pillarMetric, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
-            ⚡ Instant timetable routing
+            ⚡ Direct corridor routing
           </Text>
         </BaseCard>
 
@@ -367,7 +352,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                   Honey the Hive Saver
                 </Text>
                 <Text style={[styles.pillarMascotRole, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
-                  15+ European Countries
+                  Transparent Pricing
                 </Text>
               </View>
             </View>
@@ -388,13 +373,13 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
             aria-level={3}
             style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
           >
-            Smart €10/Hour Value Engine
+            Clear Fares & Schedules
           </Text>
           <Text style={[styles.pillarDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            Honey evaluates every journey against the smart €10/hour rule (~50 lei/hr). Faster trains outrank buses unless road savings beat the threshold.
+            Upfront pricing with no hidden booking fees, helping you compare and find the best value for your trip.
           </Text>
           <Text style={[styles.pillarMetric, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
-            💰 Honey's Nectar Jar savings
+            💰 Upfront fare comparisons
           </Text>
         </BaseCard>
 
@@ -419,7 +404,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
                   Bumble the Buffer Guard
                 </Text>
                 <Text style={[styles.pillarMascotRole, { color: isDark ? theme.colors.success : '#15803D' }]}>
-                  Multi-Modal & Live Sync
+                  Comfortable Transfers
                 </Text>
               </View>
             </View>
@@ -440,169 +425,24 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
             aria-level={3}
             style={[styles.pillarTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
           >
-            Romanian Transfer Shield (25–35 min buffers)
+            Protected Transfer Buffers
           </Text>
           <Text style={[styles.pillarDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            Bumble safeguards your trip with generous 25–35 min buffers at key Romanian junctions to safeguard against CFR delay vulnerabilities.
+            Sensible connection windows at major transfer stations so you can switch trains without rushing.
           </Text>
           <Text style={[styles.pillarMetric, { color: isDark ? theme.colors.success : '#15803D' }]}>
-            🛡️ Bumble's safe transfer shield guarantee
+            🛡️ Generous connection buffers
           </Text>
         </BaseCard>
       </View>
 
-      {/* 3. High-Impact Feature Highlights (Curated Trifecta Value Propositions) */}
-      <View style={styles.featureGrid} testID="marketing-feature-grid">
-        <View
-          testID="feature-card-direct-corridors"
-          style={[
-            styles.featureItem,
-            {
-              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
-              borderColor: theme.colors.honeyBorder,
-            },
-          ]}
-        >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7' }]}>
-            <Ionicons name="flash" size={20} color={isDark ? theme.colors.brandHoney : '#D97706'} />
-          </View>
-          <Text
-            accessibilityRole="header"
-            aria-level={4}
-            style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
-          >
-            ⚡ High-Speed & Direct Romanian Corridors
-          </Text>
-          <Text style={[styles.featureDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            Direct InterRegio and Astra Trans Carpatic corridors connecting Bucharest, Brașov, Constanța, and Cluj.
-          </Text>
-        </View>
-
-        <View
-          testID="feature-card-value-engine"
-          style={[
-            styles.featureItem,
-            {
-              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
-              borderColor: theme.colors.honeyBorder,
-            },
-          ]}
-        >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7' }]}>
-            <Ionicons name="cash-outline" size={20} color={isDark ? theme.colors.brandHoney : '#B45309'} />
-          </View>
-          <Text
-            accessibilityRole="header"
-            aria-level={4}
-            style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
-          >
-            💰 Smart €10/Hour Value Engine
-          </Text>
-          <Text style={[styles.featureDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            Time saved valued at €10/hr (~50 RON/hr); faster rail outranks buses unless road savings exceed the threshold.
-          </Text>
-        </View>
-
-        <View
-          testID="feature-card-transfer-shield"
-          style={[
-            styles.featureItem,
-            {
-              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
-              borderColor: theme.colors.honeyBorder,
-            },
-          ]}
-        >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
-            <Ionicons name="shield-checkmark" size={20} color={isDark ? '#34D399' : '#15803D'} />
-          </View>
-          <Text
-            accessibilityRole="header"
-            aria-level={4}
-            style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
-          >
-            🛡️ Romanian Transfer Shield (25–35 min buffers)
-          </Text>
-          <Text style={[styles.featureDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            Generous 25–35 min buffer protection at key Romanian junctions to safeguard against network delay vulnerabilities.
-          </Text>
-        </View>
-
-        <View
-          testID="feature-card-eco-savings"
-          style={[
-            styles.featureItem,
-            {
-              backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
-              borderColor: theme.colors.honeyBorder,
-            },
-          ]}
-        >
-          <View style={[styles.featureIconBox, { backgroundColor: isDark ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7' }]}>
-            <Ionicons name="leaf" size={20} color={isDark ? '#34D399' : '#166534'} />
-          </View>
-          <Text
-            accessibilityRole="header"
-            aria-level={4}
-            style={[styles.featureTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
-          >
-            🌿 Eco CO₂ Savings over DN1 and regional flights
-          </Text>
-          <Text style={[styles.featureDescription, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            Up to 85% lower carbon footprint than congested DN1 road traffic and regional short-haul air corridors.
-          </Text>
-        </View>
-      </View>
-
-      {/* 4. Cross-Border European Metrics Bar */}
-      <BaseCard
-        variant="flat"
-        padding="md"
-        testID="marketing-metrics-card"
-        style={[
-          styles.metricsCard,
-          {
-            backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
-            borderColor: theme.colors.honeyBorder,
-          },
-        ]}
-      >
-        <View style={[styles.metricItem, isNarrow && styles.metricItemNarrow]}>
-          <Text style={[styles.metricNumber, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>300+</Text>
-          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            km/h Speed
-          </Text>
-        </View>
-        {!isNarrow && <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />}
-        <View style={[styles.metricItem, isNarrow && styles.metricItemNarrow]}>
-          <Text style={[styles.metricNumber, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>15+</Text>
-          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            EU Countries
-          </Text>
-        </View>
-        {!isNarrow && <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />}
-        <View style={[styles.metricItem, isNarrow && styles.metricItemNarrow]}>
-          <Text style={[styles.metricNumber, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>10k+</Text>
-          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            Stations
-          </Text>
-        </View>
-        {!isNarrow && <View style={[styles.metricDivider, { backgroundColor: theme.colors.honeyBorder }]} />}
-        <View style={[styles.metricItem, isNarrow && styles.metricItemNarrow]}>
-          <Text style={[styles.metricNumber, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>85%</Text>
-          <Text style={[styles.metricLabel, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-            Less CO₂
-          </Text>
-        </View>
-      </BaseCard>
-
-      {/* 5. Featured High-Speed Corridors & Waggle Flight Paths */}
+      {/* 3. Featured Corridors (Static Informational Cards) */}
       <Text
         accessibilityRole="header"
         aria-level={2}
         style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
       >
-        Featured High-Speed Corridors
+        Featured Corridors
       </Text>
       <Text style={[styles.sectionSubtitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
         Direct routes connecting major Romanian metropolitan hubs and European gateways.
@@ -613,9 +453,7 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           key={`${corridor.from}-${corridor.to}-${idx}`}
           variant="outlined"
           padding="md"
-          onPress={onCorridorPress ? () => onCorridorPress(corridor) : undefined}
-          accessibilityRole={onCorridorPress ? 'button' : undefined}
-          accessibilityLabel={`Explore route from ${corridor.from} to ${corridor.to}, ${corridor.operator}, ${corridor.duration}, ${corridor.price}`}
+          accessibilityLabel={`${corridor.from} to ${corridor.to}, ${corridor.operator}, ${corridor.duration}, ${corridor.price}`}
           testID={getCorridorTestId(corridor.from, corridor.to)}
           style={[
             styles.corridorCard,
@@ -645,34 +483,6 @@ export const MarketingShowcase: React.FC<MarketingShowcaseProps> = ({
           </Text>
         </BaseCard>
       ))}
-
-      {/* 6. Multi-Operator Trust Banner */}
-      <BaseCard
-        variant="flat"
-        padding="md"
-        testID="marketing-trust-card"
-        style={[
-          styles.trustCard,
-          {
-            backgroundColor: isDark ? '#1C1917' : theme.colors.surfaceWarm,
-            borderColor: theme.colors.honeyBorder,
-          },
-        ]}
-      >
-        <View style={styles.trustHeader}>
-          <Ionicons name="shield-checkmark" size={18} color={isDark ? theme.colors.brandHoney : '#92400E'} />
-          <Text
-            accessibilityRole="header"
-            aria-level={3}
-            style={[styles.trustTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
-          >
-            Unified European Rail Booking with Beeline
-          </Text>
-        </View>
-        <Text style={[styles.trustSubtitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
-          Aggregating CFR Călători, Astra Trans Carpatic, Transferoviar Călători, ÖBB, and European operators into one unified experience.
-        </Text>
-      </BaseCard>
     </View>
   );
 };
@@ -712,14 +522,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 16,
     flexShrink: 1,
-  },
-  heroPreTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 4,
-    lineHeight: 18,
   },
   heroTitle: {
     fontSize: 24,
@@ -807,78 +609,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 17,
   },
-  featureGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 18,
-  },
-  featureItem: {
-    flexBasis: 260,
-    flexGrow: 1,
-    minWidth: 200,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-  },
-  featureIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-    flexShrink: 0,
-  },
-  featureTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  featureDescription: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  metricsCard: {
-    borderRadius: 14,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    gap: 8,
-  },
-  metricItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    minWidth: 64,
-    flexGrow: 1,
-  },
-  metricItemNarrow: {
-    flexBasis: '44%',
-  },
-  metricNumber: {
-    fontSize: 18,
-    fontWeight: '900',
-    lineHeight: 24,
-    marginBottom: 2,
-  },
-  metricLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    lineHeight: 16,
-    textAlign: 'center',
-  },
-  metricDivider: {
-    width: 1,
-    height: 28,
-  },
   corridorCard: {
     borderRadius: 12,
     marginBottom: 10,
@@ -931,26 +661,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: -1,
     lineHeight: 15,
-  },
-  trustCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 8,
-  },
-  trustHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
-  },
-  trustTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    lineHeight: 20,
-    flex: 1,
-  },
-  trustSubtitle: {
-    fontSize: 12,
-    lineHeight: 18,
   },
 });
