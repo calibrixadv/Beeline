@@ -366,6 +366,31 @@ export const ROMANIAN_HUB_CITIES = [
 
 export type RomanianHubCity = (typeof ROMANIAN_HUB_CITIES)[number];
 
+export const CITY_ALIASES: Record<string, string[]> = {
+  'București': ['bucuresti', 'bucharest', 'buc', 'capitala'],
+  'Galați': ['galati', 'galatz'],
+  'Cluj-Napoca': ['cluj', 'cluj napoca', 'kolozsvar'],
+  'Timișoara': ['timisoara', 'temesvar'],
+  'Brașov': ['brasov', 'kronstadt'],
+  'Constanța': ['constanta', 'tomis'],
+  'Iași': ['iasi', 'jassy'],
+  'Craiova': ['craiova'],
+  'Oradea': ['oradea', 'nagyvarad'],
+  'Sibiu': ['sibiu', 'hermannstadt'],
+};
+
+/**
+ * Common typo equivalences and phonetic stems for Romanian transit search.
+ */
+export const TOKEN_ALIASES: Record<string, string> = {
+  unii: 'unirii',
+  unir: 'unirii',
+  bucharest: 'bucuresti',
+  north: 'nord',
+  train: 'gara',
+  station: 'gara',
+};
+
 /**
  * Normalizes string for comparisons (removes diacritics, lowercase, trims whitespace).
  */
@@ -375,6 +400,66 @@ export const normalizeQuery = (text: string): string =>
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+
+export const normalizeSearchToken = (token: string): string => {
+  const norm = normalizeQuery(token);
+  return TOKEN_ALIASES[norm] || norm;
+};
+
+/**
+ * Checks if a location matches a user query using tokenized, fuzzy, and alias matching.
+ */
+export const matchesLocationTokens = (loc: FeaturedLocation, rawQuery: string): boolean => {
+  if (!loc) return false;
+  const normalized = normalizeQuery(rawQuery);
+  if (!normalized) return true;
+
+  // Direct substring match
+  if (
+    normalizeQuery(loc.name).includes(normalized) ||
+    normalizeQuery(loc.city).includes(normalized) ||
+    (loc.description && normalizeQuery(loc.description).includes(normalized))
+  ) {
+    return true;
+  }
+
+  // Token-based matching: split query into distinct words (e.g. "piata unii bucharest" -> ["piata", "unii", "bucharest"])
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return true;
+
+  const cityAliases = CITY_ALIASES[loc.city] || [];
+  const corpus = [
+    normalizeQuery(loc.name),
+    normalizeQuery(loc.city),
+    ...cityAliases.map(normalizeQuery),
+    loc.description ? normalizeQuery(loc.description) : '',
+  ].join(' ');
+
+  // Check that every token in the query matches somewhere in the location's corpus
+  return tokens.every((token) => {
+    const normToken = normalizeSearchToken(token);
+    // 1. Direct match in corpus
+    if (corpus.includes(token) || corpus.includes(normToken)) {
+      return true;
+    }
+    // 2. Prefix or fuzzy match (e.g. 'uni' -> 'unirii', 'micro' -> 'micro 19')
+    if (token.length >= 3) {
+      const words = corpus.split(/\s+/);
+      if (
+        words.some(
+          (w) =>
+            w.startsWith(token) ||
+            token.startsWith(w) ||
+            w.startsWith(normToken) ||
+            normToken.startsWith(w)
+        )
+      ) {
+        return true;
+      }
+    }
+    return false;
+  });
+};
 
 /**
  * Returns the primary train station for a given city.
@@ -419,15 +504,9 @@ export const getFeaturedLocationsForCity = (
       }
     }
 
-    // Check search query
+    // Check search query with token matching
     if (normalizedSearch) {
-      const nameMatch = normalizeQuery(loc.name).includes(normalizedSearch);
-      const descMatch = loc.description
-        ? normalizeQuery(loc.description).includes(normalizedSearch)
-        : false;
-      if (!nameMatch && !descMatch) {
-        return false;
-      }
+      return matchesLocationTokens(loc, options!.query!);
     }
 
     return true;
@@ -451,23 +530,36 @@ export const getFeaturedLocationsForCity = (
  * Detects the city for a given station/hub location name.
  */
 export const detectCityForLocation = (locationName: string): string | undefined => {
+  if (!locationName) return undefined;
   const normalized = normalizeQuery(locationName);
+
+  // 1. Direct name match in featured locations
   const match = FEATURED_LOCATIONS.find((loc) => normalizeQuery(loc.name) === normalized);
   if (match) return match.city;
 
-  // Partial match fallback
-  const partialMatch = FEATURED_LOCATIONS.find(
-    (loc) => normalizeQuery(loc.name).includes(normalized) || normalized.includes(normalizeQuery(loc.name))
-  );
-  if (partialMatch) return partialMatch.city;
+  // 2. Token match in featured locations (e.g. "galati micro 19" -> Galați, "piata unii bucharest" -> București)
+  const tokenMatch = FEATURED_LOCATIONS.find((loc) => matchesLocationTokens(loc, locationName));
+  if (tokenMatch) return tokenMatch.city;
 
-  // Direct city name match
+  // 3. City name or alias match directly in the location string
+  for (const [cityName, aliases] of Object.entries(CITY_ALIASES)) {
+    if (normalized.includes(normalizeQuery(cityName))) {
+      return cityName;
+    }
+    for (const alias of aliases) {
+      if (normalized.includes(normalizeQuery(alias))) {
+        return cityName;
+      }
+    }
+  }
+
+  // 4. Hub cities direct match
   const cityMatch = ROMANIAN_HUB_CITIES.find((c) => normalizeQuery(c) === normalized);
   return cityMatch;
 };
 
 /**
- * Returns other major rail hubs outside of the specified city.
+ * Returns other major transit hubs outside of the specified city.
  */
 export const getMajorRailHubsOutsideCity = (
   currentCityName: string,
@@ -477,17 +569,29 @@ export const getMajorRailHubsOutsideCity = (
   const normalizedSearch = query ? normalizeQuery(query) : '';
 
   return FEATURED_LOCATIONS.filter((loc) => {
+    // Cannot be in current city
     if (normalizeQuery(loc.city) === normalizedCurrent) return false;
-    if (loc.type !== 'STATION' && loc.type !== 'AIRPORT') return false;
 
+    // If a search query is provided, match ANY location outside current city that matches the tokens!
     if (normalizedSearch) {
-      const nameMatch = normalizeQuery(loc.name).includes(normalizedSearch);
-      const cityMatch = normalizeQuery(loc.city).includes(normalizedSearch);
-      if (!nameMatch && !cityMatch) return false;
+      return matchesLocationTokens(loc, query!);
     }
 
-    return true;
+    // Default outside recommendations (when no search query):
+    // Include all train stations, airports, and major city transit hubs (isMainHub)
+    return loc.type === 'STATION' || loc.type === 'AIRPORT' || Boolean(loc.isMainHub);
   });
+};
+
+/**
+ * Looks up a featured location by exact name, normalized substring, or token matching.
+ */
+export const findFeaturedLocation = (nameOrQuery: string): FeaturedLocation | undefined => {
+  if (!nameOrQuery) return undefined;
+  const normalized = normalizeQuery(nameOrQuery);
+  const direct = FEATURED_LOCATIONS.find((loc) => normalizeQuery(loc.name) === normalized);
+  if (direct) return direct;
+  return FEATURED_LOCATIONS.find((loc) => matchesLocationTokens(loc, nameOrQuery));
 };
 
 /**
@@ -495,6 +599,8 @@ export const getMajorRailHubsOutsideCity = (
  *
  * Requirements:
  * - If user picks target to be another city:
+ *   - If the user already has a valid customized origin in currentCity (e.g. "Micro 19" in Galați)
+ *     and destination is a multi-modal non-rail hub (e.g. Metro "Piața Unirii" in București), DO NOT overwrite it!
  *   - If location is activated: starting location is user's current location (`📍 My Current Location (${currentCity})`)
  *   - If location is not active: current city's main train station (e.g. `București Nord` or `Gara Galați`)
  *   - If current city is not known: destination city's train station fallback.
@@ -503,9 +609,47 @@ export const smartSuggestOrigin = (params: {
   destination: string;
   currentCity?: string;
   isLocationActive?: boolean;
+  existingOrigin?: string;
 }): string => {
-  const { destination, currentCity = 'București', isLocationActive = false } = params;
+  const {
+    destination,
+    currentCity = 'București',
+    isLocationActive = false,
+    existingOrigin,
+  } = params;
+
   const destCity = detectCityForLocation(destination);
+  const destLoc = findFeaturedLocation(destination);
+
+  // If the user already has an existing origin specified:
+  if (existingOrigin && existingOrigin.trim()) {
+    const trimmed = existingOrigin.trim();
+    // 1. Explicit GPS origin is always preserved
+    if (trimmed.startsWith('📍')) {
+      return trimmed;
+    }
+
+    const existingOriginCity = detectCityForLocation(trimmed);
+    const isExistingOriginInCurrentCity =
+      existingOriginCity && normalizeQuery(existingOriginCity) === normalizeQuery(currentCity);
+
+    // 2. Door-to-door multi-modal edge case:
+    // When traveling from a local/inner-city hub (e.g. "Micro 19" Galați) to a non-rail hub in another city
+    // (e.g. Metro "Piața Unirii" in Bucharest), preserve the local origin for door-to-door transit!
+    if (
+      isExistingOriginInCurrentCity &&
+      destLoc &&
+      destLoc.type !== 'STATION' &&
+      destLoc.type !== 'AIRPORT'
+    ) {
+      return trimmed;
+    }
+
+    // 3. Same-city journey preserves existing origin
+    if (destCity && normalizeQuery(destCity) === normalizeQuery(currentCity)) {
+      return trimmed;
+    }
+  }
 
   // If destination is in another city
   const isAnotherCity = destCity && normalizeQuery(destCity) !== normalizeQuery(currentCity);

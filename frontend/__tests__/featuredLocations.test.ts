@@ -7,6 +7,8 @@ import {
   smartSuggestOrigin,
   getMajorRailHubsOutsideCity,
   normalizeQuery,
+  matchesLocationTokens,
+  findFeaturedLocation,
 } from '../src/data/featuredLocations';
 
 describe('featuredLocations data and heuristic helpers', () => {
@@ -127,6 +129,55 @@ describe('featuredLocations data and heuristic helpers', () => {
       });
 
       expect(origin).toBe('București Nord');
+    });
+
+    it('preserves inner-city origin (e.g. Micro 19 Galați) when destination is an urban transit hub (Piața Unirii)', () => {
+      const origin = smartSuggestOrigin({
+        destination: 'Piața Unirii',
+        currentCity: 'Galați',
+        isLocationActive: false,
+        existingOrigin: 'Micro 19',
+      });
+
+      expect(origin).toBe('Micro 19');
+    });
+
+    it('pairs inner-city origin to train station when destination is a railway hub (Gara Brașov)', () => {
+      const origin = smartSuggestOrigin({
+        destination: 'Gara Brașov',
+        currentCity: 'Galați',
+        isLocationActive: false,
+        existingOrigin: 'Micro 19',
+      });
+
+      expect(origin).toBe('Gara Galați');
+    });
+  });
+
+  describe('matchesLocationTokens and findFeaturedLocation', () => {
+    it('matches "piata unii bucharest" to Piața Unirii București handling typos and aliases', () => {
+      const piataUnirii = FEATURED_LOCATIONS.find((l) => l.id === 'buc-piata-unirii')!;
+      expect(matchesLocationTokens(piataUnirii, 'piata unii bucharest')).toBe(true);
+
+      const found = findFeaturedLocation('piata unii bucharest');
+      expect(found?.id).toBe('buc-piata-unirii');
+      expect(found?.name).toBe('Piața Unirii');
+    });
+
+    it('matches "galati micro 19" to Micro 19 in Galați', () => {
+      const micro19 = FEATURED_LOCATIONS.find((l) => l.id === 'galati-micro-19')!;
+      expect(matchesLocationTokens(micro19, 'galati micro 19')).toBe(true);
+
+      const found = findFeaturedLocation('galati micro 19');
+      expect(found?.id).toBe('galati-micro-19');
+      expect(found?.name).toBe('Micro 19');
+    });
+
+    it('finds Piața Unirii when searching outside hubs from Galați with typo query', () => {
+      const outsideHubs = getMajorRailHubsOutsideCity('Galați', 'piata unii bucharest');
+      expect(outsideHubs.length).toBeGreaterThanOrEqual(1);
+      expect(outsideHubs[0].name).toBe('Piața Unirii');
+      expect(outsideHubs[0].city).toBe('București');
     });
   });
 });

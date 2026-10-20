@@ -321,6 +321,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
       destination: locName,
       currentCity,
       isLocationActive,
+      existingOrigin: origin,
     });
     if (suggestedOrigin && origin !== suggestedOrigin) {
       setOrigin(suggestedOrigin);

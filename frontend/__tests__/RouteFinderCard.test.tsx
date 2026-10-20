@@ -681,6 +681,42 @@ describe('RouteFinderCard component', () => {
       expect(originInput.props.value).toBe('Gara Galați');
     });
 
+    it('allows travelling from Galați Micro 19 to Piața Unirii București without overwriting local origin', () => {
+      const { getByTestId, queryByTestId } = renderComponent({
+        initialCity: 'Galați',
+        initialOrigin: 'Micro 19',
+        initialDestination: 'Bariera Traian',
+      });
+
+      // Destination dropdown opened and searched with typo
+      const destInput = getByTestId('route-destination-input');
+      fireEvent.changeText(destInput, 'piata unii bucharest');
+
+      // Dropdown menu opens and shows Piața Unirii outside hub
+      expect(getByTestId('destination-dropdown-menu')).toBeTruthy();
+      const piataUniriiOutside = getByTestId('dropdown-outside-hub-buc-piata-unirii');
+      expect(piataUniriiOutside).toBeTruthy();
+
+      // Select Piața Unirii
+      fireEvent.press(piataUniriiOutside);
+
+      // Verify destination is set to Piața Unirii
+      expect(destInput.props.value).toBe('Piața Unirii');
+
+      // Crucial: Origin Micro 19 MUST be preserved for this multi-modal edge case
+      const originInput = getByTestId('route-origin-input');
+      expect(originInput.props.value).toBe('Micro 19');
+
+      // Dropdown closes
+      expect(queryByTestId('destination-dropdown-menu')).toBeNull();
+
+      // Submit route search successfully
+      const submitBtn = getByTestId('route-finder-submit-btn');
+      fireEvent.press(submitBtn);
+
+      expect(getByTestId('route-submission-feedback')).toBeTruthy();
+    });
+
     it('provides View Live Schedules button in prepared submission feedback linking to /schedules', () => {
       const handleNavigateSchedules = jest.fn();
       const { getByTestId } = renderComponent({
