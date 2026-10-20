@@ -19,6 +19,8 @@ export interface CozyHoneyBackgroundProps {
   animated?: boolean;
   /** Number of floating golden pollen particles to render. Defaults to 8. */
   particleCount?: number;
+  /** Whether to show the cozy honeycomb texture overlay. Defaults to true. */
+  showTexture?: boolean;
   /** Custom pointer events configuration. Defaults to 'box-none' if children exist, else 'none'. */
   pointerEvents?: 'box-none' | 'none' | 'box-only' | 'auto';
   /** Custom container style */
@@ -69,10 +71,19 @@ const WATERMARK_HEXES = [
   { top: 90, right: 88 },
 ];
 
+const WATERMARK_HEXES_BOTTOM_LEFT = [
+  { bottom: 10, left: 16 },
+  { bottom: 10, left: 68 },
+  { bottom: 55, left: 42 },
+  { bottom: 100, left: 16 },
+  { bottom: 100, left: 68 },
+];
+
 export const CozyHoneyBackground: React.FC<CozyHoneyBackgroundProps> = ({
   children,
   animated = true,
   particleCount = 8,
+  showTexture = true,
   pointerEvents,
   style,
   testID = 'cozy-honey-background',
@@ -236,7 +247,28 @@ export const CozyHoneyBackground: React.FC<CozyHoneyBackgroundProps> = ({
     }
   };
 
-  // Pure Web CSS Keyframes for zero-jank 60fps web performance
+  // Seamless mathematical honeycomb SVG mesh with warm nectar accents
+  const honeycombSvgDataUri = useMemo(() => {
+    const stroke = isDark ? '%23F59E0B' : '%23D97706';
+    const strokeOpacity = isDark ? '0.12' : '0.075';
+    const nectarGlow = isDark ? '%23FDE047' : '%23F59E0B';
+    const nectarOpacity = isDark ? '0.045' : '0.035';
+
+    // Seamless 56x100 hexagonal honeycomb mesh with soft nectar-filled accent cells
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="100" viewBox="0 0 56 100"><path d="M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100" fill="none" stroke="${stroke}" stroke-opacity="${strokeOpacity}" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/><polygon points="28,14 44,23 44,43 28,52 12,43 12,23" fill="${nectarGlow}" fill-opacity="${nectarOpacity}"/><circle cx="28" cy="33" r="2.2" fill="${nectarGlow}" fill-opacity="${nectarOpacity}"/></svg>`;
+
+    return `data:image/svg+xml,${svg}`;
+  }, [isDark]);
+
+  // Warm radial honey glow / hive hearth vignette
+  const radialGlowGradient = useMemo(() => {
+    if (isDark) {
+      return 'radial-gradient(ellipse 80% 60% at 50% 18%, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.04) 50%, transparent 80%)';
+    }
+    return 'radial-gradient(ellipse 80% 60% at 50% 18%, rgba(251, 191, 36, 0.14) 0%, rgba(245, 158, 11, 0.04) 50%, transparent 80%)';
+  }, [isDark]);
+
+  // Pure Web CSS Keyframes & Texture Styles for zero-jank 60fps web performance
   const webKeyframes = useMemo(() => {
     if (Platform.OS !== 'web' || !shouldAnimate) return null;
     const rules = POLLEN_PRESETS.map((p, idx) => `
@@ -271,6 +303,52 @@ export const CozyHoneyBackground: React.FC<CozyHoneyBackgroundProps> = ({
         pointerEvents="none"
         style={StyleSheet.absoluteFill}
       >
+        {/* Full-bleed Honeycomb Mesh & Warm Glow Texture Layer */}
+        {showTexture && (
+          <View
+            testID="cozy-honeycomb-texture"
+            style={[
+              styles.textureLayer,
+              Platform.OS === 'web'
+                ? ({
+                    backgroundImage: `url("${honeycombSvgDataUri}"), ${radialGlowGradient}`,
+                    backgroundRepeat: 'repeat, no-repeat',
+                    backgroundSize: '56px 100px, 100% 100%',
+                    backgroundPosition: 'top center, top center',
+                    opacity: isDark ? 0.95 : 0.9,
+                  } as any)
+                : null,
+            ]}
+          >
+            {/* Secondary lower-left honeycomb watermark cluster for native & mobile balance */}
+            <View
+              testID="honeycomb-watermark-secondary"
+              style={styles.watermarkBottomLeftContainer}
+            >
+              {WATERMARK_HEXES_BOTTOM_LEFT.map((hex, idx) => (
+                <View
+                  key={idx}
+                  testID={`honeycomb-cell-secondary-${idx}`}
+                  style={[
+                    styles.watermarkCell,
+                    {
+                      bottom: hex.bottom,
+                      left: hex.left,
+                      opacity: isDark ? 0.08 : 0.05,
+                    },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="hexagon-outline"
+                    size={46}
+                    color={isDark ? theme.colors.brandHoney : theme.colors.brandAmber}
+                  />
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* Geometric Honeycomb Watermark Pattern */}
         <View testID="honeycomb-watermark" style={styles.watermarkContainer}>
           {WATERMARK_HEXES.map((hex, idx) => (
@@ -370,11 +448,21 @@ const styles = StyleSheet.create({
     width: '100%',
     overflow: 'hidden',
   },
+  textureLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
   watermarkContainer: {
     position: 'absolute',
     top: 10,
     right: 12,
     width: 170,
+    height: 150,
+  },
+  watermarkBottomLeftContainer: {
+    position: 'absolute',
+    bottom: 12,
+    left: 8,
+    width: 150,
     height: 150,
   },
   watermarkCell: {

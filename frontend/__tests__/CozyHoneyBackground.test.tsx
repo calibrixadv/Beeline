@@ -119,6 +119,24 @@ describe('CozyHoneyBackground component', () => {
     }
   });
 
+  it('renders cozy honeycomb texture layer and secondary balancing cluster', () => {
+    const { getByTestId } = renderWithTheme(<CozyHoneyBackground />);
+
+    expect(getByTestId('cozy-honeycomb-texture')).toBeTruthy();
+    expect(getByTestId('honeycomb-watermark-secondary')).toBeTruthy();
+    for (let i = 0; i < 5; i++) {
+      expect(getByTestId(`honeycomb-cell-secondary-${i}`)).toBeTruthy();
+    }
+  });
+
+  it('allows disabling texture layer via showTexture={false}', () => {
+    const { queryByTestId } = renderWithTheme(
+      <CozyHoneyBackground showTexture={false} />
+    );
+
+    expect(queryByTestId('cozy-honeycomb-texture')).toBeNull();
+  });
+
   it('adapts background and pollen particle colors seamlessly in dark mode', () => {
     const { getByTestId } = renderWithTheme(
       <CozyHoneyBackground testID="dark-bg" />,
@@ -180,5 +198,11 @@ describe('CozyHoneyBackground component', () => {
     expect(flatStyle).toBeDefined();
     expect(flatStyle.animationName).toBe('pollenDrift_0');
     expect(flatStyle.animationFillMode).toBe('both');
+
+    const texture = getByTestId('cozy-honeycomb-texture');
+    expect(texture).toBeTruthy();
+    const textureStyle = StyleSheet.flatten(texture.props.style) as any;
+    expect(textureStyle.backgroundImage).toContain('data:image/svg+xml');
+    expect(textureStyle.backgroundRepeat).toBe('repeat, no-repeat');
   });
 });
