@@ -22,6 +22,7 @@ import * as MarketingShowcaseStories from '../src/components/stories/MarketingSh
 import * as MascotBeeStories from '../src/components/stories/MascotBee.stories';
 import * as RouteRewardBadgeStories from '../src/components/stories/RouteRewardBadge.stories';
 import * as CozyHoneyBackgroundStories from '../src/components/stories/CozyHoneyBackground.stories';
+import * as TransitScheduleCardStories from '../src/components/stories/TransitScheduleCard.stories';
 
 export const stories = [
   { name: 'BaseButton', module: BaseButtonStories },
@@ -48,6 +49,7 @@ export const stories = [
   { name: 'MascotBee', module: MascotBeeStories },
   { name: 'RouteRewardBadge', module: RouteRewardBadgeStories },
   { name: 'CozyHoneyBackground', module: CozyHoneyBackgroundStories },
+  { name: 'TransitScheduleCard', module: TransitScheduleCardStories },
 ];
 
 

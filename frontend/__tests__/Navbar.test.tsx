@@ -38,7 +38,7 @@ describe('Navbar UI component', () => {
 
     const trainsLink = getByTestId('navbar-link-schedules');
     fireEvent.press(trainsLink);
-    expect(handleNavigate).toHaveBeenCalledWith('/trains');
+    expect(handleNavigate).toHaveBeenCalledWith('/schedules');
 
     const homeLink = getByTestId('navbar-link-home');
     fireEvent.press(homeLink);
@@ -56,7 +56,7 @@ describe('Navbar UI component', () => {
     const trainsLink = getByTestId('navbar-link-schedules');
     fireEvent.press(trainsLink);
 
-    expect(router.push).toHaveBeenCalledWith('/trains');
+    expect(router.push).toHaveBeenCalledWith('/schedules');
   });
 
   it('triggers quick action button press', () => {
@@ -66,7 +66,7 @@ describe('Navbar UI component', () => {
     const actionBtn = getByTestId('navbar-action-btn');
     fireEvent.press(actionBtn);
 
-    expect(router.push).toHaveBeenCalledWith('/trains');
+    expect(router.push).toHaveBeenCalledWith('/schedules');
   });
 
   it('toggles theme on pressing theme toggle button', () => {

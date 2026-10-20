@@ -52,10 +52,14 @@ Implement "The Cozy Hive" redesign specified in `docs/ideas/cozy-bee-homepage-re
 - [x] **Task 9**: Resolve text overlaps, connector wrapping, and dark mode contrast discordances on HomeScreen.
 - [x] **Task 10**: Streamline MarketingShowcase, remove duplicate feature cards, fabricated metrics, and fake navigation transitions.
 
-### Checkpoint 4: Complete & Clean Build
-- [x] `npm test`: 100% passing test suites
-- [x] `npm run test:storybook`: 100% passing automated story interaction tests
+### Phase 5: Romanian Transit Multi-Modal Schedule Screen
+- [x] **Task 11**: Implement `/schedules` screen with dual-section switcher (Urban Transit vs Intercity Rail), Romanian transit provider templates (Metrorex, Transurb Galați, STB, CFR Călători, Astra Trans Carpatic, TFC, Softrans, Regio Călători), distance-based location filtering, expandable stop timeline accordion, and zero map implementation.
+
+### Checkpoint 5: Complete & Clean Build
+- [x] `npm test`: 34 test suites, 440 tests passed (100%)
+- [x] `npm run test:storybook`: 196 automated story interaction tests passed
 - [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] `npm run build:web`: Export succeeded cleanly with 0 errors
 - [x] `AI_LOG.md` remains strictly untouched
 
 ---

@@ -68,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navLinks = [
     { label: 'Home', route: '/', icon: 'home-outline' as const },
-    { label: 'Schedules', route: '/trains', icon: 'train-outline' as const },
+    { label: 'Schedules', route: '/schedules', icon: 'time-outline' as const },
     {
       label: 'My Trip',
       route: '/my-trip',
@@ -147,7 +147,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             const isActive =
               link.route === '/'
                 ? activePath === '/' || activePath === ''
-                : activePath.startsWith(link.route);
+                : activePath.startsWith(link.route) ||
+                  (link.route === '/schedules' && activePath.startsWith('/trains'));
 
             return (
               <TouchableOpacity
@@ -209,7 +210,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               size="sm"
               title="Jump into Action"
               iconRight={<Ionicons name="arrow-forward" size={14} color="#000000" />}
-              onPress={() => handleNav('/trains')}
+              onPress={() => handleNav('/schedules')}
               style={styles.ctaButton}
               accessibilityLabel="Jump directly into route action"
             />

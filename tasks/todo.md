@@ -200,6 +200,27 @@
 
 ---
 
+## Task 11: Implement Romanian Multi-Modal Transit Schedule Screen
+**Description:** Implement comprehensive `/schedules` screen featuring dual sections (Urban Transit: Tram, Bus, Metro vs Intercity Rail: Train), location-based filtering with city quick-pick chips and GPS detection, Romanian transit providers (Metrorex, Transurb Galați, STB, CFR Călători, Astra Trans Carpatic, TFC, Softrans, Regio Călători), and a backend-ready template service layer.
+**Acceptance criteria:**
+- [x] Create `frontend/src/types/schedule.ts` defining `TransitMode`, `TransitProvider`, `TransitLineSchedule`, `ScheduleSection`.
+- [x] Create `frontend/src/data/romanianTransitTemplates.ts` with templates for Metrorex, Transurb Galați, STB, CTP Cluj, STPT Timișoara, CFR, Astra, TFC, etc.
+- [x] Create `frontend/src/services/transitScheduleService.ts` supporting filtering by section, city, mode, operator, query, and coordinate distance resolution.
+- [x] Create `frontend/src/components/TransitScheduleCard.tsx` with live departure pills, mode badges, fare in LEI, and expandable stopover timeline.
+- [x] Create `frontend/app/schedules.tsx` with dual-section switcher, location filter bar, mode & provider chips, real-time search, and zero map.
+- [x] Update `Navbar.tsx` and `_layout.tsx` to register and link `/schedules`.
+- [x] Add Storybook stories in `TransitScheduleCard.stories.tsx` and register in `storybook.requires.ts`.
+- [x] Add unit tests in `transitScheduleService.test.ts` and integration tests in `schedulesRoute.test.tsx`.
+- [x] Update `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `npm test`: 34 suites, 440 tests passed
+- [x] `npm run test:storybook`: 196 story tests passed
+- [x] `npm run type-check`: 0 errors
+- [x] `npm run build:web`: Export succeeded
+- [x] `AI_LOG.md`: Strictly untouched
+
+---
+
 ## Task 10: Streamline Marketing Showcase & Remove Invented Behaviour on HomeScreen
 **Description:** Remove redundant feature grids, fabricated metrics, fake aggregator claims, and fake timetable loading transitions; rewrite hero and mascot pillars with clean, authentic copy.
 **Acceptance criteria:**
@@ -213,4 +234,25 @@
 - [x] `npm test`: 32 suites, 415 tests passed
 - [x] `npm run test:storybook`: 188 story tests passed
 - [x] `npm run type-check`: 0 errors
+- [x] `AI_LOG.md`: Strictly untouched
+
+---
+
+## Task 11: Implement Romanian Multi-Modal Transit Schedule Screen
+**Description:** Implement comprehensive `/schedules` screen featuring dual sections (Urban Transit: Tram, Bus, Metro vs Intercity Rail: Train), location-based filtering with city quick-pick chips and GPS detection, Romanian transit providers (Metrorex, Transurb Galați, STB, CFR Călători, Astra Trans Carpatic, TFC, Softrans, Regio Călători), and a backend-ready template service layer.
+**Acceptance criteria:**
+- [x] Create `frontend/src/types/schedule.ts` defining `TransitMode`, `TransitProvider`, `TransitLineSchedule`, `ScheduleSection`.
+- [x] Create `frontend/src/data/romanianTransitTemplates.ts` with templates for Metrorex, Transurb Galați, STB, CTP Cluj, STPT Timișoara, CFR, Astra, TFC, etc.
+- [x] Create `frontend/src/services/transitScheduleService.ts` supporting filtering by section, city, mode, operator, query, and coordinate distance resolution.
+- [x] Create `frontend/src/components/TransitScheduleCard.tsx` with live departure pills, mode badges, fare in LEI, and expandable stopover timeline.
+- [x] Create `frontend/app/schedules.tsx` with dual-section switcher, location filter bar, mode & provider chips, real-time search, and zero map.
+- [x] Update `Navbar.tsx` and `_layout.tsx` to register and link `/schedules`.
+- [x] Add Storybook stories in `TransitScheduleCard.stories.tsx` and register in `storybook.requires.ts`.
+- [x] Add unit tests in `transitScheduleService.test.ts` and integration tests in `schedulesRoute.test.tsx`.
+- [x] Update `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `npm test`: 34 suites, 440 tests passed
+- [x] `npm run test:storybook`: 196 story tests passed
+- [x] `npm run type-check`: 0 errors
+- [x] `npm run build:web`: Export succeeded
 - [x] `AI_LOG.md`: Strictly untouched

@@ -547,6 +547,19 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 
 ---
 
+### 22. `TransitScheduleCard`
+- **File**: [`frontend/src/components/TransitScheduleCard.tsx`](frontend/src/components/TransitScheduleCard.tsx)
+- **Lineage**: Composed Schedule Item Component (built with `BaseCard`, `BaseBadge`, `Ionicons`)
+- **Description**: Visualizes real-time Romanian transit departures across Urban Transit (Tram, Bus, Metro) and Intercity Rail. Renders mode icons (Sky Blue for Metro, Emerald for Tram, Amber for Bus, Red for Train), line code badges, provider tag (Metrorex, Transurb Galați, STB, CFR Călători, etc.), origin/destination route arrow, live countdown pills (`in 3m`, `in 9m`), live tracking pulse dot, fare in LEI, status badge, and an expandable key stopover accordion.
+- **Props**:
+  - `schedule`: `TransitLineSchedule`
+  - `onPress`?: `(schedule: TransitLineSchedule) => void`
+  - `style`?: `StyleProp<ViewStyle>`
+  - `testID`?: string
+- **When to Use**: Schedule screen listings in `app/schedules.tsx`.
+
+---
+
 ## 4. Automated Storybook Testing Library
 
 ### Structure
