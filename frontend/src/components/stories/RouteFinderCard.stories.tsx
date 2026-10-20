@@ -147,3 +147,37 @@ export const DuplicateDiacriticValidation: StoryObj<RouteFinderCardProps> = {
   },
 };
 
+export const WithCurrentCityLocationDropdown: StoryObj<RouteFinderCardProps> = {
+  args: {
+    initialCity: 'București',
+    initialOrigin: 'București Nord',
+    initialDestination: 'Brașov',
+  },
+  play: async ({ canvasElement }) => {
+    // Open origin dropdown
+    const toggle = canvasElement.getByTestId('origin-dropdown-toggle');
+    fireEvent.press(toggle);
+    expect(canvasElement.getByTestId('origin-dropdown-menu')).toBeTruthy();
+  },
+};
+
+export const SmartIntercityPairing: StoryObj<RouteFinderCardProps> = {
+  args: {
+    initialCity: 'Galați',
+    initialOrigin: 'Micro 19',
+    initialDestination: 'Bariera Traian',
+  },
+  play: async ({ canvasElement }) => {
+    // Toggle destination dropdown and select outside city
+    const toggle = canvasElement.getByTestId('destination-dropdown-toggle');
+    fireEvent.press(toggle);
+
+    const outsideHub = canvasElement.getByTestId('dropdown-outside-hub-bv-gara-cfr');
+    fireEvent.press(outsideHub);
+
+    // Origin is smartly paired to Gara Galați
+    const originInput = canvasElement.getByTestId('route-origin-input');
+    expect(originInput.props.value).toBe('Gara Galați');
+  },
+};
+

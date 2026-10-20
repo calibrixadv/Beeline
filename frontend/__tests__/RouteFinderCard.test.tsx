@@ -606,6 +606,103 @@ describe('RouteFinderCard component', () => {
       : templateNote.props.style;
     expect(flatNote.flex).toBe(1);
   });
+
+  describe('Current City selector and searchable location dropdowns', () => {
+    it('switches current city and updates featured transit hubs', () => {
+      const { getByTestId, getByText } = renderComponent();
+
+      expect(getByTestId('current-city-selector-bar')).toBeTruthy();
+      expect(getByText(/CURRENT CITY:/)).toBeTruthy();
+
+      // Click Galați quick chip
+      const galatiChip = getByTestId('city-select-chip-galați');
+      fireEvent.press(galatiChip);
+
+      // Origin should update to Gara Galați (smart pairing for Brașov destination)
+      const originInput = getByTestId('route-origin-input');
+      expect(originInput.props.value).toBe('Gara Galați');
+    });
+
+    it('detects GPS location via Detect Near Me button and updates origin', () => {
+      const { getByTestId, getByText } = renderComponent();
+
+      const detectBtn = getByTestId('detect-current-city-btn');
+      fireEvent.press(detectBtn);
+
+      expect(getByTestId('detected-city-msg')).toBeTruthy();
+      expect(getByText(/Location detected: Galați/)).toBeTruthy();
+
+      const originInput = getByTestId('route-origin-input');
+      expect(originInput.props.value).toBe('📍 My Current Location (Galați)');
+    });
+
+    it('toggles origin dropdown, displays featured city locations, and selects an item', () => {
+      const { getByTestId, queryByTestId } = renderComponent();
+
+      expect(queryByTestId('origin-dropdown-menu')).toBeNull();
+
+      // Toggle dropdown open
+      const originToggle = getByTestId('origin-dropdown-toggle');
+      fireEvent.press(originToggle);
+
+      expect(getByTestId('origin-dropdown-menu')).toBeTruthy();
+
+      // Select Piața Unirii from featured Bucharest locations
+      const piataUniriiItem = getByTestId('dropdown-item-buc-piata-unirii');
+      fireEvent.press(piataUniriiItem);
+
+      // Dropdown should close and input should update
+      expect(queryByTestId('origin-dropdown-menu')).toBeNull();
+      const originInput = getByTestId('route-origin-input');
+      expect(originInput.props.value).toBe('Piața Unirii');
+    });
+
+    it('applies smart heuristic when picking a destination in another city', () => {
+      const { getByTestId } = renderComponent({
+        initialCity: 'Galați',
+        initialOrigin: 'Micro 19',
+        initialDestination: 'Spitalul Județean Galați',
+      });
+
+      // Open destination dropdown
+      const destToggle = getByTestId('destination-dropdown-toggle');
+      fireEvent.press(destToggle);
+
+      // Select a destination in another city (Gara Brașov)
+      const brasovHub = getByTestId('dropdown-outside-hub-bv-gara-cfr');
+      fireEvent.press(brasovHub);
+
+      // Destination is set to Gara Brașov
+      const destInput = getByTestId('route-destination-input');
+      expect(destInput.props.value).toBe('Gara Brașov');
+
+      // Origin is smartly paired to the current city's main railway station (Gara Galați)
+      const originInput = getByTestId('route-origin-input');
+      expect(originInput.props.value).toBe('Gara Galați');
+    });
+
+    it('provides View Live Schedules button in prepared submission feedback linking to /schedules', () => {
+      const handleNavigateSchedules = jest.fn();
+      const { getByTestId } = renderComponent({
+        initialOrigin: 'București Nord',
+        initialDestination: 'Brașov',
+        onNavigateSchedules: handleNavigateSchedules,
+      });
+
+      // Submit search
+      const submitBtn = getByTestId('route-finder-submit-btn');
+      fireEvent.press(submitBtn);
+
+      // Submission feedback renders with live schedules button
+      const viewSchedulesBtn = getByTestId('view-live-schedules-btn');
+      expect(viewSchedulesBtn).toBeTruthy();
+
+      fireEvent.press(viewSchedulesBtn);
+      expect(handleNavigateSchedules).toHaveBeenCalledWith(
+        '/schedules?city=Bucure%C8%99ti&query=Bra%C8%99ov'
+      );
+    });
+  });
 });
 
 describe('normalizeStation utility', () => {

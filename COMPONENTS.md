@@ -456,22 +456,28 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 
 ### 17. `RouteFinderCard`
 - **File**: [`frontend/src/components/RouteFinderCard.tsx`](frontend/src/components/RouteFinderCard.tsx)
-- **Lineage**: Extends `BaseCard`, composes `BaseInput`, `BaseBadge`, `BaseButton`, `IconButton`, `MascotBee`
-- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with transport mode filters ("Trains", "Metro", "Busses"), station swap action, diacritic-insensitive duplicate validation, stylized **Waggle flight dashed connector trail** (`[Origin] ── 🐝 ~ ~ ── [Destination]`) flanking the swap button (`testID="route-waggle-connector"`), warm honey palette styling (`surfaceWarm` `#FFFBEB` in light, `#1C1917` in dark; `honeyBorder` `#FDE68A` in light, `#3E3204` in dark), and prepared submission feedback showcasing the **Curated Trifecta** paired with their companion mascots (⚡ Fastest: Barnaby, 💰 Best Value: Honey, 🛡️ Most Reliable: Bumble) without executing feature redirection.
+- **Lineage**: Extends `BaseCard`, composes `BaseInput`, `BaseBadge`, `BaseButton`, `IconButton`, `MascotBee`, `LocationSelectDropdown`
+- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with dynamic Current City selection (with GPS "Detect Near Me" and quick Romanian city chips: București, Galați, Cluj-Napoca, Timișoara, Brașov, Constanța, etc.), searchable featured location dropdowns with type badges (Train Station 🚆, Metro 🚇, Bus/Tram 🚌, Airport ✈️, Current Location 📍), smart auto-suggestion heuristics (inner-city priority when Metro/Bus selected; auto-pairing origin to Current Location or current city train station when destination in another city is picked), recent searches history, transport mode filters ("Trains", "Metro", "Busses"), station swap action, diacritic-insensitive duplicate validation, stylized **Waggle flight dashed connector trail** (`[Origin] ── 🐝 ~ ~ ── [Destination]`) flanking the swap button (`testID="route-waggle-connector"`), warm honey palette styling (`surfaceWarm` `#FFFBEB` in light, `#1C1917` in dark; `honeyBorder` `#FDE68A` in light, `#3E3204` in dark), prepared submission feedback showcasing the **Curated Trifecta** paired with their companion mascots (⚡ Fastest: Barnaby, 💰 Best Value: Honey, 🛡️ Most Reliable: Bumble), and a direct shortcut button to view live departures on `/schedules`.
 - **States & Handlers**:
-  - `origin` & `destination`: Controlled text inputs with clearable actions extending `BaseInput`. Modifying text immediately clears active preview feedback.
-  - `swap`: Swaps origin and destination stations using `IconButton` (`swap-vertical`). Immediately dismisses active preview feedback.
-  - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`) extending `BaseBadge` with `brandHoney` / `brandHoneyDark` selected styling. Retains at least 1 active mode; toggling dismisses active preview feedback.
-  - `onSubmitRoute`: Validates non-empty and distinct inputs, formats prepared query `{ origin, destination, modes }`, displays in-card Curated Trifecta preview cards with companion mascots, and invokes optional callback.
-  - **Invariant**: Strictly does NOT execute router redirection.
+  - `currentCity`: Active city context defaulting to `'București'` (or detected city); dynamically populates dropdowns.
+  - `handleDetectLocation`: Triggers GPS geolocation via `transitScheduleService.detectNearestCity` or fast test fallback, setting origin to `📍 My Current Location (${city})`.
+  - `origin` & `destination`: Controlled text inputs with searchable dropdown overlays and clearable actions extending `BaseInput`.
+  - `activeDropdown`: Manages visibility of origin or destination dropdown popovers.
+  - `recentChoices`: Remembers recently submitted/selected stations at the top of the dropdown.
+  - `swap`: Swaps origin and destination stations using `IconButton` (`swap-vertical`).
+  - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`).
+  - `onSubmitRoute`: Validates inputs and prepares template query `{ origin, destination, modes }`.
+  - **Invariant**: Strictly does NOT execute accidental router redirection on submit (template preview mode). Direct navigation button provided for `/schedules`.
 - **Props**:
   - `initialOrigin`?: string (default `'București Nord'`)
   - `initialDestination`?: string (default `'Brașov'`)
+  - `initialCity`?: string (default `'București'`)
   - `initialModes`?: `TransportMode[]` (default `['Trains', 'Metro', 'Busses']`)
   - `onSubmitRoute`?: `(params: RouteSearchParams) => void`
+  - `onNavigateSchedules`?: `(url: string) => void`
   - `style`?: StyleProp<ViewStyle>
   - `testID`?: string
-- **When to Use**: HomePage hero action shorthand to capture user travel intent quickly.
+- **When to Use**: HomePage hero action shorthand to capture user travel intent quickly with city-aware transit hubs.
 
 ---
 
@@ -557,6 +563,30 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
   - `style`?: `StyleProp<ViewStyle>`
   - `testID`?: string
 - **When to Use**: Schedule screen listings in `app/schedules.tsx`.
+
+---
+
+### 23. `LocationSelectDropdown`
+- **File**: [`frontend/src/components/LocationSelectDropdown.tsx`](frontend/src/components/LocationSelectDropdown.tsx)
+- **Lineage**: Composed Interactive Dropdown Overlay (built with `Pressable`, `ScrollView`, `Ionicons`)
+- **Description**: Dropdown overlay menu presenting curated transit locations for a selected Romanian city. Organizes options into:
+  - 📍 `My Current Location` GPS shortcut (for origin point).
+  - 🕒 `Recent Searches` history.
+  - 🏛️ `Featured in {City}` categorized with colored badges: Train Station 🚆, Metro 🚇, Bus/Tram 🚌, Airport ✈️.
+  - 🚆 `Major Hubs in Other Romanian Cities` (for intercity journeys).
+  Supports inner-city mode prioritization and real-time text query filtering.
+- **Props**:
+  - `currentCity`: string
+  - `field`: `'origin' | 'destination'`
+  - `searchQuery`?: string
+  - `selectedModes`?: `TransportMode[]`
+  - `recentChoices`?: string[]
+  - `isLocationActive`?: boolean
+  - `onSelectLocation`: `(locationName: string, location?: FeaturedLocation) => void`
+  - `onClose`: `() => void`
+  - `style`?: `StyleProp<ViewStyle>`
+  - `testID`?: string
+- **When to Use**: Origin and Destination pickers in `RouteFinderCard`.
 
 ---
 

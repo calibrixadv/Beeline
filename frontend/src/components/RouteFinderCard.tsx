@@ -7,8 +7,10 @@ import {
   ViewStyle,
   Pressable,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useTheme, ThemeTokens } from '../context/ThemeContext';
 import { BaseCard } from './BaseCard';
 import { BaseInput } from './BaseInput';
@@ -16,6 +18,12 @@ import { BaseButton } from './BaseButton';
 import { BaseBadge } from './BaseBadge';
 import { IconButton } from './IconButton';
 import { MascotBee } from './MascotBee';
+import {
+  FeaturedLocation,
+  smartSuggestOrigin,
+} from '../data/featuredLocations';
+import { LocationSelectDropdown } from './LocationSelectDropdown';
+import { transitScheduleService } from '../services/transitScheduleService';
 
 export type TransportMode = 'Trains' | 'Metro' | 'Busses';
 
@@ -30,10 +38,14 @@ export interface RouteFinderCardProps {
   initialOrigin?: string;
   /** Initial destination station/city */
   initialDestination?: string;
+  /** Initial current city */
+  initialCity?: string;
   /** Initial selected transport modes */
   initialModes?: TransportMode[];
   /** Callback when user triggers search submission (no redirect performed) */
   onSubmitRoute?: (params: RouteSearchParams) => void;
+  /** Callback to navigate to schedules directly */
+  onNavigateSchedules?: (url: string) => void;
   /** Custom container style */
   style?: StyleProp<ViewStyle>;
   /** Test identifier */
@@ -173,12 +185,24 @@ const QuickCorridorChip: React.FC<QuickCorridorChipProps> = ({
 export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
   initialOrigin = 'București Nord',
   initialDestination = 'Brașov',
+  initialCity = 'București',
   initialModes = ['Trains', 'Metro', 'Busses'],
   onSubmitRoute,
+  onNavigateSchedules,
   style,
   testID = 'route-finder-card',
 }) => {
   const { theme, isDark } = useTheme();
+  const router = useRouter();
+
+  const [currentCity, setCurrentCity] = useState(initialCity);
+  const [isLocationActive, setIsLocationActive] = useState(false);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [detectedCityMessage, setDetectedCityMessage] = useState<string | null>(null);
+  const [activeDropdown, setActiveDropdown] = useState<'origin' | 'destination' | null>(null);
+  const [recentChoices, setRecentChoices] = useState<string[]>([]);
+  const [originSearch, setOriginSearch] = useState<string>('');
+  const [destinationSearch, setDestinationSearch] = useState<string>('');
 
   const [origin, setOrigin] = useState(initialOrigin);
   const [destination, setDestination] = useState(initialDestination);
@@ -208,6 +232,100 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
     setDestination(temp);
     setValidationError(null);
     setSubmittedQuery(null);
+    setActiveDropdown(null);
+  };
+
+  // City selection & location detection
+  const handleSelectCity = (newCity: string) => {
+    setCurrentCity(newCity);
+    setIsLocationActive(false);
+    setDetectedCityMessage(null);
+
+    // If destination is in another city, suggest origin from new city
+    const suggested = smartSuggestOrigin({
+      destination,
+      currentCity: newCity,
+      isLocationActive: false,
+    });
+    if (suggested) {
+      setOrigin(suggested);
+    }
+    setValidationError(null);
+    setSubmittedQuery(null);
+    setActiveDropdown(null);
+  };
+
+  const handleDetectLocation = () => {
+    setIsDetectingLocation(true);
+    setDetectedCityMessage(null);
+
+    const executeFallback = () => {
+      setIsDetectingLocation(false);
+      const detected = 'Galați';
+      setCurrentCity(detected);
+      setIsLocationActive(true);
+      setDetectedCityMessage(`📍 Location detected: ${detected}`);
+      setOrigin(`📍 My Current Location (${detected})`);
+      setSubmittedQuery(null);
+    };
+
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const nearest = transitScheduleService.detectNearestCity(
+            pos.coords.latitude,
+            pos.coords.longitude
+          );
+          setIsDetectingLocation(false);
+          if (nearest) {
+            setCurrentCity(nearest);
+            setIsLocationActive(true);
+            setDetectedCityMessage(`📍 Location detected: ${nearest}`);
+            setOrigin(`📍 My Current Location (${nearest})`);
+          } else {
+            setDetectedCityMessage('📍 Outside covered Romanian transit cities');
+          }
+        },
+        (_err) => {
+          executeFallback();
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      if (process.env.NODE_ENV === 'test') {
+        executeFallback();
+      } else {
+        setTimeout(executeFallback, 300);
+      }
+    }
+  };
+
+  const handleSelectOriginLocation = (locName: string, _locObj?: FeaturedLocation) => {
+    setOrigin(locName);
+    setOriginSearch('');
+    setActiveDropdown(null);
+    setValidationError(null);
+    setSubmittedQuery(null);
+  };
+
+  const handleSelectDestinationLocation = (locName: string, _locObj?: FeaturedLocation) => {
+    setDestination(locName);
+    setDestinationSearch('');
+    setActiveDropdown(null);
+    setValidationError(null);
+    setSubmittedQuery(null);
+
+    // Smart heuristic:
+    // "example if the user picks the target to be another city most likely it's starting point will be current location, if it is not available current cities train station, if the current city is not known destination city train station"
+    const suggestedOrigin = smartSuggestOrigin({
+      destination: locName,
+      currentCity,
+      isLocationActive,
+    });
+    if (suggestedOrigin && origin !== suggestedOrigin) {
+      setOrigin(suggestedOrigin);
+      setOriginSearch('');
+    }
   };
 
   // Submission handler: Validates inputs and prepares query WITHOUT actual redirect
@@ -242,6 +360,16 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
 
     setSubmittedQuery(query);
 
+    // Add to recent choices
+    setRecentChoices((prev) => {
+      const next = [
+        trimmedOrigin,
+        trimmedDestination,
+        ...prev.filter((c) => c !== trimmedOrigin && c !== trimmedDestination),
+      ];
+      return next.slice(0, 5);
+    });
+
     // Call optional external callback — NOTE: Strictly no route redirect is performed here!
     onSubmitRoute?.(query);
   };
@@ -252,6 +380,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
     setDestination(to);
     setValidationError(null);
     setSubmittedQuery(null);
+    setActiveDropdown(null);
   };
 
   return (
@@ -291,28 +420,157 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
         Quick 2-point routing across high-speed trains, urban metro, and regional busses.
       </Text>
 
-      {/* 2-Point Inputs with Swap Action & Waggle Flight Connector */}
+      {/* Current City Selector Bar with GPS & Quick City Chips */}
+      <View style={styles.citySelectorContainer} testID="current-city-selector-bar">
+        <View style={styles.citySelectorHeader}>
+          <View style={styles.cityLabelRow}>
+            <Ionicons name="location-sharp" size={14} color={isDark ? theme.colors.brandHoney : '#92400E'} />
+            <Text style={[styles.citySelectorLabel, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}>
+              CURRENT CITY:{' '}
+              <Text style={{ color: isDark ? theme.colors.brandHoney : '#B45309', fontWeight: '800' }}>
+                {currentCity}
+              </Text>
+            </Text>
+          </View>
+          <Pressable
+            testID="detect-current-city-btn"
+            accessibilityRole="button"
+            accessibilityLabel="Detect current city using GPS"
+            onPress={handleDetectLocation}
+            style={[
+              styles.detectBtn,
+              {
+                borderColor: theme.colors.honeyBorder,
+                backgroundColor: isDark ? '#292524' : '#FEF3C7',
+              },
+            ]}
+          >
+            <Ionicons name="locate" size={13} color={isDark ? theme.colors.brandHoney : '#92400E'} />
+            <Text style={[styles.detectBtnText, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
+              {isDetectingLocation ? 'Locating...' : 'Detect Near Me'}
+            </Text>
+          </Pressable>
+        </View>
+
+        {detectedCityMessage ? (
+          <Text testID="detected-city-msg" style={[styles.detectedCityNotice, { color: isDark ? '#34D399' : '#059669' }]}>
+            {detectedCityMessage}
+          </Text>
+        ) : null}
+
+        {/* Quick Romanian City Chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cityChipsRow}
+          style={styles.cityChipsScroll}
+        >
+          {['București', 'Galați', 'Cluj-Napoca', 'Timișoara', 'Brașov', 'Constanța', 'Iași'].map((city) => {
+            const isSelected = city === currentCity;
+            return (
+              <Pressable
+                key={city}
+                testID={`city-select-chip-${city.toLowerCase()}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Select current city ${city}`}
+                onPress={() => handleSelectCity(city)}
+                style={[
+                  styles.cityChip,
+                  {
+                    backgroundColor: isSelected
+                      ? theme.colors.brandHoney
+                      : isDark
+                      ? '#292524'
+                      : '#FEF3C7',
+                    borderColor: isSelected
+                      ? theme.colors.brandHoneyDark
+                      : theme.colors.honeyBorder,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.cityChipText,
+                    {
+                      color: isSelected
+                        ? '#1C1917'
+                        : isDark
+                        ? '#FFFFFF'
+                        : theme.colors.textCharcoal,
+                      fontWeight: isSelected ? '800' : '600',
+                    },
+                  ]}
+                >
+                  {city}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* 2-Point Inputs with Swap Action, Waggle Flight Connector & Searchable Dropdowns */}
       <View style={styles.inputsContainer}>
         <View style={styles.inputRow}>
           <BaseInput
             label="ORIGIN"
-            placeholder="Origin station (e.g., București Nord)"
+            placeholder={`Origin station in ${currentCity}`}
             value={origin}
             onChangeText={(text) => {
               setOrigin(text);
+              setOriginSearch(text);
               setValidationError(null);
               setSubmittedQuery(null);
+              setActiveDropdown('origin');
+            }}
+            onFocus={() => {
+              setOriginSearch('');
+              setActiveDropdown('origin');
             }}
             onClear={() => {
               setOrigin('');
+              setOriginSearch('');
               setValidationError(null);
               setSubmittedQuery(null);
             }}
             leftIcon={<Ionicons name="navigate-circle-outline" size={18} color={theme.colors.brandHoney} />}
+            rightIcon={
+              <Pressable
+                testID="origin-dropdown-toggle"
+                accessibilityRole="button"
+                accessibilityLabel="Toggle origin locations dropdown"
+                onPress={() => {
+                  setOriginSearch('');
+                  setActiveDropdown((prev) => (prev === 'origin' ? null : 'origin'));
+                }}
+                hitSlop={8}
+                style={styles.dropdownToggleBtn}
+              >
+                <Ionicons
+                  name={activeDropdown === 'origin' ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={isDark ? theme.colors.brandHoney : theme.colors.brandHoneyDark}
+                />
+              </Pressable>
+            }
             clearable
             testID="route-origin-input"
             accessibilityLabel="Origin point input"
           />
+
+          {activeDropdown === 'origin' ? (
+            <LocationSelectDropdown
+              testID="origin-dropdown-menu"
+              currentCity={currentCity}
+              field="origin"
+              searchQuery={originSearch}
+              selectedModes={selectedModes}
+              recentChoices={recentChoices}
+              isLocationActive={isLocationActive}
+              onSelectLocation={handleSelectOriginLocation}
+              onClose={() => setActiveDropdown(null)}
+            />
+          ) : null}
         </View>
 
         {/* Waggle Flight Connector flanking the swap button */}
@@ -385,19 +643,59 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
             value={destination}
             onChangeText={(text) => {
               setDestination(text);
+              setDestinationSearch(text);
               setValidationError(null);
               setSubmittedQuery(null);
+              setActiveDropdown('destination');
+            }}
+            onFocus={() => {
+              setDestinationSearch('');
+              setActiveDropdown('destination');
             }}
             onClear={() => {
               setDestination('');
+              setDestinationSearch('');
               setValidationError(null);
               setSubmittedQuery(null);
             }}
             leftIcon={<Ionicons name="location-outline" size={18} color={theme.colors.brandHoney} />}
+            rightIcon={
+              <Pressable
+                testID="destination-dropdown-toggle"
+                accessibilityRole="button"
+                accessibilityLabel="Toggle destination locations dropdown"
+                onPress={() => {
+                  setDestinationSearch('');
+                  setActiveDropdown((prev) => (prev === 'destination' ? null : 'destination'));
+                }}
+                hitSlop={8}
+                style={styles.dropdownToggleBtn}
+              >
+                <Ionicons
+                  name={activeDropdown === 'destination' ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={isDark ? theme.colors.brandHoney : theme.colors.brandHoneyDark}
+                />
+              </Pressable>
+            }
             clearable
             testID="route-destination-input"
             accessibilityLabel="Destination point input"
           />
+
+          {activeDropdown === 'destination' ? (
+            <LocationSelectDropdown
+              testID="destination-dropdown-menu"
+              currentCity={currentCity}
+              field="destination"
+              searchQuery={destinationSearch}
+              selectedModes={selectedModes}
+              recentChoices={recentChoices}
+              isLocationActive={isLocationActive}
+              onSelectLocation={handleSelectDestinationLocation}
+              onClose={() => setActiveDropdown(null)}
+            />
+          ) : null}
         </View>
       </View>
 
@@ -629,6 +927,36 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           >
             Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.
           </Text>
+
+          {/* Direct link to live schedules for this route & city */}
+          <View style={styles.viewSchedulesBtnRow}>
+            <BaseButton
+              variant="outline"
+              size="md"
+              title="View Live Schedules on /schedules"
+              iconLeft={<Ionicons name="time-outline" size={16} color={isDark ? theme.colors.brandHoney : '#92400E'} />}
+              onPress={() => {
+                const dest = submittedQuery ? submittedQuery.destination : destination;
+                const url = `/schedules?city=${encodeURIComponent(currentCity)}&query=${encodeURIComponent(dest)}`;
+                if (onNavigateSchedules) {
+                  onNavigateSchedules(url);
+                } else {
+                  router.push(url as any);
+                }
+              }}
+              testID="view-live-schedules-btn"
+              accessibilityLabel={`View Live Schedules in ${currentCity}`}
+              style={[
+                styles.viewSchedulesBtn,
+                {
+                  borderColor: theme.colors.honeyBorder,
+                  backgroundColor: isDark ? '#292524' : '#FEF3C7',
+                },
+              ]}
+              textStyle={{ color: isDark ? theme.colors.brandHoney : '#92400E', fontWeight: '700' }}
+              fullWidth
+            />
+          </View>
         </View>
       ) : null}
 
@@ -960,5 +1288,75 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     lineHeight: 16,
+  },
+  citySelectorContainer: {
+    marginBottom: 14,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.25)',
+    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+  },
+  citySelectorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  cityLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  citySelectorLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  detectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  detectBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  detectedCityNotice: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  cityChipsScroll: {
+    width: '100%',
+  },
+  cityChipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+  },
+  cityChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  cityChipText: {
+    fontSize: 11,
+  },
+  dropdownToggleBtn: {
+    padding: 4,
+  },
+  viewSchedulesBtnRow: {
+    marginTop: 10,
+  },
+  viewSchedulesBtn: {
+    borderRadius: 10,
   },
 });

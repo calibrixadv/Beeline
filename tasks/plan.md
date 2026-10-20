@@ -55,9 +55,12 @@ Implement "The Cozy Hive" redesign specified in `docs/ideas/cozy-bee-homepage-re
 ### Phase 5: Romanian Transit Multi-Modal Schedule Screen
 - [x] **Task 11**: Implement `/schedules` screen with dual-section switcher (Urban Transit vs Intercity Rail), Romanian transit provider templates (Metrorex, Transurb Galați, STB, CFR Călători, Astra Trans Carpatic, TFC, Softrans, Regio Călători), distance-based location filtering, expandable stop timeline accordion, and zero map implementation.
 
-### Checkpoint 5: Complete & Clean Build
-- [x] `npm test`: 34 test suites, 440 tests passed (100%)
-- [x] `npm run test:storybook`: 196 automated story interaction tests passed
+### Phase 6: Mainpage Route Finder Dropdowns & Smart Location Selection
+- [x] **Task 12**: Update `RouteFinderCard.tsx` and `HomeScreen` with Current City selector (GPS "Detect Near Me" + Romanian city quick chips), searchable featured location dropdowns (`LocationSelectDropdown.tsx`), smart inner-city and inter-city pairing heuristics, recent choices history, and direct link to live departures on `/schedules`.
+
+### Checkpoint 6: Complete & Clean Build
+- [x] `npm test`: 36 test suites, 475 tests passed (100%)
+- [x] `npm run test:storybook`: 206 automated story interaction tests passed
 - [x] `npm run type-check`: 0 TypeScript compiler errors
 - [x] `npm run build:web`: Export succeeded cleanly with 0 errors
 - [x] `AI_LOG.md` remains strictly untouched

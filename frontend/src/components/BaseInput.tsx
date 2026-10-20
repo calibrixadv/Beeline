@@ -156,19 +156,22 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           autoCorrect={false}
           accessibilityLabel={accessibilityLabel || label || placeholder}
         />
-        {showClear ? (
-          <IconButton
-            iconName="close-circle"
-            iconSize={18}
-            iconColor={theme.colors.textMuted}
-            onPress={handleClear}
-            testID={`${testID ?? 'input'}-clear-btn`}
-            accessibilityLabel="Clear input value"
-            size="sm"
-          />
-        ) : rightIcon ? (
-          <View style={styles.rightIconWrapper}>{rightIcon}</View>
-        ) : null}
+        <View style={styles.rightActionsRow}>
+          {showClear ? (
+            <IconButton
+              iconName="close-circle"
+              iconSize={18}
+              iconColor={theme.colors.textMuted}
+              onPress={handleClear}
+              testID={`${testID ?? 'input'}-clear-btn`}
+              accessibilityLabel="Clear input value"
+              size="sm"
+            />
+          ) : null}
+          {rightIcon ? (
+            <View style={styles.rightIconWrapper}>{rightIcon}</View>
+          ) : null}
+        </View>
       </View>
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
@@ -218,8 +221,13 @@ const styles = StyleSheet.create({
   leftIconWrapper: {
     marginRight: 8,
   },
+  rightActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
   rightIconWrapper: {
-    marginLeft: 8,
+    marginLeft: 4,
   },
   errorText: {
     fontSize: 11,

@@ -23,6 +23,7 @@ import * as MascotBeeStories from '../src/components/stories/MascotBee.stories';
 import * as RouteRewardBadgeStories from '../src/components/stories/RouteRewardBadge.stories';
 import * as CozyHoneyBackgroundStories from '../src/components/stories/CozyHoneyBackground.stories';
 import * as TransitScheduleCardStories from '../src/components/stories/TransitScheduleCard.stories';
+import * as LocationSelectDropdownStories from '../src/components/stories/LocationSelectDropdown.stories';
 
 export const stories = [
   { name: 'BaseButton', module: BaseButtonStories },
@@ -50,6 +51,7 @@ export const stories = [
   { name: 'RouteRewardBadge', module: RouteRewardBadgeStories },
   { name: 'CozyHoneyBackground', module: CozyHoneyBackgroundStories },
   { name: 'TransitScheduleCard', module: TransitScheduleCardStories },
+  { name: 'LocationSelectDropdown', module: LocationSelectDropdownStories },
 ];
 
 

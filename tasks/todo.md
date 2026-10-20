@@ -221,6 +221,25 @@
 
 ---
 
+## Task 12: Mainpage Route Finder Dropdowns & Smart Location Selection
+**Description:** Update `RouteFinderCard.tsx` and `HomeScreen` with a Current City selector (GPS "Detect Near Me" + Romanian city quick chips), searchable featured location dropdowns (`LocationSelectDropdown.tsx`), smart inner-city and inter-city pairing heuristics, recent choices history, and direct link to live departures on `/schedules`.
+**Acceptance criteria:**
+- [x] Create `frontend/src/data/featuredLocations.ts` with Romanian transit hubs categorized by city, type, and transport modes, plus smart suggestion helper `smartSuggestOrigin`.
+- [x] Create `frontend/src/components/LocationSelectDropdown.tsx` with sections for GPS current location, recent searches, featured city hubs, and major outside rail hubs.
+- [x] Update `RouteFinderCard.tsx` with Current City selector bar, searchable origin & destination dropdowns, inner-city vs inter-city smart heuristics, recent choices memory, and `View Live Schedules on /schedules` button.
+- [x] Update `frontend/app/index.tsx` to forward schedule navigation transitions.
+- [x] Add Storybook stories in `LocationSelectDropdown.stories.tsx` and `RouteFinderCard.stories.tsx` and register in `storybook.requires.ts`.
+- [x] Add unit tests in `featuredLocations.test.ts`, `LocationSelectDropdown.test.tsx`, and update `RouteFinderCard.test.tsx`.
+- [x] Update `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `npm test`: 36 suites, 475 tests passed
+- [x] `npm run test:storybook`: 206 story tests passed
+- [x] `npm run type-check`: 0 errors
+- [x] `npm run build:web`: Export succeeded
+- [x] `AI_LOG.md`: Strictly untouched
+
+---
+
 ## Task 10: Streamline Marketing Showcase & Remove Invented Behaviour on HomeScreen
 **Description:** Remove redundant feature grids, fabricated metrics, fake aggregator claims, and fake timetable loading transitions; rewrite hero and mascot pillars with clean, authentic copy.
 **Acceptance criteria:**
@@ -253,6 +272,25 @@
 **Verification:**
 - [x] `npm test`: 34 suites, 440 tests passed
 - [x] `npm run test:storybook`: 196 story tests passed
+- [x] `npm run type-check`: 0 errors
+- [x] `npm run build:web`: Export succeeded
+- [x] `AI_LOG.md`: Strictly untouched
+
+---
+
+## Task 12: Mainpage Route Finder Dropdowns & Smart Location Selection
+**Description:** Update `RouteFinderCard.tsx` and `HomeScreen` with a Current City selector (GPS "Detect Near Me" + Romanian city quick chips), searchable featured location dropdowns (`LocationSelectDropdown.tsx`), smart inner-city and inter-city pairing heuristics, recent choices history, and direct link to live departures on `/schedules`.
+**Acceptance criteria:**
+- [x] Create `frontend/src/data/featuredLocations.ts` with Romanian transit hubs categorized by city, type, and transport modes, plus smart suggestion helper `smartSuggestOrigin`.
+- [x] Create `frontend/src/components/LocationSelectDropdown.tsx` with sections for GPS current location, recent searches, featured city hubs, and major outside rail hubs.
+- [x] Update `RouteFinderCard.tsx` with Current City selector bar, searchable origin & destination dropdowns, inner-city vs inter-city smart heuristics, recent choices memory, and `View Live Schedules on /schedules` button.
+- [x] Update `frontend/app/index.tsx` to forward schedule navigation transitions.
+- [x] Add Storybook stories in `LocationSelectDropdown.stories.tsx` and `RouteFinderCard.stories.tsx` and register in `storybook.requires.ts`.
+- [x] Add unit tests in `featuredLocations.test.ts`, `LocationSelectDropdown.test.tsx`, and update `RouteFinderCard.test.tsx`.
+- [x] Update `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `npm test`: 36 suites, 475 tests passed
+- [x] `npm run test:storybook`: 206 story tests passed
 - [x] `npm run type-check`: 0 errors
 - [x] `npm run build:web`: Export succeeded
 - [x] `AI_LOG.md`: Strictly untouched

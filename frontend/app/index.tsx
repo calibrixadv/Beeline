@@ -46,6 +46,7 @@ export default function HomeScreen() {
           <RouteFinderCard
             testID="home-route-finder-card"
             onSubmitRoute={handleRouteFinderSubmit}
+            onNavigateSchedules={(url) => handleNavigate(url, 'Buzzing to transit schedules...')}
           />
 
           {/* Active Trip Status Indicator (if trips exist in itinerary) */}
