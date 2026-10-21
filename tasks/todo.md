@@ -356,3 +356,25 @@
 - [x] `npm run type-check`: 0 TypeScript compiler errors
 - [x] `npm run build:web`: Export succeeded
 - [x] `AI_LOG.md`: Strictly untouched
+
+
+---
+
+## Task 15: Relational SQL Database for Users & Multi-Engine Persistence
+**Description:** Implement and configure a dedicated SQL relational database for users, sessions, MFA credentials, password resets, and saved itineraries. Provide explicit SQL DDL (`schema.sql`), SQL seed data (`seed.sql`), database initialization and seeding scripts (`init_and_seed_db.py`), PostgreSQL support via Docker Compose (`docker-compose.yml`), and automated SQL integration test suite.
+**Acceptance criteria:**
+- [x] Create ANSI/SQLite/PostgreSQL compatible SQL DDL in `backend/schema.sql` defining `users`, `user_sessions`, `mfa_credentials`, `password_reset_tokens`, and `saved_routes` with constraints, foreign keys (`ON DELETE CASCADE`), and indexes.
+- [x] Create seed data in `backend/seed.sql` with hashed passwords for demo traveler (`traveler@beeline.io`), admin with MFA (`admin@beeline.io`), and guest explorer with saved itinerary.
+- [x] Anchor `DATABASE_URL` in `backend/app/core/config.py` to absolute backend path (`backend/beeline.db`), guaranteeing consistent database persistence across working directories.
+- [x] Provide `SYNC_DATABASE_URL` and `get_sync_engine()` in `backend/app/core/database.py` for raw SQL utilities, seeding, and migrations.
+- [x] Create `backend/scripts/init_and_seed_db.py` to initialize tables, insert seed users, and verify database statistics from CLI.
+- [x] Create `backend/docker-compose.yml` and `backend/.env.example` enabling 1-command local PostgreSQL 16 database provisioning.
+- [x] Add automated SQL test suite in `backend/tests/test_sql_database.py` validating table existence, raw SQL CRUD operations, unique email constraints, and cascade deletion.
+- [x] Update documentation in `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `pytest backend/tests/ -v`: 21 tests passed (100%)
+- [x] `sqlite3 backend/beeline.db ".tables"`: 5 relational tables verified
+- [x] `npm test`: 40 suites, 508 tests passed (100%)
+- [x] `npm run test:storybook`: 207 story interaction tests passed (100%)
+- [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] `AI_LOG.md`: Strictly untouched

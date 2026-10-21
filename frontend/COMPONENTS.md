@@ -670,7 +670,10 @@ When asked to create a new component `NewWidget`:
 - **Root Directory**: [`backend/`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/)
 - **Application Entrypoint**: [`backend/app/main.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/main.py)
 - **Core Configuration**: [`backend/app/core/config.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/config.py)
-- **Database Engine**: [`backend/app/core/database.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/database.py) (Async SQLAlchemy + aiosqlite / PostgreSQL)
+- **Database Engine**: [`backend/app/core/database.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/database.py) (Async SQLAlchemy + aiosqlite / asyncpg)
+- **SQL DDL Schema**: [`backend/schema.sql`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/schema.sql) (ANSI/SQLite/PostgreSQL compatible)
+- **SQL Seed Data**: [`backend/seed.sql`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/seed.sql) & [`backend/scripts/init_and_seed_db.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/scripts/init_and_seed_db.py)
+- **Docker Compose (PostgreSQL)**: [`backend/docker-compose.yml`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/docker-compose.yml)
 - **Security & Cryptography**: [`backend/app/core/security.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/security.py) (Native bcrypt, JWT HS256, SHA-256 token hashing)
 
 ### Authentication & MFA Features

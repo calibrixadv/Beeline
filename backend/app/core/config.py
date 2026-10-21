@@ -1,6 +1,9 @@
+from pathlib import Path
 from typing import List, Union
 from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class Settings(BaseSettings):
@@ -18,7 +21,17 @@ class Settings(BaseSettings):
     MFA_ISSUER_NAME: str = "Beeline VoyageRail"
 
     # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./beeline.db"
+    DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR}/beeline.db"
+
+    @property
+    def SYNC_DATABASE_URL(self) -> str:
+        """Synchronous database URL for Alembic migrations and raw SQL CLI tools."""
+        url = self.DATABASE_URL
+        if "sqlite+aiosqlite://" in url:
+            return url.replace("sqlite+aiosqlite://", "sqlite://")
+        if "postgresql+asyncpg://" in url:
+            return url.replace("postgresql+asyncpg://", "postgresql://")
+        return url
 
     # CORS Origins
     CORS_ORIGINS: List[str] = [

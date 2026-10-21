@@ -1,6 +1,7 @@
 from typing import AsyncGenerator
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.core.config import settings
 
@@ -27,6 +28,18 @@ AsyncSessionLocal = async_sessionmaker(
 Base = declarative_base()
 
 
+def get_sync_engine():
+    """Returns a synchronous engine for migrations, seeding, and raw SQL queries."""
+    sync_connect_args = {}
+    if "sqlite" in settings.SYNC_DATABASE_URL:
+        sync_connect_args = {"check_same_thread": False}
+    return create_engine(
+        settings.SYNC_DATABASE_URL,
+        echo=False,
+        connect_args=sync_connect_args
+    )
+
+
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
@@ -36,5 +49,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
+    # Ensure all models are registered in Base.metadata before creating tables
+    import app.models  # noqa: F401
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
