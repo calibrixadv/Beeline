@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { UserProfile, MFALoginChallengeResponse, TokenResponse } from '../types/auth';
 import { apiClient, tokenStorage } from '../services/apiClient';
@@ -58,7 +60,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else {
         const tokenRes = res as TokenResponse;
         setUser(tokenRes.user);
-        setMfaChallenge(null);
         setIsLoading(false);
         return true;
       }
@@ -68,7 +69,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const signup = async (email: string, password: string, fullName?: string) => {
+  const signup = async (email: string, password: string, fullName?: string): Promise<void> => {
     setIsLoading(true);
     try {
       const res = await apiClient.signup({ email, password, full_name: fullName });
@@ -78,7 +79,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const continueAsGuest = async () => {
+  const continueAsGuest = async (): Promise<void> => {
     setIsLoading(true);
     try {
       const res = await apiClient.loginAsGuest();
@@ -88,20 +89,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const convertGuest = async (email: string, password: string, fullName?: string) => {
+  const convertGuest = async (email: string, password: string, fullName?: string): Promise<void> => {
     setIsLoading(true);
     try {
-      const updated = await apiClient.convertGuest({ email, password, full_name: fullName });
-      setUser(updated);
+      const updatedUser = await apiClient.convertGuest({ email, password, full_name: fullName });
+      setUser(updatedUser);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     setIsLoading(true);
     try {
       await apiClient.logout();
+    } catch {
+      tokenStorage.clear();
     } finally {
       setUser(null);
       setMfaChallenge(null);
@@ -109,21 +112,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const verifyMFA = async (code: string, isBackupCode: boolean = false) => {
+  const verifyMFA = async (code: string, isBackupCode: boolean = false): Promise<void> => {
     if (!mfaChallenge) throw new Error('No active MFA challenge');
-
     setIsLoading(true);
     try {
-      const payload: { mfa_session_token: string; totp_code?: string; backup_code?: string } = {
+      const res = await apiClient.verifyMFAChallenge({
         mfa_session_token: mfaChallenge.mfa_session_token,
-      };
-      if (isBackupCode) {
-        payload.backup_code = code;
-      } else {
-        payload.totp_code = code;
-      }
-
-      const res = await apiClient.verifyMFAChallenge(payload);
+        ...(isBackupCode ? { backup_code: code } : { totp_code: code }),
+      });
       setUser(res.user);
       setMfaChallenge(null);
     } finally {
@@ -135,27 +131,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setMfaChallenge(null);
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user && !user.is_guest,
-        isGuest: !!user && user.is_guest,
-        isLoading,
-        mfaChallenge,
-        login,
-        signup,
-        continueAsGuest,
-        convertGuest,
-        logout,
-        verifyMFA,
-        cancelMFA,
-        refreshUser,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user && !user.is_guest,
+    isGuest: !!user?.is_guest,
+    isLoading,
+    mfaChallenge,
+    login,
+    signup,
+    continueAsGuest,
+    convertGuest,
+    logout,
+    verifyMFA,
+    cancelMFA,
+    refreshUser,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {

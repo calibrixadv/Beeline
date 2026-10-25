@@ -1,560 +1,192 @@
+'use client';
+
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  StyleProp,
-  ViewStyle,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../context/ThemeContext';
-import { BaseCard } from './BaseCard';
-import { BaseButton } from './BaseButton';
-import { BaseBadge } from './BaseBadge';
+import { Filter, RotateCcw, Zap, Coins, ShieldCheck, Sparkles, ArrowUpDown } from 'lucide-react';
 import { TripFilterState, POPULAR_ROMANIAN_PROVIDERS } from '../services/tripBookingService';
 import { TransitMode, CuratedPillar } from '../types/routePlan';
+import BaseCard from './BaseCard';
+import BaseButton from './BaseButton';
 
 export interface TripFilterBarProps {
   filters: TripFilterState;
-  onFilterChange: (filters: TripFilterState) => void;
-  availableOperators?: string[];
-  totalResultsCount: number;
-  filteredResultsCount: number;
-  onResetFilters: () => void;
-  style?: StyleProp<ViewStyle>;
-  testID?: string;
+  onChange: (updated: TripFilterState) => void;
+  onReset: () => void;
+  activeCount: number;
 }
 
-const ALL_MODES: { id: TransitMode; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { id: 'TRAIN', label: 'Trains', icon: 'train-outline' },
-  { id: 'METRO', label: 'Metro', icon: 'subway-outline' },
-  { id: 'TRAM', label: 'Trams', icon: 'trail-sign-outline' },
-  { id: 'BUS', label: 'Busses', icon: 'bus-outline' },
+const PILLARS: { id: 'ALL' | CuratedPillar; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'ALL', label: 'All Trips', icon: Sparkles },
+  { id: 'FASTEST', label: '⚡ Fastest Direct', icon: Zap },
+  { id: 'BEST_VALUE', label: '💰 Best Value', icon: Coins },
+  { id: 'MOST_RELIABLE', label: '🛡️ Most Reliable', icon: ShieldCheck },
 ];
 
-const PILLAR_OPTIONS: { id: 'ALL' | CuratedPillar; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { id: 'ALL', label: 'All Trips', icon: 'grid-outline' },
-  { id: 'FASTEST', label: '⚡ Fastest Direct', icon: 'flash-outline' },
-  { id: 'BEST_VALUE', label: '💰 Best Value', icon: 'wallet-outline' },
-  { id: 'MOST_RELIABLE', label: '🛡️ Most Reliable', icon: 'shield-checkmark-outline' },
+const MODES: { id: TransitMode; label: string }[] = [
+  { id: 'TRAIN', label: 'Trains' },
+  { id: 'METRO', label: 'Metrorex' },
+  { id: 'TRAM', label: 'Trams' },
+  { id: 'BUS', label: 'Buses' },
 ];
 
-const PRICE_TIERS: { label: string; value?: number }[] = [
-  { label: 'Any Price', value: undefined },
-  { label: '< 50 LEI', value: 50 },
-  { label: '< 70 LEI', value: 70 },
-  { label: '< 100 LEI', value: 100 },
-];
-
-const SORT_OPTIONS: { id: 'departure' | 'duration' | 'price' | 'risk'; label: string }[] = [
-  { id: 'departure', label: 'Departure Time' },
-  { id: 'duration', label: 'Shortest Duration' },
-  { id: 'price', label: 'Lowest Price' },
-  { id: 'risk', label: 'Lowest Risk (Shielded)' },
+const PRICE_TIERS = [
+  { label: 'Any Price', max: undefined },
+  { label: '< 50 LEI', max: 50 },
+  { label: '< 70 LEI', max: 70 },
+  { label: '< 100 LEI', max: 100 },
 ];
 
 export const TripFilterBar: React.FC<TripFilterBarProps> = ({
   filters,
-  onFilterChange,
-  availableOperators = POPULAR_ROMANIAN_PROVIDERS,
-  totalResultsCount,
-  filteredResultsCount,
-  onResetFilters,
-  style,
-  testID = 'trip-filter-bar',
+  onChange,
+  onReset,
+  activeCount,
 }) => {
-  const { theme, isDark } = useTheme();
-
-  const handleToggleMode = (mode: TransitMode) => {
+  const toggleMode = (mode: TransitMode) => {
     const exists = filters.modes.includes(mode);
-    let next: TransitMode[];
-    if (exists) {
-      // Keep at least one mode
-      if (filters.modes.length === 1) return;
-      next = filters.modes.filter((m) => m !== mode);
-    } else {
-      next = [...filters.modes, mode];
-    }
-    onFilterChange({ ...filters, modes: next });
+    const updated = exists ? filters.modes.filter((m) => m !== mode) : [...filters.modes, mode];
+    onChange({ ...filters, modes: updated });
   };
 
-  const handleToggleProvider = (provider: string) => {
-    const exists = filters.providers.includes(provider);
-    let next: string[];
-    if (exists) {
-      next = filters.providers.filter((p) => p !== provider);
-    } else {
-      next = [...filters.providers, provider];
-    }
-    onFilterChange({ ...filters, providers: next });
+  const toggleProvider = (p: string) => {
+    const exists = filters.providers.includes(p);
+    const updated = exists ? filters.providers.filter((x) => x !== p) : [...filters.providers, p];
+    onChange({ ...filters, providers: updated });
   };
-
-  const handleSelectPillar = (pillar: 'ALL' | CuratedPillar) => {
-    onFilterChange({ ...filters, pillar });
-  };
-
-  const handleSelectPrice = (maxPriceLei?: number) => {
-    onFilterChange({ ...filters, maxPriceLei });
-  };
-
-  const handleSelectSort = (sortBy: 'departure' | 'duration' | 'price' | 'risk') => {
-    onFilterChange({ ...filters, sortBy });
-  };
-
-  const activeFiltersCount =
-    (filters.pillar !== 'ALL' ? 1 : 0) +
-    (filters.modes.length < 4 ? 4 - filters.modes.length : 0) +
-    filters.providers.length +
-    (filters.maxPriceLei !== undefined ? 1 : 0) +
-    (filters.maxDurationMinutes !== undefined ? 1 : 0);
 
   return (
-    <BaseCard
-      variant="elevated"
-      padding="md"
-      testID={testID}
-      style={[
-        styles.container,
-        {
-          backgroundColor: isDark ? '#1C1917' : '#FFFFFF',
-          borderColor: theme.colors.honeyBorder,
-        },
-        style,
-      ]}
-    >
-      {/* Trifecta Pillars Ribbon */}
-      <View style={styles.sectionHeaderRow}>
-        <Text
-          accessibilityRole="header"
-          aria-level={3}
-          style={[styles.sectionTitle, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}
-        >
-          CURATED TRIFECTA PILLARS
-        </Text>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsScrollContent}
-        style={styles.horizontalScroll}
-      >
-        {PILLAR_OPTIONS.map((pillar) => {
-          const isSelected = filters.pillar === pillar.id;
-          return (
-            <Pressable
-              key={pillar.id}
-              testID={`filter-pillar-${pillar.id.toLowerCase()}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Filter by ${pillar.label}`}
-              onPress={() => handleSelectPillar(pillar.id)}
-              style={[
-                styles.chipBtn,
-                {
-                  backgroundColor: isSelected
-                    ? theme.colors.brandHoney
-                    : isDark
-                    ? '#292524'
-                    : '#FFFDF7',
-                  borderColor: isSelected ? theme.colors.brandHoneyDark : theme.colors.honeyBorder,
-                },
-              ]}
+    <BaseCard variant="elevated" className="p-4 md:p-5 mb-6 border border-amber-200/80 bg-white">
+      {/* Top Header Row with Active Count and Reset */}
+      <div className="flex items-center justify-between pb-3 mb-3 border-b border-stone-100 flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-amber-600" />
+          <span className="font-bold text-sm text-stone-900">Filters &amp; Sorting</span>
+          {activeCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-stone-950">
+              {activeCount} active
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Sorting Dropdown */}
+          <div className="flex items-center gap-1.5 text-xs text-stone-600">
+            <ArrowUpDown className="w-3.5 h-3.5 text-stone-400" />
+            <span className="hidden sm:inline font-medium">Sort by:</span>
+            <select
+              value={filters.sortBy}
+              onChange={(e) => onChange({ ...filters, sortBy: e.target.value as any })}
+              className="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
             >
-              <Ionicons
-                name={pillar.icon}
-                size={14}
-                color={isSelected ? '#1C1917' : isDark ? '#FFFFFF' : theme.colors.textCharcoal}
-              />
-              <Text
-                style={[
-                  styles.chipBtnText,
-                  {
-                    color: isSelected ? '#1C1917' : isDark ? '#FFFFFF' : theme.colors.textCharcoal,
-                    fontWeight: isSelected ? '800' : '600',
-                  },
-                ]}
-              >
-                {pillar.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+              <option value="departure">Departure Time</option>
+              <option value="duration">Shortest Duration</option>
+              <option value="price">Lowest Fare</option>
+              <option value="risk">Most Reliable (Shield)</option>
+            </select>
+          </div>
 
-      {/* Transit Modes Filter */}
-      <View style={[styles.sectionHeaderRow, { marginTop: 12 }]}>
-        <Text
-          style={[styles.sectionTitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
-        >
-          TRANSIT MODES
-        </Text>
-      </View>
-      <View style={styles.modesRow}>
-        {ALL_MODES.map((modeItem) => {
-          const isSelected = filters.modes.includes(modeItem.id);
-          return (
-            <BaseBadge
-              key={modeItem.id}
-              label={modeItem.label}
-              variant={isSelected ? 'warning' : 'neutral'}
-              size="md"
-              selected={isSelected}
-              icon={
-                <Ionicons
-                  name={modeItem.icon}
-                  size={14}
-                  color={isSelected ? '#1C1917' : theme.colors.textCharcoalMuted}
-                />
-              }
-              onPress={() => handleToggleMode(modeItem.id)}
-              testID={`filter-mode-${modeItem.id.toLowerCase()}`}
-              accessibilityLabel={`Filter by ${modeItem.label}`}
-              style={[
-                styles.modeBadge,
-                isSelected
-                  ? {
-                      backgroundColor: theme.colors.brandHoney,
-                      borderColor: theme.colors.brandHoneyDark,
-                    }
-                  : {
-                      backgroundColor: isDark ? '#292524' : '#F9FAFB',
-                      borderColor: isDark ? theme.colors.honeyBorder : '#E5E7EB',
-                    },
-              ]}
-              textStyle={
-                isSelected
-                  ? { color: '#1C1917', fontWeight: '800' }
-                  : isDark
-                  ? { color: '#FFFFFF' }
-                  : { color: theme.colors.textCharcoalMuted, fontWeight: '600' }
-              }
-            />
-          );
-        })}
-      </View>
-
-      {/* Romanian Operators / Providers */}
-      <View style={[styles.sectionHeaderRow, { marginTop: 12 }]}>
-        <Text
-          style={[styles.sectionTitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
-        >
-          ROMANIAN PROVIDERS
-        </Text>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chipsScrollContent}
-        style={styles.horizontalScroll}
-      >
-        {availableOperators.map((operator) => {
-          const isSelected = filters.providers.includes(operator);
-          return (
-            <Pressable
-              key={operator}
-              testID={`filter-provider-${operator.toLowerCase().replace(/\s+/g, '-')}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Filter by ${operator}`}
-              onPress={() => handleToggleProvider(operator)}
-              style={[
-                styles.operatorChip,
-                {
-                  backgroundColor: isSelected
-                    ? isDark
-                      ? '#451A03'
-                      : '#FEF3C7'
-                    : isDark
-                    ? '#292524'
-                    : '#F9FAFB',
-                  borderColor: isSelected
-                    ? theme.colors.brandHoney
-                    : isDark
-                    ? '#44403C'
-                    : '#E5E7EB',
-                },
-              ]}
+          {activeCount > 0 && (
+            <button
+              type="button"
+              onClick={onReset}
+              className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 font-semibold cursor-pointer"
             >
-              <Ionicons
-                name={isSelected ? 'checkbox' : 'square-outline'}
-                size={13}
-                color={isSelected ? theme.colors.brandHoney : theme.colors.textCharcoalMuted}
-              />
-              <Text
-                style={[
-                  styles.operatorChipText,
-                  {
-                    color: isSelected
-                      ? isDark
-                        ? theme.colors.brandHoney
-                        : '#92400E'
-                      : isDark
-                      ? '#FFFFFF'
-                      : theme.colors.textCharcoal,
-                    fontWeight: isSelected ? '700' : '500',
-                  },
-                ]}
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {/* Curated Trifecta Pillar Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {PILLARS.map((p) => {
+            const isSelected = filters.pillar === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onChange({ ...filters, pillar: p.id })}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  isSelected
+                    ? 'bg-amber-500 text-stone-950 shadow-xs'
+                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+                }`}
               >
-                {operator}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Max Price and Sort Row */}
-      <View style={styles.priceAndSortRow}>
-        {/* Max Price Chips */}
-        <View style={styles.priceColumn}>
-          <Text
-            style={[styles.subSectionTitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
-          >
-            MAX PRICE
-          </Text>
-          <View style={styles.priceChipsWrap}>
-            {PRICE_TIERS.map((tier) => {
-              const isSelected = filters.maxPriceLei === tier.value;
-              return (
-                <Pressable
-                  key={tier.label}
-                  testID={`filter-price-${tier.value ? tier.value : 'any'}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Filter max price ${tier.label}`}
-                  onPress={() => handleSelectPrice(tier.value)}
-                  style={[
-                    styles.priceChip,
-                    {
-                      backgroundColor: isSelected
-                        ? theme.colors.brandHoney
-                        : isDark
-                        ? '#292524'
-                        : '#F3F4F6',
-                      borderColor: isSelected ? theme.colors.brandHoneyDark : '#E5E7EB',
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.priceChipText,
-                      {
-                        color: isSelected ? '#1C1917' : isDark ? '#FFFFFF' : theme.colors.textCharcoal,
-                        fontWeight: isSelected ? '800' : '600',
-                      },
-                    ]}
-                  >
-                    {tier.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        {/* Transit Modes Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+          <span className="text-xs text-stone-400 mr-1">Modes:</span>
+          {MODES.map((m) => {
+            const isSelected = filters.modes.includes(m.id);
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => toggleMode(m.id)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                  isSelected
+                    ? 'bg-amber-50 text-amber-900 border-amber-300 font-semibold'
+                    : 'bg-white text-stone-400 border-stone-200 hover:border-stone-300'
+                }`}
+              >
+                {m.label}
+              </button>
+            );
+          })}
+        </div>
 
-        {/* Sort Chips */}
-        <View style={styles.sortColumn}>
-          <Text
-            style={[styles.subSectionTitle, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
-          >
-            SORT BY
-          </Text>
-          <View style={styles.sortChipsWrap}>
-            {SORT_OPTIONS.map((opt) => {
-              const isSelected = filters.sortBy === opt.id;
-              return (
-                <Pressable
-                  key={opt.id}
-                  testID={`sort-option-${opt.id}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Sort by ${opt.label}`}
-                  onPress={() => handleSelectSort(opt.id)}
-                  style={[
-                    styles.sortChip,
-                    {
-                      backgroundColor: isSelected
-                        ? isDark
-                          ? '#451A03'
-                          : '#FEF3C7'
-                        : isDark
-                        ? '#292524'
-                        : '#F9FAFB',
-                      borderColor: isSelected
-                        ? theme.colors.brandHoney
-                        : isDark
-                        ? '#44403C'
-                        : '#E5E7EB',
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.sortChipText,
-                      {
-                        color: isSelected
-                          ? isDark
-                            ? theme.colors.brandHoney
-                            : '#92400E'
-                          : isDark
-                          ? '#FFFFFF'
-                          : theme.colors.textCharcoal,
-                        fontWeight: isSelected ? '700' : '500',
-                      },
-                    ]}
-                  >
-                    {opt.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      </View>
+        {/* Romanian Operators Multi-select Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+          <span className="text-xs text-stone-400 mr-1">Operators:</span>
+          {POPULAR_ROMANIAN_PROVIDERS.map((prov) => {
+            const isSelected = filters.providers.includes(prov);
+            return (
+              <button
+                key={prov}
+                type="button"
+                onClick={() => toggleProvider(prov)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                  isSelected
+                    ? 'bg-amber-500 text-stone-950 border-amber-500 font-bold'
+                    : 'bg-white text-stone-600 border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                {prov}
+              </button>
+            );
+          })}
+        </div>
 
-      {/* Results Header Count & Reset Bar */}
-      <View
-        style={[
-          styles.resultsFooter,
-          {
-            borderTopColor: isDark ? '#292524' : '#F3F4F6',
-          },
-        ]}
-      >
-        <Text
-          style={[styles.resultsCountText, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
-          testID="trips-results-count"
-        >
-          Showing {filteredResultsCount} of {totalResultsCount} trips
-        </Text>
-
-        {activeFiltersCount > 0 ? (
-          <BaseButton
-            variant="ghost"
-            size="sm"
-            title={`Reset Filters (${activeFiltersCount})`}
-            iconLeft={<Ionicons name="refresh" size={13} color={theme.colors.brandHoney} />}
-            onPress={onResetFilters}
-            testID="reset-filters-btn"
-            accessibilityLabel="Reset all filters to defaults"
-            textStyle={{ color: isDark ? theme.colors.brandHoney : '#92400E', fontWeight: '700' }}
-          />
-        ) : null}
-      </View>
+        {/* Price Tiers */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-1">
+          <span className="text-xs text-stone-400 mr-1">Budget:</span>
+          {PRICE_TIERS.map((tier) => {
+            const isSelected = filters.maxPriceLei === tier.max;
+            return (
+              <button
+                key={tier.label}
+                type="button"
+                onClick={() => onChange({ ...filters, maxPriceLei: tier.max })}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                  isSelected
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                    : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'
+                }`}
+              >
+                {tier.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </BaseCard>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    borderRadius: 16,
-    borderWidth: 1.5,
-    marginBottom: 20,
-  },
-  sectionHeaderRow: {
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  horizontalScroll: {
-    marginBottom: 4,
-  },
-  chipsScrollContent: {
-    gap: 8,
-    paddingVertical: 2,
-  },
-  chipBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  chipBtnText: {
-    fontSize: 12,
-  },
-  modesRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginBottom: 4,
-  },
-  modeBadge: {
-    borderRadius: 20,
-  },
-  operatorChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  operatorChipText: {
-    fontSize: 12,
-  },
-  priceAndSortRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
-    marginTop: 12,
-    flexWrap: 'wrap',
-  },
-  priceColumn: {
-    flex: 1,
-    minWidth: 200,
-  },
-  sortColumn: {
-    flex: 1,
-    minWidth: 200,
-  },
-  subSectionTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-  },
-  priceChipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  priceChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  priceChipText: {
-    fontSize: 11,
-  },
-  sortChipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  sortChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  sortChipText: {
-    fontSize: 11,
-  },
-  resultsFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: 1,
-  },
-  resultsCountText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-});
+export default TripFilterBar;

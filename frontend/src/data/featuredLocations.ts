@@ -1,4 +1,4 @@
-import { TransportMode } from '../components/RouteFinderCard';
+export type TransportMode = 'Trains' | 'Metro' | 'Busses';
 
 export type LocationType = 'STATION' | 'METRO' | 'BUS_TRAM' | 'AIRPORT' | 'CURRENT_LOCATION';
 

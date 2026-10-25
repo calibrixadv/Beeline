@@ -747,3 +747,33 @@ When asked to create a new component `NewWidget`:
   - **Seamless Handoff**: Reads URL query parameters (`origin`, `destination`, `pillar`) passed from `RouteFinderCard` and HomePage.
   - **Strict Invariants**: ZERO maps rendered; wrapped in ambient [`CozyHoneyBackground`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/CozyHoneyBackground.tsx).
 
+---
+
+## 9. Next.js TypeScript App Router Architecture
+
+The frontend application has been upgraded to **Next.js (App Router)** with **TypeScript Strict** and **Tailwind CSS**, preserving the full mobile setup in [`mobile/`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/mobile).
+
+### App Router Directory Structure
+- [`frontend/src/app/layout.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/layout.tsx): Root layout with metadata, ambient `CozyHoneyBackground`, and client provider tree.
+- [`frontend/src/app/providers.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/providers.tsx): Client provider wrapper for `ThemeProvider`, `AuthProvider`, and `TripProvider`.
+- [`frontend/src/app/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/page.tsx): Home route (`/`) featuring 2-point `RouteFinderCard` and `MarketingShowcase` (Zero map invariant strictly preserved).
+- [`frontend/src/app/trips/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/trips/page.tsx): Multi-modal booking trip explorer (`/trips`) with dual currency formatting (LEI & EUR), Trifecta badges, Transfer Shield indicator, and live matrix summary ribbon.
+- [`frontend/src/app/schedules/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/schedules/page.tsx): Romanian transit schedules directory (`/schedules`).
+- [`frontend/src/app/trains/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/trains/page.tsx): Rail timetable (`/trains`) with real-time status tracking, fare tiers, and intermediate stops modal.
+- [`frontend/src/app/my-trip/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/my-trip/page.tsx): Active trip itinerary wallet (`/my-trip`) with total pricing, travel duration, carbon reduction benchmarks, and JSON export.
+
+### Next.js Component Library (`src/components/`)
+- [`frontend/src/components/Navbar.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/Navbar.tsx): Sticky responsive header with brand mascot bee, navigation links, and guest/traveler user pill.
+- [`frontend/src/components/CozyHoneyBackground.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/CozyHoneyBackground.tsx): Honeycomb SVG geometric pattern overlay with drifting golden pollen particles.
+- [`frontend/src/components/MascotBee.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/MascotBee.tsx): SVG companion avatars (Barnaby Scout ⚡, Honey Saver 💰, Bumble Guard 🛡️).
+- [`frontend/src/components/BaseButton.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseButton.tsx): Reusable button primitive supporting 6 color variants and 3 size scales.
+- [`frontend/src/components/BaseCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseCard.tsx): Reusable card primitive with elevated, outlined, and flat variants.
+- [`frontend/src/components/BaseBadge.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseBadge.tsx): Chip and badge primitive with custom honey tokens.
+- [`frontend/src/components/BaseInput.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseInput.tsx): Input field with icon and 1-tap clear action.
+- [`frontend/src/components/BookingTripCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BookingTripCard.tsx): Booking-inspired trip card with dual pricing, Transfer Shield indicator, leg accordion, and `TripContext` integration.
+- [`frontend/src/components/TripFilterBar.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TripFilterBar.tsx): Filter bar for pillars, transit modes, Romanian operators, price tiers, and sorting.
+- [`frontend/src/components/TransitScheduleCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TransitScheduleCard.tsx): Transit timetable card with departures list and intermediate stops expander.
+- [`frontend/src/components/TrainCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainCard.tsx): Rail timetable card with amenities, seat availability, delay badges, and "+ Plan" action.
+- [`frontend/src/components/TrainDetailModal.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainDetailModal.tsx): Modal for intermediate stops, fare breakdown, and onboard amenities.
+
+

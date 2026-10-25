@@ -401,3 +401,26 @@
 - [x] `npm run build:web`: Export to `dist` succeeded without errors
 - [x] `pytest backend/tests/ -v`: 21 tests passed (100%)
 - [x] `AI_LOG.md`: Strictly untouched
+
+---
+
+## Task 17: Next.js TypeScript App Router Migration
+**Description:** Migrate the frontend to an official Next.js App Router TypeScript template with Tailwind CSS and Lucide React icons, preserving the existing mobile setup in `mobile/`. Port all domain models, services, datasets, contexts, UI components, and App Router pages (`/`, `/trips`, `/schedules`, `/trains`, `/my-trip`), maintaining full feature parity, zero map elements on the HomePage, and seamless root npm scripts.
+**Acceptance criteria:**
+- [x] Archive previous Expo mobile app in `mobile/` with intact git history.
+- [x] Bootstrap official Next.js App Router TypeScript template with Tailwind CSS in `frontend/`.
+- [x] Port TypeScript domain types (`train.ts`, `routePlan.ts`, `auth.ts`, `schedule.ts`, `trip.ts`) and datasets (`romanianTransitTemplates.ts`, `sampleRoutePlans.ts`, `sampleTrains.ts`, `featuredLocations.ts`).
+- [x] Port core business logic and services (`apiClient.ts`, `tripBookingService.ts`, `transitScheduleService.ts`, `riskScoreCalculator.ts`, `trainFilters.ts`).
+- [x] Implement React Web context providers with `localStorage` hydration (`ThemeContext.tsx`, `TripContext.tsx`, `AuthContext.tsx`).
+- [x] Build Tailwind CSS UI component system: `Navbar.tsx`, `CozyHoneyBackground.tsx`, `MascotBee.tsx`, `BaseButton.tsx`, `BaseCard.tsx`, `BaseBadge.tsx`, `BaseInput.tsx`, `RouteFinderCard.tsx` (ZERO map!), `MarketingShowcase.tsx`, `BookingTripCard.tsx`, `TripFilterBar.tsx`, `TransitScheduleCard.tsx`, `TrainCard.tsx`, `TrainDetailModal.tsx`.
+- [x] Implement Next.js App Router pages: `src/app/page.tsx` (Home), `src/app/trips/page.tsx` (Booking Trips), `src/app/schedules/page.tsx` (Schedules), `src/app/trains/page.tsx` (Trains), `src/app/my-trip/page.tsx` (Trip Wallet).
+- [x] Configure root `package.json` scripts (`dev`, `build`, `start`, `test`, `type-check`).
+- [x] Setup Jest and React Testing Library for Next.js and build automated test suites in `frontend/src/__tests__/`.
+- [x] Update documentation in `COMPONENTS.md`.
+**Verification:**
+- [x] `npm run build`: Next.js production build succeeded in 298ms (7/7 static pages generated)
+- [x] `npm run type-check`: 0 TypeScript compiler errors (`tsc --noEmit`)
+- [x] `npm test`: 3 suites, 13 tests passed (100%)
+- [x] `pytest backend/tests/ -v`: 21 tests passed (100%)
+- [x] `AI_LOG.md`: Strictly untouched
+

@@ -72,7 +72,8 @@ export class ApiClient {
   constructor(baseUrl?: string) {
     this.baseUrl =
       baseUrl ||
-      (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) ||
+      (typeof process !== 'undefined' &&
+        (process.env?.NEXT_PUBLIC_API_URL || process.env?.EXPO_PUBLIC_API_URL)) ||
       'http://localhost:8000/api/v1';
   }
 

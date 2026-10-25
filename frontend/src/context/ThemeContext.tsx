@@ -1,37 +1,30 @@
+'use client';
+
 import React, { createContext, useContext, useState, useMemo, useCallback } from 'react';
 
 export type ThemeMode = 'light' | 'dark';
 
 export interface ThemeColors {
-  // Beeline brand colors (Yellow / Black / White identity)
   brandYellow: string;
   brandYellowHover: string;
   brandYellowLight: string;
   brandYellowDark: string;
   brandBlack: string;
   brandWhite: string;
-
-  // Semantic surfaces & backgrounds
   background: string;
   backgroundSecondary: string;
   surface: string;
   surfaceElevated: string;
   surfaceSubtle: string;
-
-  // Text tokens
   textPrimary: string;
   textSecondary: string;
   textMuted: string;
   textOnYellow: string;
   textOnDark: string;
-
-  // Borders & Dividers
   border: string;
   borderSubtle: string;
   borderStrong: string;
   borderFocus: string;
-
-  // Buttons & Interactive
   primary: string;
   primaryHover: string;
   primaryText: string;
@@ -40,20 +33,14 @@ export interface ThemeColors {
   secondaryText: string;
   accent: string;
   accentText: string;
-
-  // Navbar tokens
   navbarBg: string;
   navbarText: string;
   navbarSubtext: string;
   navbarBorder: string;
   navbarActiveIndicator: string;
-
-  // Cards
   cardBg: string;
   cardBorder: string;
   cardShadow: string;
-
-  // Status / Feedback
   success: string;
   successBg: string;
   warning: string;
@@ -62,8 +49,6 @@ export interface ThemeColors {
   dangerBg: string;
   info: string;
   infoBg: string;
-
-  // Cozy Honey tokens
   brandHoney: string;
   brandHoneyLight: string;
   brandHoneyDark: string;
@@ -96,113 +81,97 @@ export interface ThemeTokens {
 
 export const lightColors: ThemeColors = {
   brandYellow: '#FFC700',
-  brandYellowHover: '#E5B200',
-  brandYellowLight: '#FEF9C3',
-  brandYellowDark: '#CA8A04',
-  brandBlack: '#000000',
+  brandYellowHover: '#E5B300',
+  brandYellowLight: '#FFF8E1',
+  brandYellowDark: '#C79A00',
+  brandBlack: '#121212',
   brandWhite: '#FFFFFF',
-
-  background: '#FFFFFF',
-  backgroundSecondary: '#F8F9FA',
+  background: '#FFFDF9',
+  backgroundSecondary: '#FFF9ED',
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-  surfaceSubtle: '#F4F4F5',
-
-  textPrimary: '#000000',
-  textSecondary: '#3F3F46',
-  textMuted: '#71717A',
-  textOnYellow: '#000000',
+  surfaceSubtle: '#FFF5DC',
+  textPrimary: '#1E1B18',
+  textSecondary: '#6B655B',
+  textMuted: '#9E988D',
+  textOnYellow: '#121212',
   textOnDark: '#FFFFFF',
-
-  border: '#E4E4E7',
-  borderSubtle: '#F4F4F5',
-  borderStrong: '#000000',
-  borderFocus: '#FFC700',
-
-  primary: '#FFC700',
-  primaryHover: '#E5B200',
-  primaryText: '#000000',
-  secondary: '#000000',
-  secondaryHover: '#27272A',
-  secondaryText: '#FFFFFF',
-  accent: '#FFC700',
-  accentText: '#000000',
-
-  navbarBg: '#09090B',
-  navbarText: '#FFFFFF',
+  border: '#F0E5D0',
+  borderSubtle: '#F9F1E2',
+  borderStrong: '#D6C8AC',
+  borderFocus: '#F59E0B',
+  primary: '#F59E0B',
+  primaryHover: '#D97706',
+  primaryText: '#FFFFFF',
+  secondary: '#FFF3D6',
+  secondaryHover: '#FDE4A8',
+  secondaryText: '#854D0E',
+  accent: '#10B981',
+  accentText: '#FFFFFF',
+  navbarBg: '#18181B',
+  navbarText: '#F4F4F5',
   navbarSubtext: '#A1A1AA',
   navbarBorder: '#27272A',
-  navbarActiveIndicator: '#FFC700',
-
+  navbarActiveIndicator: '#F59E0B',
   cardBg: '#FFFFFF',
-  cardBorder: '#E4E4E7',
-  cardShadow: 'rgba(0, 0, 0, 0.06)',
-
+  cardBorder: '#F0E5D0',
+  cardShadow: 'rgba(245, 158, 11, 0.08)',
   success: '#10B981',
-  successBg: '#DCFCE7',
+  successBg: '#ECFDF5',
   warning: '#F59E0B',
-  warningBg: '#FEF3C7',
+  warningBg: '#FFFBEB',
   danger: '#EF4444',
-  dangerBg: '#FEE2E2',
+  dangerBg: '#FEF2F2',
   info: '#3B82F6',
-  infoBg: '#DBEAFE',
-
-  // Cozy Honey tokens
+  infoBg: '#EFF6FF',
   brandHoney: '#F59E0B',
-  brandHoneyLight: '#FEF3C7',
-  brandHoneyDark: '#D97706',
+  brandHoneyLight: '#FFFBEB',
+  brandHoneyDark: '#B45309',
   brandAmber: '#D97706',
   brandCream: '#FFFDF7',
-  surfaceWarm: '#FFFBEB',
+  surfaceWarm: '#FFFBF0',
   honeyBorder: '#FDE68A',
-  textCharcoal: '#1C1917',
-  textCharcoalMuted: '#57534E',
+  textCharcoal: '#1E1B18',
+  textCharcoalMuted: '#6B655B',
 };
 
 export const darkColors: ThemeColors = {
   brandYellow: '#FFC700',
-  brandYellowHover: '#FFD233',
-  brandYellowLight: '#3E3204',
-  brandYellowDark: '#EAB308',
-  brandBlack: '#000000',
+  brandYellowHover: '#E5B300',
+  brandYellowLight: '#3D3100',
+  brandYellowDark: '#C79A00',
+  brandBlack: '#121212',
   brandWhite: '#FFFFFF',
-
-  background: '#09090B',
-  backgroundSecondary: '#121215',
-  surface: '#18181B',
-  surfaceElevated: '#242428',
-  surfaceSubtle: '#1F1F23',
-
-  textPrimary: '#FFFFFF',
-  textSecondary: '#A1A1AA',
-  textMuted: '#71717A',
-  textOnYellow: '#000000',
+  background: '#0F0E0D',
+  backgroundSecondary: '#171513',
+  surface: '#1A1816',
+  surfaceElevated: '#24211D',
+  surfaceSubtle: '#2E2A24',
+  textPrimary: '#FAFAF9',
+  textSecondary: '#A8A29E',
+  textMuted: '#78716C',
+  textOnYellow: '#121212',
   textOnDark: '#FFFFFF',
-
-  border: '#27272A',
-  borderSubtle: '#1F1F23',
-  borderStrong: '#FFC700',
-  borderFocus: '#FFC700',
-
-  primary: '#FFC700',
-  primaryHover: '#FFD233',
-  primaryText: '#000000',
-  secondary: '#27272A',
-  secondaryHover: '#3F3F46',
-  secondaryText: '#FFFFFF',
-  accent: '#FFC700',
-  accentText: '#000000',
-
-  navbarBg: '#000000',
-  navbarText: '#FFFFFF',
-  navbarSubtext: '#A1A1AA',
-  navbarBorder: '#27272A',
-  navbarActiveIndicator: '#FFC700',
-
-  cardBg: '#18181B',
-  cardBorder: '#27272A',
-  cardShadow: 'rgba(0, 0, 0, 0.4)',
-
+  border: '#38332D',
+  borderSubtle: '#292520',
+  borderStrong: '#574F46',
+  borderFocus: '#F59E0B',
+  primary: '#F59E0B',
+  primaryHover: '#D97706',
+  primaryText: '#121212',
+  secondary: '#2E2A24',
+  secondaryHover: '#3D372E',
+  secondaryText: '#FDE68A',
+  accent: '#10B981',
+  accentText: '#FFFFFF',
+  navbarBg: '#121110',
+  navbarText: '#FAFAF9',
+  navbarSubtext: '#A8A29E',
+  navbarBorder: '#292520',
+  navbarActiveIndicator: '#F59E0B',
+  cardBg: '#1A1816',
+  cardBorder: '#38332D',
+  cardShadow: 'rgba(0, 0, 0, 0.5)',
   success: '#34D399',
   successBg: '#064E3B',
   warning: '#FBBF24',
@@ -211,8 +180,6 @@ export const darkColors: ThemeColors = {
   dangerBg: '#7F1D1D',
   info: '#60A5FA',
   infoBg: '#1E3A8A',
-
-  // Cozy Honey tokens
   brandHoney: '#F59E0B',
   brandHoneyLight: '#3E3204',
   brandHoneyDark: '#D97706',
@@ -272,15 +239,10 @@ const defaultContextValue: ThemeContextValue = {
 
 export const ThemeContext = createContext<ThemeContextValue>(defaultContextValue);
 
-export interface ThemeProviderProps {
+export const ThemeProvider: React.FC<{
   children: React.ReactNode;
   initialMode?: ThemeMode;
-}
-
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({
-  children,
-  initialMode = 'light',
-}) => {
+}> = ({ children, initialMode = 'light' }) => {
   const [mode, setModeState] = useState<ThemeMode>(initialMode);
 
   const toggleTheme = useCallback(() => {

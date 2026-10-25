@@ -2,19 +2,15 @@
   "name": "tripplanner-root",
   "version": "1.0.0",
   "private": true,
-  "description": "VoyageRail Trip Planner - Multi-module root project",
+  "description": "VoyageRail / Beeline Trip Planner - Next.js TypeScript App & FastAPI Backend",
   "scripts": {
+    "dev": "npm --prefix frontend run dev",
     "start": "npm --prefix frontend run start",
-    "android": "npm --prefix frontend run android",
-    "ios": "npm --prefix frontend run ios",
-    "web": "npm --prefix frontend run web",
-    "build": "npm --prefix frontend run build:web",
-    "build:web": "npm --prefix frontend run build:web",
-    "expo": "npm --prefix frontend exec -- expo",
+    "build": "npm --prefix frontend run build",
     "test": "npm --prefix frontend run test",
     "test:coverage": "npm --prefix frontend run test:coverage",
-    "test:storybook": "npm --prefix frontend run test:storybook",
     "type-check": "npm --prefix frontend run type-check",
+    "lint": "npm --prefix frontend run lint",
     "install:frontend": "npm --prefix frontend install",
     "postinstall": "npm --prefix frontend install"
   }

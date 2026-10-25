@@ -1,238 +1,55 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  StyleProp,
-  ViewStyle,
-  TextStyle,
-  NativeSyntheticEvent,
-  TextInputFocusEventData,
-} from 'react-native';
-import { useTheme } from '../context/ThemeContext';
-import { IconButton } from './IconButton';
+'use client';
 
-export interface BaseInputProps {
-  /** Current text value */
-  value: string;
-  /** Value change callback */
-  onChangeText: (text: string) => void;
-  /** Placeholder text */
-  placeholder?: string;
-  /** Top label */
+import React from 'react';
+import { X } from 'lucide-react';
+
+export interface BaseInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
-  /** Left adornment */
-  leftIcon?: React.ReactNode;
-  /** Right adornment */
-  rightIcon?: React.ReactNode;
-  /** Whether a clear button appears when value is not empty */
-  clearable?: boolean;
-  /** Clear button callback */
-  onClear?: () => void;
-  /** Disabled state */
-  disabled?: boolean;
-  /** Error message */
   error?: string;
-  /** Focus callbacks */
-  onFocus?: (e: NativeSyntheticEvent<TextInputFocusEventData>) => void;
-  onBlur?: (e: NativeSyntheticEvent<TextInputFocusEventData>) => void;
-  /** Hover callbacks */
-  onHoverIn?: () => void;
-  onHoverOut?: () => void;
-  /** Container style overrides */
-  style?: StyleProp<ViewStyle>;
-  /** TextInput style overrides */
-  inputStyle?: StyleProp<TextStyle>;
-  /** Accessibility */
-  accessibilityLabel?: string;
-  testID?: string;
+  leftIcon?: React.ReactNode;
+  onClear?: () => void;
 }
 
 export const BaseInput: React.FC<BaseInputProps> = ({
-  value,
-  onChangeText,
-  placeholder,
   label,
-  leftIcon,
-  rightIcon,
-  clearable = false,
-  onClear,
-  disabled = false,
   error,
-  onFocus,
-  onBlur,
-  onHoverIn,
-  onHoverOut,
-  style,
-  inputStyle,
-  accessibilityLabel,
-  testID,
+  leftIcon,
+  onClear,
+  value,
+  className = '',
+  ...props
 }) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-
-  const { theme, isDark } = useTheme();
-
-  const handleFocus = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
-    setIsFocused(true);
-    onFocus?.(e);
-  };
-
-  const handleBlur = (e: NativeSyntheticEvent<TextInputFocusEventData>) => {
-    setIsFocused(false);
-    onBlur?.(e);
-  };
-
-  const handleHoverIn = () => {
-    if (!disabled) {
-      setIsHovered(true);
-      onHoverIn?.();
-    }
-  };
-
-  const handleHoverOut = () => {
-    if (!disabled) {
-      setIsHovered(false);
-      onHoverOut?.();
-    }
-  };
-
-  const handleClear = () => {
-    onChangeText('');
-    onClear?.();
-  };
-
-  const showClear = clearable && value.length > 0 && !disabled;
-
   return (
-    <View style={[styles.wrapper, style]}>
-      {label ? (
-        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>{label}</Text>
-      ) : null}
-      <View
-        testID={testID ? `${testID}-container` : 'base-input-container'}
-        onPointerEnter={handleHoverIn}
-        onPointerLeave={handleHoverOut}
-        // @ts-ignore React Native / Testing Library hover event support
-        onHoverIn={handleHoverIn}
-        // @ts-ignore
-        onHoverOut={handleHoverOut}
-        style={[
-          styles.inputContainer,
-          {
-            backgroundColor: isDark ? theme.colors.surfaceSubtle : '#F8FAFC',
-            borderColor: isDark ? theme.colors.border : '#E2E8F0',
-          },
-          isHovered && [
-            styles.hovered,
-            { borderColor: isDark ? theme.colors.borderStrong : '#94A3B8' },
-          ],
-          isFocused && [
-            styles.focused,
-            {
-              borderColor: theme.colors.borderFocus,
-              backgroundColor: isDark ? theme.colors.surfaceElevated : '#FFFFFF',
-            },
-          ],
-          disabled && [
-            styles.disabled,
-            { backgroundColor: isDark ? '#141416' : '#F1F5F9' },
-          ],
-          error ? styles.hasError : null,
-        ]}
-      >
-        {leftIcon ? <View style={styles.leftIconWrapper}>{leftIcon}</View> : null}
-        <TextInput
-          testID={testID}
-          style={[styles.input, { color: theme.colors.textPrimary }, inputStyle]}
-          placeholder={placeholder}
-          placeholderTextColor={theme.colors.textMuted}
+    <div className="w-full flex flex-col gap-1.5">
+      {label && <label className="text-xs font-semibold text-stone-700 tracking-wide">{label}</label>}
+      <div className="relative flex items-center">
+        {leftIcon && (
+          <div className="absolute left-3.5 flex items-center pointer-events-none text-stone-400">
+            {leftIcon}
+          </div>
+        )}
+        <input
           value={value}
-          onChangeText={onChangeText}
-          editable={!disabled}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          autoCorrect={false}
-          accessibilityLabel={accessibilityLabel || label || placeholder}
+          className={`w-full bg-white border rounded-xl py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all ${
+            leftIcon ? 'pl-10' : 'pl-3.5'
+          } ${onClear && value ? 'pr-10' : 'pr-3.5'} ${
+            error ? 'border-red-400 focus:ring-red-400/20' : 'border-stone-200'
+          } ${className}`}
+          {...props}
         />
-        <View style={styles.rightActionsRow}>
-          {showClear ? (
-            <IconButton
-              iconName="close-circle"
-              iconSize={18}
-              iconColor={theme.colors.textMuted}
-              onPress={handleClear}
-              testID={`${testID ?? 'input'}-clear-btn`}
-              accessibilityLabel="Clear input value"
-              size="sm"
-            />
-          ) : null}
-          {rightIcon ? (
-            <View style={styles.rightIconWrapper}>{rightIcon}</View>
-          ) : null}
-        </View>
-      </View>
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-    </View>
+        {onClear && Boolean(value) && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute right-3 p-1 rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      {error && <span className="text-xs text-red-500 font-medium">{error}</span>}
+    </div>
   );
 };
 
-const styles = StyleSheet.create({
-  wrapper: {
-    width: '100%',
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#475569',
-    marginBottom: 4,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    height: 42,
-  },
-  hovered: {
-    borderColor: '#94A3B8',
-  },
-  focused: {
-    borderColor: '#2563EB',
-    backgroundColor: '#FFFFFF',
-  },
-  disabled: {
-    backgroundColor: '#F1F5F9',
-    opacity: 0.6,
-  },
-  hasError: {
-    borderColor: '#DC2626',
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    color: '#0F172A',
-    paddingVertical: 0,
-  },
-  leftIconWrapper: {
-    marginRight: 8,
-  },
-  rightActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  rightIconWrapper: {
-    marginLeft: 4,
-  },
-  errorText: {
-    fontSize: 11,
-    color: '#DC2626',
-    marginTop: 4,
-    fontWeight: '600',
-  },
-});
+export default BaseInput;

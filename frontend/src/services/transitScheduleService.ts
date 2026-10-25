@@ -35,7 +35,10 @@ function getDistanceFromLatLonInKm(
 export class TransitScheduleService {
   private templates: TransitLineSchedule[] = ROMANIAN_TRANSIT_TEMPLATES;
   private apiBaseUrl: string | null =
-    (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_TRANSIT_API_URL) || null;
+    (typeof process !== 'undefined' &&
+      (process.env?.NEXT_PUBLIC_TRANSIT_API_URL ||
+        process.env?.EXPO_PUBLIC_TRANSIT_API_URL)) ||
+    null;
 
   /**
    * Fetches schedules matching filtering options.

@@ -17,4 +17,8 @@ export interface TripContextType {
   clearTrip: () => void;
   getTripTotalCost: () => number;
   getTripItemCount: () => number;
+  totalCost: number;
+  totalDurationMinutes: number;
+  totalCo2Kg: number;
+  totalCo2SavedKg: number;
 }
