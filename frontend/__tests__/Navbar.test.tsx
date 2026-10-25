@@ -33,8 +33,13 @@ describe('Navbar UI component', () => {
     const { getByText, getByTestId } = renderNavbar({ onNavigate: handleNavigate });
 
     expect(getByText('Home')).toBeTruthy();
+    expect(getByText('Trips')).toBeTruthy();
     expect(getByText('Schedules')).toBeTruthy();
     expect(getByText('My Trip')).toBeTruthy();
+
+    const tripsLink = getByTestId('navbar-link-trips');
+    fireEvent.press(tripsLink);
+    expect(handleNavigate).toHaveBeenCalledWith('/trips');
 
     const trainsLink = getByTestId('navbar-link-schedules');
     fireEvent.press(trainsLink);

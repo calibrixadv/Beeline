@@ -24,6 +24,8 @@ import * as RouteRewardBadgeStories from '../src/components/stories/RouteRewardB
 import * as CozyHoneyBackgroundStories from '../src/components/stories/CozyHoneyBackground.stories';
 import * as TransitScheduleCardStories from '../src/components/stories/TransitScheduleCard.stories';
 import * as LocationSelectDropdownStories from '../src/components/stories/LocationSelectDropdown.stories';
+import * as BookingTripCardStories from '../src/components/stories/BookingTripCard.stories';
+import * as TripFilterBarStories from '../src/components/stories/TripFilterBar.stories';
 
 export const stories = [
   { name: 'BaseButton', module: BaseButtonStories },
@@ -52,6 +54,8 @@ export const stories = [
   { name: 'CozyHoneyBackground', module: CozyHoneyBackgroundStories },
   { name: 'TransitScheduleCard', module: TransitScheduleCardStories },
   { name: 'LocationSelectDropdown', module: LocationSelectDropdownStories },
+  { name: 'BookingTripCard', module: BookingTripCardStories },
+  { name: 'TripFilterBar', module: TripFilterBarStories },
 ];
 
 

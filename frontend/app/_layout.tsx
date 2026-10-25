@@ -58,6 +58,12 @@ function AppShell() {
             }}
           />
           <Stack.Screen
+            name="trips"
+            options={{
+              title: 'Beeline - Multi-Modal Trips & Bookings',
+            }}
+          />
+          <Stack.Screen
             name="trains"
             options={{
               title: 'Beeline - Train Schedules',

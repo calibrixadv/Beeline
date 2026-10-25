@@ -378,3 +378,26 @@
 - [x] `npm run test:storybook`: 207 story interaction tests passed (100%)
 - [x] `npm run type-check`: 0 TypeScript compiler errors
 - [x] `AI_LOG.md`: Strictly untouched
+
+---
+
+## Task 16: Multi-Modal Booking Trip Results Tab & Explorer
+**Description:** Implement a dedicated `/trips` route and booking interface inspired by modern European travel booking platforms (Trainline, Omio, Google Flights). Provide origin/destination selection, departure presets, popular corridor chips, curated Trifecta badges (Barnaby, Honey, Bumble, Eco Hero), dual currency pricing (LEI & EUR), carrier breakdowns across Romanian transit operators (CFR Călători, Astra Trans Carpatic, Transferoviar Călători, Metrorex, Transurb Galați, STB), expandable leg timelines, Romanian Transfer Shield risk scores, and 1-tap "Book Trip" integration with `TripContext`.
+**Acceptance criteria:**
+- [x] Create multi-modal booking data service `tripBookingService.ts` providing realistic Romanian corridors, dynamic fallback route generation, filtering, sorting, and conversion to `TrainJourney` for `TripContext`.
+- [x] Build `BookingTripCard.tsx` extending `BaseCard` with dual pricing, Trifecta mascot badges, Transfer Shield indicator, expandable leg accordion, operator breakdown, and "Book Trip" / "In Trip ✓" toggle.
+- [x] Build `TripFilterBar.tsx` extending `BaseCard` with pillar chips, transit mode filters, Romanian operator multi-select, price tiers, sorting options, and active filter counter with reset.
+- [x] Build `trips.tsx` (`/trips` route) with origin/destination selector, station swap, departure presets, quick corridor chips, live matrix ribbon, and ambient `CozyHoneyBackground`.
+- [x] Register `/trips` tab in `Navbar.tsx` and `frontend/app/_layout.tsx`.
+- [x] Add seamless "Explore Trips" handoff button in `RouteFinderCard.tsx` and `app/index.tsx`.
+- [x] Enforce ZERO map elements invariant on the HomePage and `/trips` route.
+- [x] Build Storybook stories in `BookingTripCard.stories.tsx` (7 variants) and `TripFilterBar.stories.tsx` (4 variants), registered in `storybook.requires.ts`.
+- [x] Build comprehensive unit tests in `BookingTripCard.test.tsx`, `TripFilterBar.test.tsx`, `tripBookingService.test.ts`, and `tripsRoute.test.tsx`, updating `Navbar.test.tsx` and `RouteFinderCard.test.tsx`.
+- [x] Update documentation in `COMPONENTS.md` and `frontend/COMPONENTS.md`.
+**Verification:**
+- [x] `npm test`: 44 suites, 554 tests passed (100%)
+- [x] `npm run test:storybook`: 223 story interaction tests passed (100%)
+- [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] `npm run build:web`: Export to `dist` succeeded without errors
+- [x] `pytest backend/tests/ -v`: 21 tests passed (100%)
+- [x] `AI_LOG.md`: Strictly untouched

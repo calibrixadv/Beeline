@@ -738,6 +738,36 @@ describe('RouteFinderCard component', () => {
         '/schedules?city=Bucure%C8%99ti&query=Bra%C8%99ov'
       );
     });
+
+    it('provides Explore Multi-Modal Trips button linking to /trips with pre-filled origin and destination', () => {
+      const handleNavigateTrips = jest.fn();
+      const handleExploreTrips = jest.fn();
+      const { getByTestId } = renderComponent({
+        initialOrigin: 'București Nord',
+        initialDestination: 'Brașov',
+        onNavigateTrips: handleNavigateTrips,
+        onExploreTrips: handleExploreTrips,
+      });
+
+      // Submit search
+      const submitBtn = getByTestId('route-finder-submit-btn');
+      fireEvent.press(submitBtn);
+
+      // Explore Trips button appears in feedback
+      const exploreTripsBtn = getByTestId('explore-trips-btn');
+      expect(exploreTripsBtn).toBeTruthy();
+
+      fireEvent.press(exploreTripsBtn);
+      expect(handleNavigateTrips).toHaveBeenCalledWith(
+        '/trips?origin=Bucure%C8%99ti%20Nord&destination=Bra%C8%99ov'
+      );
+      expect(handleExploreTrips).toHaveBeenCalledWith(
+        expect.objectContaining({
+          origin: 'București Nord',
+          destination: 'Brașov',
+        })
+      );
+    });
   });
 });
 

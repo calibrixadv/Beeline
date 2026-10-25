@@ -30,6 +30,13 @@ export default function HomeScreen() {
     // The RouteFinderCard internally renders prepared submission feedback.
   };
 
+  const handleExploreTrips = (params: RouteSearchParams) => {
+    handleNavigate(
+      `/trips?origin=${encodeURIComponent(params.origin)}&destination=${encodeURIComponent(params.destination)}`,
+      'Buzzing to booking options...'
+    );
+  };
+
   const handleExploreTrains = () => {
     handleNavigate('/trains', 'Exploring train routes...');
   };
@@ -46,6 +53,8 @@ export default function HomeScreen() {
           <RouteFinderCard
             testID="home-route-finder-card"
             onSubmitRoute={handleRouteFinderSubmit}
+            onExploreTrips={handleExploreTrips}
+            onNavigateTrips={(url) => handleNavigate(url, 'Buzzing to booking options...')}
             onNavigateSchedules={(url) => handleNavigate(url, 'Buzzing to transit schedules...')}
           />
 

@@ -705,3 +705,46 @@ When asked to create a new component `NewWidget`:
 - **Context**: [`frontend/src/context/AuthContext.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/context/AuthContext.tsx) (Global user, guest status, login, signup, guest conversion, and MFA modal challenge state).
 - **Types**: [`frontend/src/types/auth.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/types/auth.ts).
 
+---
+
+## 8. Multi-Modal Booking & Trip Results Tab
+
+### 1. `BookingTripCard`
+- **Location**: [`frontend/src/components/BookingTripCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BookingTripCard.tsx)
+- **Storybook Stories**: [`frontend/src/components/stories/BookingTripCard.stories.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/stories/BookingTripCard.stories.tsx)
+- **Unit Tests**: [`frontend/__tests__/BookingTripCard.test.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/__tests__/BookingTripCard.test.tsx)
+- **Extension**: Extends [`BaseCard`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseCard.tsx) (`variant="elevated"`) and utilizes [`BaseButton`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseButton.tsx) and [`BaseBadge`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseBadge.tsx).
+- **Features**:
+  - **Booking Layout**: Inspired by Trainline, Omio, and Google Flights. Shows prominent departure and arrival times, station names, total travel duration, and transfers count ("Direct" or "X transfers").
+  - **Curated Trifecta Badge**: Visual companion indicator with mascot avatars (Barnaby for `⚡ FASTEST`, Honey for `💰 BEST VALUE`, Bumble for `🛡️ MOST RELIABLE`, and `🌿 ECO HERO`).
+  - **Romanian Transfer Shield Banner**: Risk score (0-100), risk tier classification (`LOW`, `MODERATE`, `HIGH`), and transfer buffer adequacy evaluation.
+  - **Dual Currency Pricing**: Prominently formats total fare in Romanian LEI (e.g. `63.00 LEI`) and approximate EUR conversion (`€12.60`).
+  - **Expandable Leg-by-Leg Timeline Accordion**: Toggles step-by-step transit itinerary showing leg transit modes, operator codes, vehicle identifiers, intermediate stopovers list toggle, and protected transfer buffer indicators.
+  - **Carrier Breakdown**: Itemized fare summary across Romanian operators (CFR Călători, Astra Trans Carpatic, Transferoviar Călători, Metrorex, Transurb Galați, STB).
+  - **TripContext Integration**: "Book Trip" / "In Trip ✓" button directly converts the route plan into a [`TrainJourney`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/types/train.ts) and adds/removes it from the active itinerary.
+
+### 2. `TripFilterBar`
+- **Location**: [`frontend/src/components/TripFilterBar.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TripFilterBar.tsx)
+- **Storybook Stories**: [`frontend/src/components/stories/TripFilterBar.stories.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/stories/TripFilterBar.stories.tsx)
+- **Unit Tests**: [`frontend/__tests__/TripFilterBar.test.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/__tests__/TripFilterBar.test.tsx)
+- **Extension**: Extends [`BaseCard`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseCard.tsx) and [`BaseButton`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseButton.tsx).
+- **Features**:
+  - **Trifecta Pillar Chips**: Quick filters for `ALL`, `⚡ Fastest Direct`, `💰 Best Value`, and `🛡️ Most Reliable`.
+  - **Transit Modes Filter**: Toggle Train, Metro, Tram, Bus filters with interactive badges.
+  - **Romanian Operator Chips**: Multi-select filter for CFR Călători, Astra Trans Carpatic, Transferoviar Călători (TFC), Metrorex, Transurb Galați, and STB.
+  - **Price Tiers**: Quick max price filters (`Any Price`, `< 50 LEI`, `< 70 LEI`, `< 100 LEI`).
+  - **Sorting Selector**: Departure time, shortest duration, lowest price, or lowest risk score (most shielded).
+  - **Live Filter Counter & Reset**: Active filter counter badge with 1-tap "Reset Filters" action.
+
+### 3. `TripsScreen` (`/trips` Route)
+- **Location**: [`frontend/app/trips.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/app/trips.tsx)
+- **Unit Tests**: [`frontend/__tests__/tripsRoute.test.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/__tests__/tripsRoute.test.tsx)
+- **Features**:
+  - **2-Point Location Selector**: Origin & destination inputs with instant station swap and clear actions.
+  - **Departure Time Presets**: One-tap departure options ("Now", "08:00 AM", "12:00 PM", "16:00 PM").
+  - **Popular Corridor Quick Chips**: Instant presets for *București ⇄ Brașov*, *Galați ⇄ București*, and *Cluj ⇄ Timișoara*.
+  - **Matrix Ribbon**: At-a-glance metrics for Best Price, Fastest Transit, and Honey Shield reliability rate.
+  - **Seamless Handoff**: Reads URL query parameters (`origin`, `destination`, `pillar`) passed from `RouteFinderCard` and HomePage.
+  - **Strict Invariants**: ZERO maps rendered; wrapped in ambient [`CozyHoneyBackground`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/CozyHoneyBackground.tsx).
+
+

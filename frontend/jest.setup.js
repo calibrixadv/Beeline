@@ -5,6 +5,8 @@ const mockRouter = {
   back: jest.fn(),
 };
 
+const mockUseLocalSearchParams = jest.fn(() => ({}));
+
 jest.mock('expo-router', () => {
   const React = require('react');
   const { View } = require('react-native');
@@ -12,12 +14,13 @@ jest.mock('expo-router', () => {
   MockStack.Screen = () => null;
   return {
     useRouter: () => mockRouter,
-    useLocalSearchParams: () => ({}),
+    useLocalSearchParams: mockUseLocalSearchParams,
     usePathname: () => '/',
     useSegments: () => [],
     Link: ({ children, ...props }) => React.createElement(View, props, children),
     Stack: MockStack,
     mockRouter,
+    mockUseLocalSearchParams,
   };
 });
 

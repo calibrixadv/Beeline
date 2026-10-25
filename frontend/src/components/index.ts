@@ -24,3 +24,5 @@ export * from './RouteRewardBadge';
 export * from './CozyHoneyBackground';
 export * from './TransitScheduleCard';
 export * from './LocationSelectDropdown';
+export * from './BookingTripCard';
+export * from './TripFilterBar';

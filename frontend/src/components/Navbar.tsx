@@ -68,6 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const navLinks = [
     { label: 'Home', route: '/', icon: 'home-outline' as const },
+    { label: 'Trips', route: '/trips', icon: 'navigate-outline' as const },
     { label: 'Schedules', route: '/schedules', icon: 'time-outline' as const },
     {
       label: 'My Trip',

@@ -46,6 +46,10 @@ export interface RouteFinderCardProps {
   onSubmitRoute?: (params: RouteSearchParams) => void;
   /** Callback to navigate to schedules directly */
   onNavigateSchedules?: (url: string) => void;
+  /** Callback to navigate to multi-modal trip booking results directly */
+  onNavigateTrips?: (url: string) => void;
+  /** Callback when user clicks explore trips */
+  onExploreTrips?: (params: RouteSearchParams) => void;
   /** Custom container style */
   style?: StyleProp<ViewStyle>;
   /** Test identifier */
@@ -189,6 +193,8 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
   initialModes = ['Trains', 'Metro', 'Busses'],
   onSubmitRoute,
   onNavigateSchedules,
+  onNavigateTrips,
+  onExploreTrips,
   style,
   testID = 'route-finder-card',
 }) => {
@@ -928,6 +934,41 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           >
             Shorthand preview: full door-to-door itinerary and booking will load upon future redirect.
           </Text>
+
+          {/* Direct link to Multi-Modal Trips & Booking results on /trips */}
+          <View style={[styles.viewSchedulesBtnRow, { marginBottom: 10 }]}>
+            <BaseButton
+              variant="primary"
+              size="md"
+              title="Explore Multi-Modal Trips (/trips)"
+              iconLeft={<Ionicons name="navigate" size={16} color="#1C1917" />}
+              iconRight={<Ionicons name="arrow-forward" size={16} color="#1C1917" />}
+              onPress={() => {
+                const qOrigin = submittedQuery ? submittedQuery.origin : origin;
+                const qDest = submittedQuery ? submittedQuery.destination : destination;
+                const url = `/trips?origin=${encodeURIComponent(qOrigin)}&destination=${encodeURIComponent(qDest)}`;
+                if (onExploreTrips && submittedQuery) {
+                  onExploreTrips(submittedQuery);
+                }
+                if (onNavigateTrips) {
+                  onNavigateTrips(url);
+                } else {
+                  router.push(url as any);
+                }
+              }}
+              testID="explore-trips-btn"
+              accessibilityLabel="Explore Multi-Modal Trips and Booking Options"
+              style={[
+                styles.viewSchedulesBtn,
+                {
+                  backgroundColor: theme.colors.brandHoney,
+                  borderColor: theme.colors.brandHoneyDark,
+                },
+              ]}
+              textStyle={{ color: '#1C1917', fontWeight: '800' }}
+              fullWidth
+            />
+          </View>
 
           {/* Direct link to live schedules for this route & city */}
           <View style={styles.viewSchedulesBtnRow}>
