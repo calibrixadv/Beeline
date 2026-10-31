@@ -1,7 +1,7 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
-import HomePage from '../app/page';
+import HomePage, { MAX_BEE_DISPLACEMENT_PX } from '../app/page';
 
 const mockPush = jest.fn();
 
@@ -42,13 +42,17 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(container.querySelector('map')).toBeNull();
   });
 
-  it('starts with default explorer mascot gear and initial search inputs', () => {
-    render(<HomePage />);
+  it('starts with default explorer mascot gear and initial search inputs, with right card removed', () => {
+    const { container } = render(<HomePage />);
     
-    // Mascot is in default explorer gear
-    expect(screen.getAllByText(/EXPLORER/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Aviator Goggles & Explorer Knot/i)).toBeInTheDocument();
-    expect(screen.getByText(/Ready to buzz across Romania!/i)).toBeInTheDocument();
+    // Mascot in background is in default explorer gear
+    const bgContainer = container.querySelector('[data-testid="background-flying-mascot"]');
+    expect(bgContainer).toBeInTheDocument();
+    expect(bgContainer).toHaveAttribute('data-gear', 'default');
+
+    // Right card has been removed from hero layout
+    expect(screen.queryByText(/Ready to buzz across Romania! Pick your route\./i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Manual debug override active/i)).not.toBeInTheDocument();
 
     // Inputs are present
     expect(screen.getByPlaceholderText(/e\.g\. Galați/i)).toBeInTheDocument();
@@ -56,7 +60,8 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
   });
 
   it('searches corridors and dynamically changes mascot gear to route gears', () => {
-    render(<HomePage />);
+    const { container } = render(<HomePage />);
+    const bgContainer = container.querySelector('[data-testid="background-flying-mascot"]');
     
     const searchBtn = screen.getByRole('button', { name: /Find Synchronized Routes/i });
     fireEvent.click(searchBtn);
@@ -68,32 +73,30 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.getAllByText(/ECONOMY/i).length).toBeGreaterThan(0);
 
     // Defaults to SAFE route gear upon search
-    expect(screen.getByText(/Romanian Transfer Shield/i)).toBeInTheDocument();
-    expect(screen.getByText(/Transfer Shield active: 100% connection guarantee!/i)).toBeInTheDocument();
+    expect(bgContainer).toHaveAttribute('data-gear', 'safe');
 
     // Click Fast Route
     const fastCard = screen.getAllByText(/FAST ROUTE/i)[0].closest('div');
     if (fastCard) fireEvent.click(fastCard);
-    expect(screen.getByText(/Supersonic Speed Visor & Scarf/i)).toBeInTheDocument();
-    expect(screen.getByText(/Supersonic mode! Zero stopovers, maximum speed\./i)).toBeInTheDocument();
+    expect(bgContainer).toHaveAttribute('data-gear', 'fast');
 
     // Click Economy Route
     const economyCard = screen.getAllByText(/ECONOMY/i)[0].closest('div');
     if (economyCard) fireEvent.click(economyCard);
-    expect(screen.getByText(/Nectar Jar & Bargain Specs/i)).toBeInTheDocument();
-    expect(screen.getByText(/Sweetest fare found! Pocket the leftover nectar\./i)).toBeInTheDocument();
+    expect(bgContainer).toHaveAttribute('data-gear', 'economy');
 
     // Click Modify to reset back to default
     const modifyBtn = screen.getByRole('button', { name: /Modify/i });
     fireEvent.click(modifyBtn);
 
     // Returned to default explorer mascot gear
-    expect(screen.getByText(/Aviator Goggles & Explorer Knot/i)).toBeInTheDocument();
+    expect(bgContainer).toHaveAttribute('data-gear', 'default');
     expect(screen.getByRole('button', { name: /Find Synchronized Routes/i })).toBeInTheDocument();
   });
 
   it('does not allow gear selection in regular UI but allows manual override in Debug Tools popup', () => {
-    render(<HomePage />);
+    const { container } = render(<HomePage />);
+    const bgContainer = container.querySelector('[data-testid="background-flying-mascot"]');
     
     // Regular UI must NOT expose the gear chips
     expect(screen.queryByRole('button', { name: /⚡ Fast/i })).not.toBeInTheDocument();
@@ -114,22 +117,22 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     // Toggle to Fast gear manually
     const fastChip = screen.getByRole('button', { name: /⚡ Fast/i });
     fireEvent.click(fastChip);
-    expect(screen.getAllByText(/Supersonic Speed Visor & Scarf/i).length).toBeGreaterThan(0);
+    expect(bgContainer).toHaveAttribute('data-gear', 'fast');
 
     // Toggle to Safe gear manually
     const safeChip = screen.getByRole('button', { name: /🛡️ Safe/i });
     fireEvent.click(safeChip);
-    expect(screen.getAllByText(/Romanian Transfer Shield/i).length).toBeGreaterThan(0);
+    expect(bgContainer).toHaveAttribute('data-gear', 'safe');
 
     // Toggle to Economy gear manually
     const economyChip = screen.getByRole('button', { name: /🍯 Economy/i });
     fireEvent.click(economyChip);
-    expect(screen.getAllByText(/Nectar Jar & Bargain Specs/i).length).toBeGreaterThan(0);
+    expect(bgContainer).toHaveAttribute('data-gear', 'economy');
 
     // Toggle back to Default gear
     const defaultChip = screen.getByRole('button', { name: /🧭 Default/i });
     fireEvent.click(defaultChip);
-    expect(screen.getAllByText(/Aviator Goggles & Explorer Knot/i).length).toBeGreaterThan(0);
+    expect(bgContainer).toHaveAttribute('data-gear', 'default');
 
     // Reset to Automatic Route Mode
     const resetAutoBtn = screen.getByRole('button', { name: /Reset to Automatic Route Mode/i });
@@ -153,6 +156,184 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     const flyingBee = bgContainer?.querySelector('.animate-bee-dynamic-flight');
     expect(flyingBee).toBeInTheDocument();
   });
+
+  it('smoothly follows mouse movements over/near the background bee clamped to max 4rem (64px)', () => {
+    const { container } = render(<HomePage />);
+    const anchor = container.querySelector('[data-testid="bee-mascot-anchor"]') as HTMLElement;
+    const follow = container.querySelector('[data-testid="bee-mascot-follow"]') as HTMLElement;
+    expect(anchor).toBeInTheDocument();
+    expect(follow).toBeInTheDocument();
+
+    // Mock bounding rect for predictable coordinates in JSDOM: anchor at (800, 100) with size (300, 300) -> center (950, 250)
+    anchor.getBoundingClientRect = () => ({
+      left: 800,
+      top: 100,
+      right: 1100,
+      bottom: 400,
+      width: 300,
+      height: 300,
+      x: 800,
+      y: 100,
+      toJSON: () => {},
+    });
+
+    // Initial resting displacement is 0
+    expect(follow).toHaveAttribute('data-displacement-x', '0.00');
+    expect(follow).toHaveAttribute('data-displacement-y', '0.00');
+    expect(follow).toHaveAttribute('data-near', 'false');
+
+    // Move mouse near the bee: center is (950, 250). Target at (980, 290) -> deltaX = 30, deltaY = 40, distance = 50 (< 64px)
+    fireEvent.mouseMove(window, { clientX: 980, clientY: 290 });
+    expect(follow).toHaveAttribute('data-near', 'true');
+    expect(follow.getAttribute('data-displacement-x')).toBe('30.00');
+    expect(follow.getAttribute('data-displacement-y')).toBe('40.00');
+    expect(follow.style.transform).toBe('translate3d(30.00px, 40.00px, 0)');
+
+    // Move mouse further away: Target at (1150, 450) -> deltaX = 200, deltaY = 200, distance = 282.84px
+    // Must be strictly clamped to MAX_BEE_DISPLACEMENT_PX = 64px (4rem)
+    fireEvent.mouseMove(window, { clientX: 1150, clientY: 450 });
+    expect(follow).toHaveAttribute('data-near', 'true');
+    const dispX = parseFloat(follow.getAttribute('data-displacement-x') || '0');
+    const dispY = parseFloat(follow.getAttribute('data-displacement-y') || '0');
+    const totalDisp = Math.hypot(dispX, dispY);
+    expect(totalDisp).toBeCloseTo(MAX_BEE_DISPLACEMENT_PX, 1);
+    expect(follow.getAttribute('data-displacement-rem-x')).toBe((dispX / 16).toFixed(3));
+    expect(follow.getAttribute('data-displacement-rem-y')).toBe((dispY / 16).toFixed(3));
+
+    // Move mouse far outside proximity radius (e.g. clientX: 100, clientY: 100 -> dist > 800px)
+    fireEvent.mouseMove(window, { clientX: 100, clientY: 100 });
+    expect(follow).toHaveAttribute('data-near', 'false');
+    expect(follow).toHaveAttribute('data-displacement-x', '0.00');
+    expect(follow).toHaveAttribute('data-displacement-y', '0.00');
+    expect(follow.style.transform).toBe('translate3d(0.00px, 0.00px, 0)');
+  });
+
+  it('resets displacement smoothly to 0 when mouse leaves window', () => {
+    const { container } = render(<HomePage />);
+    const anchor = container.querySelector('[data-testid="bee-mascot-anchor"]') as HTMLElement;
+    const follow = container.querySelector('[data-testid="bee-mascot-follow"]') as HTMLElement;
+
+    anchor.getBoundingClientRect = () => ({
+      left: 800,
+      top: 100,
+      right: 1100,
+      bottom: 400,
+      width: 300,
+      height: 300,
+      x: 800,
+      y: 100,
+      toJSON: () => {},
+    });
+
+    // Move mouse over bee
+    fireEvent.mouseMove(anchor, { clientX: 970, clientY: 270 });
+    expect(follow).toHaveAttribute('data-near', 'true');
+
+    // Mouse leaves the document
+    fireEvent(document, new Event('mouseleave'));
+    expect(follow).toHaveAttribute('data-near', 'false');
+    expect(follow).toHaveAttribute('data-displacement-x', '0.00');
+    expect(follow).toHaveAttribute('data-displacement-y', '0.00');
+  });
+
+  it('resets displacement to 0 when window loses focus (blur)', () => {
+    const { container } = render(<HomePage />);
+    const anchor = container.querySelector('[data-testid="bee-mascot-anchor"]') as HTMLElement;
+    const follow = container.querySelector('[data-testid="bee-mascot-follow"]') as HTMLElement;
+
+    anchor.getBoundingClientRect = () => ({
+      left: 800,
+      top: 100,
+      right: 1100,
+      bottom: 400,
+      width: 300,
+      height: 300,
+      x: 800,
+      y: 100,
+      toJSON: () => {},
+    });
+
+    // Move mouse over bee
+    fireEvent.mouseMove(window, { clientX: 970, clientY: 270 });
+    expect(follow).toHaveAttribute('data-near', 'true');
+
+    // Window blur event fires
+    fireEvent(window, new Event('blur'));
+    expect(follow).toHaveAttribute('data-near', 'false');
+    expect(follow).toHaveAttribute('data-displacement-x', '0.00');
+    expect(follow).toHaveAttribute('data-displacement-y', '0.00');
+  });
+
+  it('correctly clamps negative displacement vectors without producing negative zeros (-0.00)', () => {
+    const { container } = render(<HomePage />);
+    const anchor = container.querySelector('[data-testid="bee-mascot-anchor"]') as HTMLElement;
+    const follow = container.querySelector('[data-testid="bee-mascot-follow"]') as HTMLElement;
+
+    anchor.getBoundingClientRect = () => ({
+      left: 800,
+      top: 100,
+      right: 1100,
+      bottom: 400,
+      width: 300,
+      height: 300,
+      x: 800,
+      y: 100,
+      toJSON: () => {},
+    });
+
+    // Move mouse top-left of bee center (950, 250): target at (850, 150) -> deltaX = -100, deltaY = -100
+    fireEvent.mouseMove(window, { clientX: 850, clientY: 150 });
+    expect(follow).toHaveAttribute('data-near', 'true');
+
+    const dispX = parseFloat(follow.getAttribute('data-displacement-x') || '0');
+    const dispY = parseFloat(follow.getAttribute('data-displacement-y') || '0');
+    expect(dispX).toBeLessThan(0);
+    expect(dispY).toBeLessThan(0);
+    expect(follow.getAttribute('data-displacement-x')).not.toContain('-0.00');
+    expect(follow.getAttribute('data-displacement-y')).not.toContain('-0.00');
+
+    const totalDisp = Math.hypot(dispX, dispY);
+    expect(totalDisp).toBeCloseTo(MAX_BEE_DISPLACEMENT_PX, 1);
+  });
+
+  it('respects prefers-reduced-motion by ignoring mouse tracking', () => {
+    const originalMatchMedia = window.matchMedia;
+    window.matchMedia = jest.fn().mockImplementation((query) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
+
+    const { container } = render(<HomePage />);
+    const anchor = container.querySelector('[data-testid="bee-mascot-anchor"]') as HTMLElement;
+    const follow = container.querySelector('[data-testid="bee-mascot-follow"]') as HTMLElement;
+
+    anchor.getBoundingClientRect = () => ({
+      left: 800,
+      top: 100,
+      right: 1100,
+      bottom: 400,
+      width: 300,
+      height: 300,
+      x: 800,
+      y: 100,
+      toJSON: () => {},
+    });
+
+    // Move mouse near bee
+    fireEvent.mouseMove(window, { clientX: 980, clientY: 290 });
+    expect(follow).toHaveAttribute('data-near', 'false');
+    expect(follow).toHaveAttribute('data-displacement-x', '0.00');
+    expect(follow).toHaveAttribute('data-displacement-y', '0.00');
+
+    window.matchMedia = originalMatchMedia;
+  });
+
 
   it('swaps origin and destination when swap button is pressed', () => {
     render(<HomePage />);
@@ -211,5 +392,30 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(mockPush).toHaveBeenCalledWith(
       expect.stringContaining('/trips?origin=Gala%C8%9Bi&destination=Bucure%C8%99ti+Nord&pillar=MOST_RELIABLE')
     );
+  });
+
+  it('ensures foreground interactive elements remain fully accessible and responsive', () => {
+    render(<HomePage />);
+    
+    // Inputs are typeable and accessible
+    const originInput = screen.getByPlaceholderText(/e\.g\. Galați/i);
+    fireEvent.change(originInput, { target: { value: 'Iași' } });
+    expect(originInput).toHaveValue('Iași');
+
+    // Swap button is clickable
+    const swapBtn = screen.getByTitle(/Swap Origin and Destination/i);
+    expect(swapBtn).not.toBeDisabled();
+    fireEvent.click(swapBtn);
+    expect(originInput).toHaveValue('București Nord');
+
+    // Corridor buttons are clickable
+    const corridorBtn = screen.getByRole('button', { name: /Cluj ⇄ Timișoara/i });
+    fireEvent.click(corridorBtn);
+    expect(originInput).toHaveValue('Cluj-Napoca');
+
+    // Search button submits cleanly
+    const searchBtn = screen.getByRole('button', { name: /Find Synchronized Routes/i });
+    fireEvent.click(searchBtn);
+    expect(screen.getByText(/Synchronized Corridors Found/i)).toBeInTheDocument();
   });
 });

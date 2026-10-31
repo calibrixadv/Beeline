@@ -134,6 +134,12 @@
   will-change: transform;
 }
 
+/* Smooth bee mouse-follow easing */
+.bee-mouse-follow {
+  transition: transform 750ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -158,6 +164,11 @@
   .animate-pollen-2,
   .animate-pollen-3 {
     animation: none !important;
+  }
+
+  .bee-mouse-follow {
+    transition: none !important;
+    transform: none !important;
   }
 }
 
