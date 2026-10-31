@@ -1,6 +1,6 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import BaseButton from '../components/BaseButton';
 import MascotBee from '../components/MascotBee';
 import MascotDebugModal from '../components/MascotDebugModal';
@@ -45,6 +45,83 @@ describe('Next.js UI Components', () => {
     // Legacy backwards compatibility aliases
     rerender(<MascotBee name="barnaby" size="md" />);
     expect(screen.getByRole('img')).toBeInTheDocument();
+  });
+
+  it('performs dynamic gear shift transitions with radial exit, vertical entry, and shine effects', () => {
+    jest.useFakeTimers();
+
+    const { container, rerender } = render(<MascotBee gear="default" size="lg" animated={true} />);
+    const root = container.firstElementChild as HTMLElement;
+
+    // Initial state: default gear, idle, no exiting gear
+    expect(root).toHaveAttribute('data-gear', 'default');
+    expect(root).toHaveAttribute('data-transitioning', 'false');
+    expect(root).not.toHaveAttribute('data-exiting-gear');
+    expect(container.querySelector('[data-testid="mascot-gear-shine"]')).toBeNull();
+
+    // Trigger gear change to 'fast'
+    rerender(<MascotBee gear="fast" size="lg" animated={true} />);
+
+    // Now in dynamic transition
+    expect(root).toHaveAttribute('data-gear', 'fast');
+    expect(root).toHaveAttribute('data-exiting-gear', 'default');
+    expect(root).toHaveAttribute('data-transitioning', 'true');
+
+    // 1. Old gear exits radially from center (transform radial + fade out)
+    const exitingGroup = container.querySelector('[data-gear-status="exiting"]');
+    expect(exitingGroup).toBeInTheDocument();
+    expect(exitingGroup).toHaveAttribute('data-gear-type', 'default');
+    expect(exitingGroup).toHaveClass('animate-gear-radial-exit');
+
+    // Radial shockwave ripple is rendered
+    expect(container.querySelector('.animate-gear-shockwave')).toBeInTheDocument();
+
+    // 2. New gear enters vertically from above (transformY + fade in)
+    const enteringGroup = container.querySelector('[data-gear-status="entering"]');
+    expect(enteringGroup).toBeInTheDocument();
+    expect(enteringGroup).toHaveAttribute('data-gear-type', 'fast');
+    expect(enteringGroup).toHaveClass('animate-gear-enter-top');
+
+    // 3. Shine effect is active when new gear gets in place
+    const shineGroup = container.querySelector('[data-testid="mascot-gear-shine"]');
+    expect(shineGroup).toBeInTheDocument();
+    expect(shineGroup).toHaveAttribute('data-shine-gear', 'fast');
+    expect(shineGroup?.querySelector('.animate-gear-sweep')).toBeInTheDocument();
+    expect(shineGroup?.querySelectorAll('.animate-gear-sparkle').length).toBeGreaterThan(0);
+
+    // Fast-forward past transition duration (850ms)
+    act(() => {
+      jest.advanceTimersByTime(900);
+    });
+
+    // Transition ends: exiting gear and shine unmounted, entering gear settles to idle
+    expect(root).toHaveAttribute('data-gear', 'fast');
+    expect(root).toHaveAttribute('data-transitioning', 'false');
+    expect(root).not.toHaveAttribute('data-exiting-gear');
+    expect(container.querySelector('[data-gear-status="exiting"]')).toBeNull();
+    expect(container.querySelector('[data-testid="mascot-gear-shine"]')).toBeNull();
+
+    const idleGroup = container.querySelector('[data-gear-status="idle"]');
+    expect(idleGroup).toBeInTheDocument();
+    expect(idleGroup).toHaveAttribute('data-gear-type', 'fast');
+
+    jest.useRealTimers();
+  });
+
+  it('skips dynamic transition animation when animated prop is false', () => {
+    const { container, rerender } = render(<MascotBee gear="default" size="lg" animated={false} />);
+    const root = container.firstElementChild as HTMLElement;
+
+    expect(root).toHaveAttribute('data-gear', 'default');
+    expect(root).toHaveAttribute('data-transitioning', 'false');
+
+    rerender(<MascotBee gear="safe" size="lg" animated={false} />);
+
+    expect(root).toHaveAttribute('data-gear', 'safe');
+    expect(root).toHaveAttribute('data-transitioning', 'false');
+    expect(root).not.toHaveAttribute('data-exiting-gear');
+    expect(container.querySelector('[data-gear-status="exiting"]')).toBeNull();
+    expect(container.querySelector('[data-testid="mascot-gear-shine"]')).toBeNull();
   });
 
   it('renders MascotDebugModal with full gear override controls', () => {

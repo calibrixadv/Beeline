@@ -140,6 +140,136 @@
   will-change: transform;
 }
 
+/* ========================================================================== */
+/* DYNAMIC MASCOT GEAR TRANSITIONS                                           */
+/* ========================================================================== */
+
+/* 1. Old Gear: Radial Transform from Mascot Center + Fade Out */
+@keyframes gearRadialExit {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    filter: drop-shadow(0 0 0px rgba(245, 158, 11, 0));
+  }
+  30% {
+    opacity: 0.85;
+    filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.45));
+  }
+  100% {
+    transform: scale(1.65);
+    opacity: 0;
+    filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0));
+  }
+}
+
+.animate-gear-radial-exit {
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+  animation: gearRadialExit 380ms cubic-bezier(0.2, 0, 0.35, 1) forwards;
+  pointer-events: none;
+}
+
+/* 2. New Gear: TransformY Vertically from Above + Fade In */
+@keyframes gearEnterFromTop {
+  0% {
+    transform: translateY(-42px) scale(0.92);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(3px) scale(1.02);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-1px) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0px) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-gear-enter-top {
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+  animation: gearEnterFromTop 460ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 3. Radial Shockwave Ripple (Emanating outward from center 60,60) */
+@keyframes gearRadialShockwave {
+  0% {
+    r: 12;
+    opacity: 0.85;
+    stroke-width: 3.5;
+  }
+  100% {
+    r: 58;
+    opacity: 0;
+    stroke-width: 0.5;
+  }
+}
+
+.animate-gear-shockwave {
+  animation: gearRadialShockwave 420ms cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
+}
+
+/* 4. Shine Effect: Sparkle Glint / Starburst at Focal Equipment Point */
+@keyframes gearShineSparkle {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.4) rotate(45deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.1) rotate(75deg);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(0) rotate(120deg);
+    opacity: 0;
+  }
+}
+
+.animate-gear-sparkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gearShineSparkle 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 260ms forwards;
+  opacity: 0;
+}
+
+.animate-gear-sparkle-delayed {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gearShineSparkle 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 360ms forwards;
+  opacity: 0;
+}
+
+/* 5. Shine Effect: Diagonal Sheen Beam Sweep across the Gear */
+@keyframes gearShineSweep {
+  0% {
+    transform: translate(-35px, -15px);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(45px, 20px);
+    opacity: 0;
+  }
+}
+
+.animate-gear-sweep {
+  animation: gearShineSweep 500ms ease-out 250ms forwards;
+  opacity: 0;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -162,8 +292,23 @@
   .animate-wing-right,
   .animate-pollen-1,
   .animate-pollen-2,
-  .animate-pollen-3 {
+  .animate-pollen-3,
+  .animate-gear-radial-exit,
+  .animate-gear-enter-top,
+  .animate-gear-shockwave,
+  .animate-gear-sparkle,
+  .animate-gear-sparkle-delayed,
+  .animate-gear-sweep {
     animation: none !important;
+  }
+
+  .animate-gear-radial-exit {
+    display: none !important;
+  }
+
+  .animate-gear-enter-top {
+    transform: none !important;
+    opacity: 1 !important;
   }
 
   .bee-mouse-follow {

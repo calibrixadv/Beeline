@@ -72,13 +72,18 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.getAllByText(/FAST ROUTE/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/ECONOMY/i).length).toBeGreaterThan(0);
 
-    // Defaults to SAFE route gear upon search
+    // Defaults to SAFE route gear upon search with dynamic entrance and shine
     expect(bgContainer).toHaveAttribute('data-gear', 'safe');
+    expect(bgContainer?.querySelector('[data-gear-status="entering"]')).toBeInTheDocument();
+    expect(bgContainer?.querySelector('[data-testid="mascot-gear-shine"]')).toBeInTheDocument();
 
-    // Click Fast Route
+    // Click Fast Route triggers dynamic gear change
     const fastCard = screen.getAllByText(/FAST ROUTE/i)[0].closest('div');
     if (fastCard) fireEvent.click(fastCard);
     expect(bgContainer).toHaveAttribute('data-gear', 'fast');
+    expect(bgContainer?.querySelector('[data-gear-status="exiting"]')).toHaveClass('animate-gear-radial-exit');
+    expect(bgContainer?.querySelector('[data-gear-status="entering"]')).toHaveClass('animate-gear-enter-top');
+    expect(bgContainer?.querySelector('[data-testid="mascot-gear-shine"]')).toBeInTheDocument();
 
     // Click Economy Route
     const economyCard = screen.getAllByText(/ECONOMY/i)[0].closest('div');
