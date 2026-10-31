@@ -58,11 +58,18 @@ Implement "The Cozy Hive" redesign specified in `docs/ideas/cozy-bee-homepage-re
 ### Phase 6: Mainpage Route Finder Dropdowns & Smart Location Selection
 - [x] **Task 12**: Update `RouteFinderCard.tsx` and `HomeScreen` with Current City selector (GPS "Detect Near Me" + Romanian city quick chips), searchable featured location dropdowns (`LocationSelectDropdown.tsx`), smart inner-city and inter-city pairing heuristics, recent choices history, and direct link to live departures on `/schedules`.
 
-### Checkpoint 6: Complete & Clean Build
-- [x] `npm test`: 36 test suites, 475 tests passed (100%)
-- [x] `npm run test:storybook`: 206 automated story interaction tests passed
+### Phase 7: Simplified Single-Screen Hero with Beeline Branding & Gear-Shifting Mascot
+- [x] **Task 18**: Redesign `MascotBee.tsx` into a unified high-fidelity Beeline mascot that dynamically shifts gear (`default`, `fast`, `safe`, `economy`) with smooth vector animations, `React.useId` scoped gradient defs, WebKit-compliant `transform-box: fill-box` wing rotations, and backwards compatibility.
+- [x] **Task 19**: Update branding in `Navbar.tsx`, `layout.tsx`, and `my-trip/page.tsx` to "Beeline" with unified mascot integration and rebranded exports.
+- [x] **Task 20**: Build exact screen-size hero on `frontend/src/app/page.tsx` with prominent `h1` Beeline title, disruptive punchline, responsive 2-column layout (`md:grid-cols-12`) with non-clipping `100dvh` viewport handling, integrated 2-point corridor search, and dynamic mascot gear switching upon route selection (ZERO map invariant strictly enforced).
+- [x] **Task 21**: Verify quality gates (`npm run type-check`, `npm run build`, `npm test`, `pytest`) with zero regressions and expanded edge case test coverage.
+
+### Checkpoint 7: Clean Build & Full Verification
+- [x] `npm test`: 4 test suites, 22 tests passed (100%)
 - [x] `npm run type-check`: 0 TypeScript compiler errors
-- [x] `npm run build:web`: Export succeeded cleanly with 0 errors
+- [x] `npm run build`: Production Next.js build succeeds with 7/7 static pages generated
+- [x] `pytest backend/tests/ -v`: 21 backend tests passed (100%)
+- [x] Zero map elements on HomePage
 - [x] `AI_LOG.md` remains strictly untouched
 
 ---
@@ -72,10 +79,11 @@ Implement "The Cozy Hive" redesign specified in `docs/ideas/cozy-bee-homepage-re
 | :--- | :---: | :--- |
 | **Animation Performance / Janks** | High | Use pure CSS keyframes on web and native driver on mobile; keep particle count low (8–10 dots); set `pointerEvents="none"` |
 | **WCAG Contrast on Dominant Yellow** | High | Enforce roasted charcoal (`#1C1917`) on warm yellow/honey surfaces; never place white text on yellow |
-| **Test Suite Regressions** | Med | Extend `ThemeColors` rather than replacing existing keys; maintain existing testIDs on key interactive elements |
-| **Accidental Route Redirection** | High | Retain explicit unit tests in `RouteFinderCard.test.tsx` and `indexRoute.test.tsx` asserting `router.push` is NOT called |
+| **Test Suite Regressions** | Med | Retain backwards-compatible persona names (`barnaby`, `honey`, `bumble`) while supporting new gears (`default`, `fast`, `safe`, `economy`) |
+| **Accidental Map Inclusion** | Critical | Enforce Strict Invariant 1: zero map elements or leafleft/mapbox scripts on HomePage |
 
 ---
 
 ## Open Questions
-- None. Requirements, mascot personalities, palette tokens, and motion strategies are fully specified in `docs/ideas/cozy-bee-homepage-redesign.md`.
+- None. Scope and constraints are fully clear from `<original_task>`.
+

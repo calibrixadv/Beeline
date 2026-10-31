@@ -3,8 +3,8 @@ import './globals.css';
 import Providers from './providers';
 
 export const metadata: Metadata = {
-  title: 'VoyageRail | Beeline Transit Planner',
-  description: 'Multi-modal transit booking and journey planning across Romania and Europe with the Romanian Transfer Shield.',
+  title: 'Beeline | Smart Romanian Transit Planner',
+  description: 'Multi-modal transit booking and journey planning across Romania with the Romanian Transfer Shield and dynamic route optimization.',
 };
 
 export default function RootLayout({

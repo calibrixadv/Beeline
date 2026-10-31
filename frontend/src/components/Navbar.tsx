@@ -39,13 +39,13 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo & Mascot */}
           <Link href="/" className="flex items-center gap-3 group">
-            <MascotBee name="honey" size="sm" animated={false} />
+            <MascotBee name="default" size="sm" animated={false} />
             <div className="flex flex-col">
-              <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-amber-400 to-yellow-200 bg-clip-text text-transparent group-hover:from-yellow-300 group-hover:to-amber-500 transition-all">
-                VoyageRail
+              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-200 bg-clip-text text-transparent group-hover:from-yellow-300 group-hover:to-amber-500 transition-all">
+                Beeline
               </span>
-              <span className="text-[10px] text-amber-400/80 uppercase tracking-widest font-semibold -mt-1">
-                Beeline Transit
+              <span className="text-[10px] text-amber-400/90 uppercase tracking-widest font-semibold -mt-1">
+                Smart Romanian Transit
               </span>
             </div>
           </Link>

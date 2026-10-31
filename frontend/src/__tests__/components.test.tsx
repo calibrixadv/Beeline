@@ -19,8 +19,23 @@ describe('Next.js UI Components', () => {
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
-  it('renders MascotBee personas without crashing', () => {
-    render(<MascotBee name="barnaby" size="md" />);
+  it('renders MascotBee personas and dynamic gear shifts without crashing', () => {
+    const { rerender } = render(<MascotBee name="default" size="md" showSpeech speechText="Ready to explore!" />);
+    expect(screen.getByRole('img')).toBeInTheDocument();
+    expect(screen.getByText('Ready to explore!')).toBeInTheDocument();
+
+    // Test gear shifts
+    rerender(<MascotBee gear="fast" size="lg" showBadge />);
+    expect(screen.getByText(/FAST ROUTE/i)).toBeInTheDocument();
+
+    rerender(<MascotBee gear="safe" size="xl" showBadge />);
+    expect(screen.getByText(/SAFE ROUTE/i)).toBeInTheDocument();
+
+    rerender(<MascotBee gear="economy" size="2xl" showBadge />);
+    expect(screen.getByText(/BEST VALUE/i)).toBeInTheDocument();
+
+    // Legacy backwards compatibility aliases
+    rerender(<MascotBee name="barnaby" size="md" />);
     expect(screen.getByRole('img')).toBeInTheDocument();
   });
 

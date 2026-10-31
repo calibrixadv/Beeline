@@ -423,4 +423,97 @@
 - [x] `npm test`: 3 suites, 13 tests passed (100%)
 - [x] `pytest backend/tests/ -v`: 21 tests passed (100%)
 - [x] `AI_LOG.md`: Strictly untouched
+ 
+---
+
+## Task 18: Redesign MascotBee with Dynamic Gear-Shifting & Modern Vector Art
+**Description:** Redesign `MascotBee.tsx` from three disconnected characters into one unified Beeline mascot that dynamically changes gear (`default`, `fast`, `safe`, `economy`). Equip with smooth vector SVG details: flapping wings, cheerful expressions, and distinct equipment overlays (resting aviator goggles for default, supersonic speed helmet/scarf for fast, Romanian Transfer Shield for safe, nectar coin pot for economy). Retain backwards compatibility for `barnaby`, `honey`, and `bumble` aliases, with `React.useId` scoped gradients and WebKit-compatible `transform-box: fill-box` wing flutters.
+**Acceptance criteria:**
+- [x] `MascotBee` supports gear variants: `default`, `fast`, `safe`, `economy` as well as legacy `barnaby`, `honey`, `bumble`.
+- [x] Vector design features expressive high-fidelity SVG artwork with animated wings and subtle float motion.
+- [x] Each gear dynamically overlays equipment: aviator goggles (`default`), supersonic helmet/scarf (`fast`), golden honey shield (`safe`), and nectar jar (`economy`).
+- [x] Backwards-compatible rendering with existing pages (`/trips`, `/schedules`, `/trains`, `/my-trip`).
+- [x] Unit tests pass in `src/__tests__/components.test.tsx`.
+**Verification:**
+- [x] `npm test`: passes
+- [x] `npm run type-check`: 0 errors
+**Dependencies:** None
+**Files likely touched:**
+- `frontend/src/components/MascotBee.tsx`
+- `frontend/src/__tests__/components.test.tsx`
+- `frontend/src/app/globals.css`
+**Estimated scope:** S (3 files)
+
+---
+
+## Task 19: Rebrand Navbar, Metadata & Export Itinerary to "Beeline"
+**Description:** Update branding in `Navbar.tsx`, `layout.tsx`, and `my-trip/page.tsx` from "VoyageRail" to "Beeline", featuring the redesigned Beeline mascot in default gear and rebranded itinerary export download.
+**Acceptance criteria:**
+- [x] Navbar logo displays "Beeline" with modern styling and the redesigned MascotBee.
+- [x] App metadata in `layout.tsx` reflects "Beeline | Smart Romanian Transit Planner".
+- [x] Itinerary export in `my-trip/page.tsx` downloads with `beeline-itinerary-*.json` filename.
+- [x] Mobile drawer and desktop nav links remain fully operational.
+**Verification:**
+- [x] `npm test`: passes
+- [x] `npm run type-check`: 0 errors
+**Dependencies:** Task 18
+**Files likely touched:**
+- `frontend/src/components/Navbar.tsx`
+- `frontend/src/app/layout.tsx`
+- `frontend/src/app/my-trip/page.tsx`
+**Estimated scope:** S (3 files)
+
+---
+
+## Task 20: Build Simplified Exact Screen-Size Hero with Search & Gear-Shifting Mascot
+**Description:** Simplify the frontend of `frontend/src/app/page.tsx` into an exact screen-size hero (`min-h-[calc(100dvh-4rem)] lg:h-[calc(100dvh-4rem)]`), displaying the prominent Beeline `h1` app title, a disruptive headline ("Romanian Transit is Chaotic. We Made It Effortless."), a streamlined 2-point corridor search, and the animated mascot that starts on `default` gear and dynamically shifts into `safe`, `fast`, or `economy` gear upon searching or selecting a route option.
+**Acceptance criteria:**
+- [x] Hero layout fits screen height (`min-h-[calc(100dvh-4rem)] lg:h-[calc(100dvh-4rem)]` on desktop, clean full-viewport responsiveness on mobile) without unnecessary vertical scroll clutter.
+- [x] Prominently presents the title "Beeline" as `h1` and disruptive punchline as `h2`.
+- [x] Responsive 2-column layout (`md:grid-cols-12`) prevents vertical overflow clipping on tablets and iPads.
+- [x] Animated Beeline mascot starts in `default` gear on initial view.
+- [x] Integrated fast corridor search (origin, destination, swap, quick corridor presets).
+- [x] After search or route selection, presents the 3 route archetypes (⚡ Fast, 🛡️ Safe, 💰 Economy), and dynamically shifts the mascot's gear to match the selected route.
+- [x] Interactive gear switcher allows trying on all gears with companion reactive speech/taglines.
+- [x] Action button allows seamlessly continuing to `/trips` with pre-filled route parameters.
+- [x] ZERO map elements on `frontend/src/app/page.tsx` (Strict Invariant 1).
+**Verification:**
+- [x] `npm test`: passes (22/22 tests across 4 suites)
+- [x] `npm run build`: Next.js production build succeeds (7/7 static pages generated)
+- [x] `npm run type-check`: 0 errors
+**Dependencies:** Tasks 18, 19
+**Files likely touched:**
+- `frontend/src/app/page.tsx`
+- `frontend/src/__tests__/homePage.test.tsx`
+**Estimated scope:** S (2 files)
+
+---
+
+## Task 21: Quality Gates, Full Test Pass & Zero Regression Verification
+**Description:** Execute all project quality gates from root (`npm run type-check`, `npm test`, `npm run build`, `pytest`), ensuring zero regressions and verifying invariant constraints.
+**Acceptance criteria:**
+- [x] `npm run type-check` reports 0 errors.
+- [x] `npm test` passes with 100% of test suites green (4 suites, 22 tests).
+- [x] `npm run build` generates all static routes successfully (7/7 pages).
+- [x] `pytest backend/tests/ -v` passes 100% (21/21 backend tests).
+- [x] Strict Invariant 1: Zero map elements on HomePage.
+- [x] Strict Invariant 2: `AI_LOG.md` remains strictly untouched.
+**Verification:**
+- [x] All CLI commands succeed with return code 0.
+- [x] `git status` verifies `AI_LOG.md` was never modified.
+**Dependencies:** Tasks 18, 19, 20
+**Files likely touched:** None (verification phase)
+**Estimated scope:** XS
+
+---
+
+## Checkpoint 7: Clean Build & Full Verification
+- [x] All frontend tests pass (4 suites, 22 tests)
+- [x] All backend tests pass (21 tests)
+- [x] Next.js production build succeeds (7/7 static pages)
+- [x] TypeScript strict type-check clean (0 errors)
+- [x] Zero map on HomePage (Strict Invariant 1 preserved)
+- [x] AI_LOG.md untouched (Strict Invariant 2 preserved)
+
+
 

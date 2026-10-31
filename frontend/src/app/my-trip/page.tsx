@@ -38,7 +38,7 @@ export default function MyTripPage() {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(trips, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `voyagerail-itinerary-${Date.now()}.json`);
+    downloadAnchor.setAttribute('download', `beeline-itinerary-${Date.now()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
