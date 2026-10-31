@@ -19,13 +19,16 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the Beeline title and disruptive message', () => {
+  it('renders the clean Beeline title and disruptive message without clutter labels', () => {
     render(<HomePage />);
     
-    // Check prominent h1 app title & badge
+    // Check prominent h1 app title
     expect(screen.getByRole('heading', { level: 1, name: /^Beeline$/i })).toBeInTheDocument();
-    expect(screen.getByText(/Transit Planner/i)).toBeInTheDocument();
-    expect(screen.getByText(/Beeline • Romanian Transit Solved/i)).toBeInTheDocument();
+    
+    // Ensure clutter labels have been removed from the hero
+    expect(screen.queryByText(/Transit Planner/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Romanian Transit Solved/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Zero Missed Connections/i)).not.toBeInTheDocument();
     
     // Check disruptive headline (h2)
     expect(screen.getByRole('heading', { level: 2, name: /Romanian Transit is Chaotic\./i })).toBeInTheDocument();

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Sparkles, 
   ArrowLeftRight, 
   Search, 
   Zap, 
@@ -290,27 +289,10 @@ export default function HomePage() {
       {/* ========================================================= */}
       <div className="relative z-10 w-full max-w-3xl mx-auto flex flex-col items-center text-center my-auto px-2">
         
-        {/* Brand Badge */}
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-amber-100 text-amber-900 border border-amber-200 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            Beeline • Romanian Transit Solved
-          </span>
-          <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-stone-500">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            Zero Missed Connections
-          </span>
-        </div>
-
         {/* App Title */}
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-stone-950 tracking-tight">
-            Beeline
-          </h1>
-          <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200/90 px-2.5 py-0.5 rounded-full">
-            Transit Planner
-          </span>
-        </div>
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-stone-950 tracking-tight mb-2">
+          Beeline
+        </h1>
 
         {/* Disruptive Headline */}
         <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-stone-900 tracking-tight leading-tight">
