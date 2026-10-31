@@ -107,8 +107,51 @@
   animation: wingFlutterRight 0.25s ease-in-out infinite;
 }
 
+/* Dynamic Background Mascot Flight Animation - gentle ambient drifting path */
+@keyframes beeDynamicFlight {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+  20% {
+    transform: translate3d(-45px, 25px, 0) rotate(-4deg) scale(1.03);
+  }
+  40% {
+    transform: translate3d(-95px, -15px, 0) rotate(3deg) scale(0.97);
+  }
+  60% {
+    transform: translate3d(-55px, 40px, 0) rotate(-3deg) scale(1.02);
+  }
+  80% {
+    transform: translate3d(15px, 10px, 0) rotate(2deg) scale(0.99);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  }
+}
+
+.animate-bee-dynamic-flight {
+  animation: beeDynamicFlight 22s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+  will-change: transform;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-mascot-float,
+  .animate-bee-dynamic-flight,
   .animate-wing-left,
   .animate-wing-right,
   .animate-pollen-1,

@@ -515,5 +515,25 @@
 - [x] Zero map on HomePage (Strict Invariant 1 preserved)
 - [x] AI_LOG.md untouched (Strict Invariant 2 preserved)
 
+---
+
+## Task 22: Background Scaled-Up Flying Mascot & Testing Debug Modal
+**Description:** Implement scaled-up dynamically flying ambient mascot in the hero background with subtle non-intrusive flight keyframes and pointer-events-none layering. Remove manual mascot gear chooser chips from the public user flow on HomePage (gear shifts automatically based on route search). Build a discrete testing/debug tools popup modal (`MascotDebugModal.tsx`) allowing developers/testers to manually force any mascot gear (`default`, `fast`, `safe`, `economy`) with keyboard trap, escape handling, and WAI-ARIA dialog attributes.
+**Acceptance criteria:**
+- [x] Bee mascot scaled up (`size="4xl"`, 320px) and flying dynamically in the ambient hero background with non-intrusive 22s keyframes (`animate-bee-dynamic-flight`).
+- [x] Layering has `pointer-events-none` and tuned opacity (`opacity-15 sm:opacity-20 lg:opacity-25`) ensuring all text, inputs, and route cards remain crystal clear.
+- [x] User-facing hero flow has no manual gear chooser chips; gear shifts automatically when selecting routes.
+- [x] Discrete "🛠️ Debug Tools" button in bottom right corner opens `MascotDebugModal`.
+- [x] `MascotDebugModal` allows manually forcing mascot gear with keyboard focus trap, Escape key handling, and ARIA attributes.
+- [x] Strict Invariant 1: Zero map elements on HomePage.
+- [x] Strict Invariant 2: `AI_LOG.md` remains strictly untouched.
+**Verification:**
+- [x] `npm test`: 4 suites, 24 tests passed (100%)
+- [x] `npm run type-check`: 0 TypeScript compiler errors
+- [x] `npm run build`: 7/7 static pages generated successfully
+- [x] `pytest backend/tests/ -v`: 21 backend tests passed (100%)
+- [x] `git status`: `AI_LOG.md` untouched
+
+
 
 

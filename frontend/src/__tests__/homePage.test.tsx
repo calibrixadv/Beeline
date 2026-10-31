@@ -92,23 +92,66 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.getByRole('button', { name: /Find Synchronized Routes/i })).toBeInTheDocument();
   });
 
-  it('allows manual gear toggles using interactive gear chips', () => {
+  it('does not allow gear selection in regular UI but allows manual override in Debug Tools popup', () => {
     render(<HomePage />);
     
+    // Regular UI must NOT expose the gear chips
+    expect(screen.queryByRole('button', { name: /⚡ Fast/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /🛡️ Safe/i })).not.toBeInTheDocument();
+
+    // Open discrete Debug Tools popup
+    const debugTrigger = screen.getByRole('button', { name: /Debug Tools/i });
+    expect(debugTrigger).toBeInTheDocument();
+    expect(debugTrigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(debugTrigger).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(debugTrigger);
+    expect(debugTrigger).toHaveAttribute('aria-expanded', 'true');
+
+    // Modal is now open, showing override options
+    expect(screen.getByText(/Mascot Gear Override Panel/i)).toBeInTheDocument();
+
     // Toggle to Fast gear manually
     const fastChip = screen.getByRole('button', { name: /⚡ Fast/i });
     fireEvent.click(fastChip);
-    expect(screen.getByText(/Supersonic Speed Visor & Scarf/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Supersonic Speed Visor & Scarf/i).length).toBeGreaterThan(0);
 
     // Toggle to Safe gear manually
     const safeChip = screen.getByRole('button', { name: /🛡️ Safe/i });
     fireEvent.click(safeChip);
-    expect(screen.getByText(/Romanian Transfer Shield/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Romanian Transfer Shield/i).length).toBeGreaterThan(0);
+
+    // Toggle to Economy gear manually
+    const economyChip = screen.getByRole('button', { name: /🍯 Economy/i });
+    fireEvent.click(economyChip);
+    expect(screen.getAllByText(/Nectar Jar & Bargain Specs/i).length).toBeGreaterThan(0);
 
     // Toggle back to Default gear
     const defaultChip = screen.getByRole('button', { name: /🧭 Default/i });
     fireEvent.click(defaultChip);
-    expect(screen.getByText(/Aviator Goggles & Explorer Knot/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Aviator Goggles & Explorer Knot/i).length).toBeGreaterThan(0);
+
+    // Reset to Automatic Route Mode
+    const resetAutoBtn = screen.getByRole('button', { name: /Reset to Automatic Route Mode/i });
+    fireEvent.click(resetAutoBtn);
+
+    // Close the debug popup
+    const closeBtn = screen.getByRole('button', { name: /Close Debug Tools/i });
+    fireEvent.click(closeBtn);
+    expect(screen.queryByText(/Mascot Gear Override Panel/i)).not.toBeInTheDocument();
+    expect(debugTrigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('renders the scaled-up background flying bee mascot in a non-intrusive container', () => {
+    const { container } = render(<HomePage />);
+    const bgContainer = container.querySelector('[data-testid="background-flying-mascot"]');
+    expect(bgContainer).toBeInTheDocument();
+    expect(bgContainer).toHaveClass('pointer-events-none');
+    expect(bgContainer).toHaveClass('fixed');
+    expect(bgContainer).toHaveAttribute('aria-hidden', 'true');
+
+    const flyingBee = bgContainer?.querySelector('.animate-bee-dynamic-flight');
+    expect(flyingBee).toBeInTheDocument();
   });
 
   it('swaps origin and destination when swap button is pressed', () => {

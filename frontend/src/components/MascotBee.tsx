@@ -4,7 +4,7 @@ import React from 'react';
 
 export type MascotGear = 'default' | 'fast' | 'safe' | 'economy';
 export type MascotName = MascotGear | 'barnaby' | 'honey' | 'bumble';
-export type MascotSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+export type MascotSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
 
 export interface MascotBeeProps {
   name?: MascotName;
@@ -17,6 +17,7 @@ export interface MascotBeeProps {
   showBadge?: boolean;
   showSpeech?: boolean;
   speechText?: string;
+  showAccessoryBadge?: boolean;
 }
 
 const SIZE_PX: Record<MascotSize, number> = {
@@ -25,6 +26,8 @@ const SIZE_PX: Record<MascotSize, number> = {
   lg: 72,
   xl: 112,
   '2xl': 160,
+  '3xl': 240,
+  '4xl': 320,
 };
 
 // Map legacy persona names to new dynamic gears
@@ -176,6 +179,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
   showBadge = false,
   showSpeech = false,
   speechText,
+  showAccessoryBadge = true,
 }) => {
   const currentGear = resolveGear(name, gear);
   const config = GEAR_CONFIG[currentGear];
@@ -627,7 +631,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
         </svg>
 
         {/* Floating Mini Accessory Badge */}
-        {size !== 'sm' && (
+        {showAccessoryBadge && size !== 'sm' && (
           <span
             className="absolute -bottom-1 -right-1 text-xs rounded-full bg-white shadow-sm border px-1.5 py-0.5 leading-none font-bold"
             style={{

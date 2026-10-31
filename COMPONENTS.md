@@ -775,5 +775,7 @@ The frontend application has been upgraded to **Next.js (App Router)** with **Ty
 - [`frontend/src/components/TransitScheduleCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TransitScheduleCard.tsx): Transit timetable card with departures list and intermediate stops expander.
 - [`frontend/src/components/TrainCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainCard.tsx): Rail timetable card with amenities, seat availability, delay badges, and "+ Plan" action.
 - [`frontend/src/components/TrainDetailModal.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainDetailModal.tsx): Modal for intermediate stops, fare breakdown, and onboard amenities.
+- [`frontend/src/components/MascotDebugModal.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/MascotDebugModal.tsx): Developer testing & debug modal for manually forcing and previewing mascot gear states (`default`, `fast`, `safe`, `economy`) with focus trap and ARIA dialog semantics.
+
 
 

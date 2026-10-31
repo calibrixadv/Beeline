@@ -17,6 +17,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import MascotBee, { MascotGear, GEAR_CONFIG } from '../components/MascotBee';
+import MascotDebugModal from '../components/MascotDebugModal';
 import BaseButton from '../components/BaseButton';
 import BaseInput from '../components/BaseInput';
 import BaseCard from '../components/BaseCard';
@@ -41,6 +42,8 @@ export default function HomePage() {
   // Mascot & Route Gear State ('default' initially, then 'fast' | 'safe' | 'economy')
   const [activeGear, setActiveGear] = useState<MascotGear>('default');
   const [selectedRouteType, setSelectedRouteType] = useState<'fast' | 'safe' | 'economy'>('safe');
+  const [isManualOverride, setIsManualOverride] = useState<boolean>(false);
+  const [isDebugModalOpen, setIsDebugModalOpen] = useState<boolean>(false);
   const [searchResults, setSearchResults] = useState<{
     fast?: TransitRoutePlan;
     safe?: TransitRoutePlan;
@@ -81,17 +84,37 @@ export default function HomePage() {
     // When search runs, default to safe route and switch mascot gear immediately!
     setSelectedRouteType('safe');
     setActiveGear('safe');
+    setIsManualOverride(false);
   };
 
   const handleSelectRouteType = (type: 'fast' | 'safe' | 'economy') => {
     setSelectedRouteType(type);
     setActiveGear(type);
+    setIsManualOverride(false);
   };
 
   const handleResetSearch = () => {
     setHasSearched(false);
     setActiveGear('default');
+    setIsManualOverride(false);
     setError(null);
+  };
+
+  const handleSelectManualGear = (gear: MascotGear) => {
+    setActiveGear(gear);
+    setIsManualOverride(true);
+    if (gear !== 'default') {
+      setSelectedRouteType(gear);
+    }
+  };
+
+  const handleResetAutoMode = () => {
+    setIsManualOverride(false);
+    if (hasSearched) {
+      setActiveGear(selectedRouteType);
+    } else {
+      setActiveGear('default');
+    }
   };
 
   const handleBookSelectedRoute = () => {
@@ -110,8 +133,26 @@ export default function HomePage() {
   const currentGearConfig = GEAR_CONFIG[activeGear];
 
   return (
-    <div className="w-full min-h-[calc(100dvh-4rem)] lg:h-[calc(100dvh-4rem)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-3 sm:py-5 overflow-y-auto">
-      <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-center my-auto">
+    <div className="relative w-full min-h-[calc(100dvh-4rem)] lg:h-[calc(100dvh-4rem)] flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 py-3 sm:py-5 overflow-y-auto overflow-x-hidden">
+      {/* ========================================================= */}
+      {/* AMBIENT BACKGROUND: Scaled-up dynamically flying bee      */}
+      {/* ========================================================= */}
+      <div
+        data-testid="background-flying-mascot"
+        className="pointer-events-none fixed inset-0 overflow-hidden z-0 select-none"
+        aria-hidden="true"
+      >
+        <div className="absolute top-[8%] sm:top-[10%] lg:top-[12%] right-[4%] sm:right-[10%] lg:right-[16%] opacity-15 sm:opacity-20 lg:opacity-25 transition-opacity duration-700 animate-bee-dynamic-flight filter drop-shadow-sm scale-75 sm:scale-90 lg:scale-100 origin-top-right">
+          <MascotBee
+            gear={activeGear}
+            size="4xl"
+            animated={true}
+            showAccessoryBadge={false}
+          />
+        </div>
+      </div>
+
+      <div className="relative z-10 w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-center my-auto">
         
         {/* ========================================================= */}
         {/* LEFT COLUMN: Beeline Brand, Disruptive Hook & Search Flow */}
@@ -415,49 +456,51 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Manual Gear Switcher Chips */}
-            <div className="mt-3 pt-2.5 w-full border-t border-stone-100 flex items-center justify-center gap-1.5 flex-wrap">
-              <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mr-1">
-                Gear:
+            {/* Automatic Synchronization Status Note */}
+            <div className="mt-3 pt-2.5 w-full border-t border-stone-100 flex items-center justify-center gap-1.5 text-[11px] font-medium text-stone-400">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>
+                {isManualOverride
+                  ? 'Manual debug override active'
+                  : 'Gear synchronizes automatically with selected route'}
               </span>
-              {(['default', 'fast', 'safe', 'economy'] as MascotGear[]).map((gear) => {
-                const isCurrent = activeGear === gear;
-                const gConfig = GEAR_CONFIG[gear];
-                return (
-                  <button
-                    key={gear}
-                    type="button"
-                    onClick={() => {
-                      setActiveGear(gear);
-                      if (gear !== 'default') {
-                        setSelectedRouteType(gear as any);
-                      }
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                      isCurrent
-                        ? 'shadow-xs scale-105'
-                        : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
-                    }`}
-                    style={
-                      isCurrent
-                        ? {
-                            backgroundColor: gConfig.bgColor,
-                            color: gConfig.textColor,
-                            borderColor: gConfig.borderColor,
-                            borderWidth: 1,
-                          }
-                        : {}
-                    }
-                  >
-                    {gConfig.accessoryIcon} {gear.charAt(0).toUpperCase() + gear.slice(1)}
-                  </button>
-                );
-              })}
             </div>
           </div>
         </div>
 
       </div>
+
+      {/* Discrete Testing/Debug Tools Trigger */}
+      <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-40">
+        <button
+          type="button"
+          onClick={() => setIsDebugModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-stone-900/85 hover:bg-stone-950 text-stone-200 border border-stone-700/60 shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500/50 cursor-pointer"
+          title="Open Mascot Testing / Debug Tools"
+          aria-label="Open Debug Tools"
+          aria-haspopup="dialog"
+          aria-expanded={isDebugModalOpen}
+        >
+          <span className="text-amber-400">🛠️</span>
+          <span>Debug Tools</span>
+          {isManualOverride && (
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"
+              title="Manual override active"
+            />
+          )}
+        </button>
+      </div>
+
+      {/* Testing / Debug Modal */}
+      <MascotDebugModal
+        isOpen={isDebugModalOpen}
+        onClose={() => setIsDebugModalOpen(false)}
+        currentGear={activeGear}
+        onSelectGear={handleSelectManualGear}
+        onResetAuto={handleResetAutoMode}
+        isManualOverride={isManualOverride}
+      />
     </div>
   );
 }

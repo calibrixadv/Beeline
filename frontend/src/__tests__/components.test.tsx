@@ -3,6 +3,7 @@ import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import BaseButton from '../components/BaseButton';
 import MascotBee from '../components/MascotBee';
+import MascotDebugModal from '../components/MascotDebugModal';
 import BaseBadge from '../components/BaseBadge';
 import BaseInput from '../components/BaseInput';
 import BookingTripCard from '../components/BookingTripCard';
@@ -34,9 +35,101 @@ describe('Next.js UI Components', () => {
     rerender(<MascotBee gear="economy" size="2xl" showBadge />);
     expect(screen.getByText(/BEST VALUE/i)).toBeInTheDocument();
 
+    // Scaled-up sizes 3xl and 4xl for ambient background flight
+    rerender(<MascotBee gear="default" size="3xl" showAccessoryBadge={false} />);
+    expect(screen.getByRole('img')).toBeInTheDocument();
+
+    rerender(<MascotBee gear="fast" size="4xl" showAccessoryBadge={false} />);
+    expect(screen.getByRole('img')).toBeInTheDocument();
+
     // Legacy backwards compatibility aliases
     rerender(<MascotBee name="barnaby" size="md" />);
     expect(screen.getByRole('img')).toBeInTheDocument();
+  });
+
+  it('renders MascotDebugModal with full gear override controls', () => {
+    const handleClose = jest.fn();
+    const handleSelectGear = jest.fn();
+    const handleResetAuto = jest.fn();
+
+    const { rerender } = render(
+      <MascotDebugModal
+        isOpen={true}
+        onClose={handleClose}
+        currentGear="default"
+        onSelectGear={handleSelectGear}
+        onResetAuto={handleResetAuto}
+        isManualOverride={false}
+      />
+    );
+
+    expect(screen.getByText(/Mascot Gear Override Panel/i)).toBeInTheDocument();
+    expect(screen.getByText(/Auto Route Sync/i)).toBeInTheDocument();
+
+    // Check default button has aria-pressed="true"
+    const defaultBtn = screen.getByRole('button', { name: /🧭 Default/i });
+    expect(defaultBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Click Fast gear
+    const fastBtn = screen.getByRole('button', { name: /⚡ Fast/i });
+    expect(fastBtn).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(fastBtn);
+    expect(handleSelectGear).toHaveBeenCalledWith('fast');
+
+    // Click Safe gear
+    const safeBtn = screen.getByRole('button', { name: /🛡️ Safe/i });
+    fireEvent.click(safeBtn);
+    expect(handleSelectGear).toHaveBeenCalledWith('safe');
+
+    // Click Economy gear
+    const economyBtn = screen.getByRole('button', { name: /🍯 Economy/i });
+    fireEvent.click(economyBtn);
+    expect(handleSelectGear).toHaveBeenCalledWith('economy');
+
+    // Click Reset to Auto
+    const resetBtn = screen.getByRole('button', { name: /Reset to Automatic Route Mode/i });
+    fireEvent.click(resetBtn);
+    expect(handleResetAuto).toHaveBeenCalledTimes(1);
+
+    // Click Done
+    const doneBtn = screen.getByRole('button', { name: /Done/i });
+    fireEvent.click(doneBtn);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+
+    // Press Escape key closes modal
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(handleClose).toHaveBeenCalledTimes(2);
+
+    // Backdrop click closes modal
+    const dialogBackdrop = screen.getByRole('dialog');
+    fireEvent.click(dialogBackdrop);
+    expect(handleClose).toHaveBeenCalledTimes(3);
+
+    // Re-render in manual override mode
+    rerender(
+      <MascotDebugModal
+        isOpen={true}
+        onClose={handleClose}
+        currentGear="fast"
+        onSelectGear={handleSelectGear}
+        onResetAuto={handleResetAuto}
+        isManualOverride={true}
+      />
+    );
+    expect(screen.getByText(/Manual Override/i)).toBeInTheDocument();
+
+    // Re-render closed
+    rerender(
+      <MascotDebugModal
+        isOpen={false}
+        onClose={handleClose}
+        currentGear="default"
+        onSelectGear={handleSelectGear}
+        onResetAuto={handleResetAuto}
+        isManualOverride={false}
+      />
+    );
+    expect(screen.queryByText(/Mascot Gear Override Panel/i)).not.toBeInTheDocument();
   });
 
   it('renders BaseBadge with variant styling', () => {

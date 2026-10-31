@@ -12,3 +12,4 @@ export * from './TripFilterBar';
 export * from './TransitScheduleCard';
 export * from './TrainCard';
 export * from './TrainDetailModal';
+export * from './MascotDebugModal';
