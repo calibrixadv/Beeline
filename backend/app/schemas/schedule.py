@@ -44,3 +44,35 @@ class ScheduleQuery(BaseModel):
     city: Optional[str] = None
     mode: Optional[TransitMode] = None
     search: Optional[str] = None
+
+
+class ScheduleStopDetails(BaseModel):
+    stopSequence: int
+    name: str
+    latitude: float
+    longitude: float
+    platform: Optional[str] = None
+    scheduledDepartures: List[str] = []
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class ScheduleDetailResponse(BaseModel):
+    schedule: TransitLineSchedule
+    stops: List[ScheduleStopDetails]
+    operatingDays: List[str] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class SupportedCity(BaseModel):
+    name: str
+    modes: List[TransitMode]
+    hasRealtime: bool = True
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class SupportedCitiesResponse(BaseModel):
+    cities: List[SupportedCity]
+

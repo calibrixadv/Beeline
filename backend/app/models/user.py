@@ -23,6 +23,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=True)
     hashed_password = Column(String(255), nullable=True)
     full_name = Column(String(255), nullable=True)
+    preferences = Column(Text, nullable=True, default="{}")
     is_guest = Column(Boolean, default=False, nullable=False, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
     mfa_enabled = Column(Boolean, default=False, nullable=False)
@@ -34,6 +35,7 @@ class User(Base):
     mfa_credential = relationship("MFACredential", back_populates="user", uselist=False, cascade="all, delete-orphan")
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
     saved_routes = relationship("SavedRoute", back_populates="user", cascade="all, delete-orphan")
+    bookings = relationship("Booking", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserSession(Base):

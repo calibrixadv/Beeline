@@ -780,26 +780,26 @@ GET /api/v1/disruptions?severity=WARNING
 | **MFA** | `/auth/mfa/challenge` | `POST` | ✅ Implemented | `apiClient.verifyMFAChallenge()` |
 | **MFA** | `/auth/mfa/disable` | `POST` | ✅ Implemented | `apiClient.disableMFA()` |
 | **Users** | `/users/me` | `GET` | ✅ Implemented | `AuthContext.refreshUser()` |
-| **Users** | `/users/me` | `PATCH` | ⏳ Ready for Backend | Profile settings modal |
+| **Users** | `/users/me` | `PATCH` | ✅ Implemented | Profile settings modal |
 | **Users** | `/users/me/sessions` | `GET` | ✅ Implemented | Security settings |
 | **Users** | `/users/me/sessions/{id}` | `DELETE` | ✅ Implemented | Security settings |
 | **Routes** | `/routes/plan` | `POST` | ✅ Implemented | HomePage (`/`), TripsPage (`/trips`) |
-| **Routes** | `/routes/corridors/popular` | `GET` | ⏳ Ready for Backend | HomePage Corridor Pills |
+| **Routes** | `/routes/corridors/popular` | `GET` | ✅ Implemented | HomePage Corridor Pills |
 | **Routes** | `/routes/saved` | `POST` | ✅ Implemented | `apiClient.saveRoute()` |
 | **Routes** | `/routes/saved` | `GET` | ✅ Implemented | `MyTripPage` (`/my-trip`) |
 | **Routes** | `/routes/saved/{id}` | `DELETE` | ✅ Implemented | `MyTripPage` (`/my-trip`) |
-| **Trains** | `/trains` | `GET` | ⏳ Ready for Backend | `TrainsPage` (`/trains`) |
-| **Trains** | `/trains/{id}` | `GET` | ⏳ Ready for Backend | `TrainDetailModal` |
-| **Trains** | `/trains/operators` | `GET` | ⏳ Ready for Backend | `TrainsPage` operator filter |
+| **Trains** | `/trains` | `GET` | ✅ Implemented | `TrainsPage` (`/trains`) |
+| **Trains** | `/trains/{id}` | `GET` | ✅ Implemented | `TrainDetailModal` |
+| **Trains** | `/trains/operators` | `GET` | ✅ Implemented | `TrainsPage` operator filter |
 | **Schedules** | `/schedules` | `GET` | ✅ Implemented | `SchedulesPage` (`/schedules`) |
-| **Schedules** | `/schedules/{id}` | `GET` | ⏳ Ready for Backend | Schedule detail modal |
-| **Schedules** | `/schedules/cities` | `GET` | ⏳ Ready for Backend | Schedule city dropdown |
-| **Stations** | `/stations/search` | `GET` | ⏳ Ready for Backend | Autocomplete in inputs |
-| **Stations** | `/stations/{code}/board`| `GET` | ⏳ Ready for Backend | Live Station Departure view |
-| **Bookings** | `/bookings` | `POST` | ⏳ Ready for Backend | `MyTripPage` checkout |
-| **Bookings** | `/bookings` | `GET` | ⏳ Ready for Backend | User travel history |
-| **Bookings** | `/bookings/{id}` | `DELETE` | ⏳ Ready for Backend | Booking cancellation |
-| **Disruptions**| `/disruptions` | `GET` | ⏳ Ready for Backend | Transfer Shield live warnings |
+| **Schedules** | `/schedules/{id}` | `GET` | ✅ Implemented | Schedule detail modal |
+| **Schedules** | `/schedules/cities` | `GET` | ✅ Implemented | Schedule city dropdown |
+| **Stations** | `/stations/search` | `GET` | ✅ Implemented | Autocomplete in inputs |
+| **Stations** | `/stations/{code}/board`| `GET` | ✅ Implemented | Live Station Departure view |
+| **Bookings** | `/bookings` | `POST` | ✅ Implemented | `MyTripPage` checkout |
+| **Bookings** | `/bookings` | `GET` | ✅ Implemented | User travel history |
+| **Bookings** | `/bookings/{id}` | `DELETE` | ✅ Implemented | Booking cancellation |
+| **Disruptions**| `/disruptions` | `GET` | ✅ Implemented | Transfer Shield live warnings |
 
 ---
 

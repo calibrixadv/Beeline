@@ -1,10 +1,10 @@
 import json
-from typing import Any, Union
+from typing import Any, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.api.deps import get_client_ip, get_current_user, get_device_info
+from app.api.deps import get_client_ip, get_current_session_id, get_current_user, get_device_info
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.security import create_mfa_session_token, decode_token, verify_password
@@ -189,10 +189,14 @@ async def refresh_token(
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
     current_user: User = Depends(get_current_user),
+    current_session_id: Optional[str] = Depends(get_current_session_id),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
-    """Revoke all active sessions for current user."""
-    await AuthService.revoke_all_user_sessions(db, current_user.id)
+    """Revoke current device session."""
+    if current_session_id:
+        await AuthService.revoke_session(db, session_id=current_session_id, user_id=current_user.id)
+    else:
+        await AuthService.revoke_all_user_sessions(db, current_user.id)
     return MessageResponse(message="Successfully logged out")
 
 

@@ -29,6 +29,19 @@ def get_device_info(request: Request) -> str:
     return ua[:200] if ua else "Web Browser"
 
 
+def get_current_session_id(
+    token: Optional[str] = Depends(oauth2_scheme)
+) -> Optional[str]:
+    """Extracts the active session ID from the JWT access token payload."""
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+        return payload.get("session_id")
+    except Exception:
+        return None
+
+
 async def get_current_user(
     token: Optional[str] = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
@@ -54,6 +67,7 @@ async def get_current_user(
                 detail="Malformed authentication token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        session_id: Optional[str] = payload.get("session_id")
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -80,3 +94,4 @@ async def get_optional_current_user(
         return await get_current_user(token=token, db=db)
     except HTTPException:
         return None
+

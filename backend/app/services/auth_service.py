@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Tuple
+import uuid
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, update
@@ -141,10 +142,15 @@ class AuthService:
         device_info: Optional[str] = None,
         ip_address: Optional[str] = None
     ) -> Tuple[str, str, str]:
+        session_id = str(uuid.uuid4())
+        extra = {"session_id": session_id}
+        if user.email:
+            extra["email"] = user.email
+
         access_token = create_access_token(
             subject=user.id,
             is_guest=user.is_guest,
-            extra_claims={"email": user.email} if user.email else None
+            extra_claims=extra
         )
         refresh_token = create_refresh_token(subject=user.id)
         
@@ -152,6 +158,7 @@ class AuthService:
         token_hash = hash_token(refresh_token)
 
         session = UserSession(
+            id=session_id,
             user_id=user.id,
             refresh_token_hash=token_hash,
             device_info=device_info,
@@ -303,6 +310,27 @@ class AuthService:
 
         await db.commit()
         return True
+
+    @staticmethod
+    async def update_user_profile(
+        db: AsyncSession,
+        user_id: str,
+        full_name: Optional[str] = None,
+        preferences: Optional[str] = None
+    ) -> User:
+        user = await AuthService.get_user_by_id(db, user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+        if full_name is not None:
+            user.full_name = full_name
+        if preferences is not None:
+            user.preferences = preferences
+
+        user.updated_at = utcnow()
+        await db.commit()
+        await db.refresh(user)
+        return user
 
 
 auth_service = AuthService()

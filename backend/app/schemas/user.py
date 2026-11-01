@@ -6,9 +6,17 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class UserBase(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
+    preferences: Optional[str] = None
     is_guest: bool = False
     is_active: bool = True
     mfa_enabled: bool = False
+
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    preferences: Optional[str] = None
+
+    model_config = ConfigDict(extra="ignore")
 
 
 class UserProfile(UserBase):
@@ -17,6 +25,7 @@ class UserProfile(UserBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
 
 
 class SessionResponse(BaseModel):

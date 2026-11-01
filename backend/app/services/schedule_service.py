@@ -235,5 +235,52 @@ class ScheduleService:
 
         return results
 
+    @staticmethod
+    def get_schedule_details(schedule_id: str):
+        matching = next((s for s in SCHEDULE_DATA if s.id == schedule_id), None)
+        if not matching:
+            return None
+
+        # Build realistic stop sequence
+        stops = []
+        all_stop_names = [matching.origin] + (matching.viaStops or []) + [matching.destination]
+        base_lat = 44.43 if matching.city == "București" else 45.42
+        base_lng = 26.10 if matching.city == "București" else 28.02
+
+        for idx, stop_name in enumerate(all_stop_names):
+            dep_times = [
+                f"{h:02d}:{m:02d}"
+                for h in range(6, 23, 2)
+                for m in [(idx * 7) % 60]
+            ]
+            stops.append({
+                "stopSequence": idx + 1,
+                "name": stop_name,
+                "latitude": round(base_lat + (idx * 0.008), 4),
+                "longitude": round(base_lng + (idx * 0.006), 4),
+                "platform": f"Platform {((idx % 2) + 1)}",
+                "scheduledDepartures": dep_times[:6]
+            })
+
+        return {
+            "schedule": matching,
+            "stops": stops,
+            "operatingDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        }
+
+    @staticmethod
+    def get_supported_cities():
+        return [
+            {"name": "București", "modes": [TransitMode.METRO, TransitMode.TRAM, TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
+            {"name": "Galați", "modes": [TransitMode.TRAM, TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
+            {"name": "Cluj-Napoca", "modes": [TransitMode.TRAM, TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
+            {"name": "Brașov", "modes": [TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
+            {"name": "Timișoara", "modes": [TransitMode.TRAM, TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
+            {"name": "Iași", "modes": [TransitMode.TRAM, TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
+            {"name": "Constanța", "modes": [TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
+            {"name": "Craiova", "modes": [TransitMode.TRAM, TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
+        ]
+
 
 schedule_service = ScheduleService()
+
