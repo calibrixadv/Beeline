@@ -22,6 +22,14 @@ The dedicated `/trains` route provides:
 6. **Stop-by-Stop Itinerary Modal**: Inspection of all intermediate stations with scheduled vs. expected arrival/departure times.
 7. **Trip Builder State**: Seamless addition and removal of journeys into the active trip planner itinerary with cost calculations and duplicate prevention.
 
+### Primary Milestone 2 Deliverable: HomePage Template (`/` route)
+The HomePage (`app/index.tsx`) serves two foundational roles:
+1. **Role 1 (Main Feature Shorthand)**: Facilitates rapid 2-point journey entry (Origin and Destination inputs) with multi-modal transport filters ("Trains", "Metro", "Busses"), 1-tap station swap action, clearable actions, unicode-normalized validation, and prepared submission feedback without executing feature redirection.
+2. **Role 2 (App Promotion)**: Clean marketing showcase placeholders promoting Beeline's speed (300+ km/h), cross-border European coverage (15+ countries, 10,000+ stations), and app capabilities (live sync, eco footprint analytics, stop details, tiered fares, and multi-operator trust guarantees).
+3. **Strict Invariants**:
+   - Zero Map Implementation: Strictly NO MapView or map canvas on HomePage.
+   - Zero Feature Redirection on Route Search: Submission prepares query feedback and invokes optional callback without navigating away.
+
 ---
 
 ## 2. Multi-Agent Workflow Architecture
@@ -102,9 +110,14 @@ Every agent and developer modifying this codebase must adhere strictly to the fo
 | **Detail Modal Component** | `frontend/src/components/TrainDetailModal.tsx`| **COMPLETE** | 94.4% coverage, refactored with IconButton, BaseButton, PlanButton |
 | **Filter Bar Component** | `frontend/src/components/FilterBar.tsx` | **COMPLETE** | 96.3% coverage, refactored with SearchInput, ResetButton |
 | **Summary Banner** | `frontend/src/components/TripSummaryBanner.tsx`| **COMPLETE** | 100% coverage, refactored with BaseButton |
-| **Component Stories** | `frontend/src/components/stories/*.stories.tsx` (16 files) | **COMPLETE** | 100% story coverage with CSF 3 `play` functions for automated interaction testing |
-| **Storybook Automated Tests** | `frontend/__tests__/storybookAuto.test.tsx` | **COMPLETE** | Dynamic test runner validating 118 automated tests (story variants, CSF play functions, onClick & onHover states) |
-| **Unit & Interaction Tests** | `frontend/__tests__/*.test.ts(x)` (23 files) | **COMPLETE** | **241 passing tests across 23 test suites (100% pass rate, 0 warnings)** |
+| **RouteFinderCard Component** | `frontend/src/components/RouteFinderCard.tsx` | **COMPLETE** | 94.2% line coverage, extends BaseCard, BaseInput, BaseBadge, BaseButton, IconButton, MascotBee; warm honey palette, waggle connector, companion mascots, no redirect |
+| **MarketingShowcase Component** | `frontend/src/components/MarketingShowcase.tsx` | **COMPLETE** | 100% line coverage, extends BaseCard, BaseBadge, BaseButton, MascotBee; warm honey hero, Waggle flight paths, Romanian corridors, Mascot Trifecta, strictly NO map |
+| **MascotBee Component** | `frontend/src/components/MascotBee.tsx` | **COMPLETE** | 100% line coverage, 3 companion personas (Barnaby, Honey, Bumble), 4 sizes, wing flutter animation, zero-dependency vector system |
+| **RouteRewardBadge Component** | `frontend/src/components/RouteRewardBadge.tsx` | **COMPLETE** | 100% line coverage, 3 reward badge types (lightning, nectar, shield), compact route stamp |
+| **CozyHoneyBackground Component** | `frontend/src/components/CozyHoneyBackground.tsx` | **COMPLETE** | 100% line coverage, ambient floating pollen particles, subtle honeycomb watermark, prefers-reduced-motion support |
+| **Component Stories** | `frontend/src/components/stories/*.stories.tsx` (24 files) | **COMPLETE** | 100% story coverage with CSF 3 `play` functions for automated interaction testing |
+| **Storybook Automated Tests** | `frontend/__tests__/storybookAuto.test.tsx` | **COMPLETE** | Dynamic test runner validating 188 automated tests (story variants, CSF play functions, onClick & onHover states) |
+| **Unit & Interaction Tests** | `frontend/__tests__/*.test.ts(x)` (32 files) | **COMPLETE** | **409 passing tests across 32 test suites (100% pass rate, 0 warnings)** |
 | **Web Platform Support** | `frontend/package.json`, `@expo/metro-runtime`, `react-dom`, `react-native-web` | **COMPLETE** | Validated via `npm run build:web` (0 errors) |
 
 ---
@@ -113,13 +126,13 @@ Every agent and developer modifying this codebase must adhere strictly to the fo
 
 Any agent or reviewer can independently verify the implementation with the following standardized steps:
 
-### Test Command 1: Run Full Automated Test Suite (All 23 Suites)
+### Test Command 1: Run Full Automated Test Suite (All 32 Suites)
 ```bash
 npm test
 ```
 **Expected Output**:
-- 23 Test Suites Passed
-- 241 Tests Passed
+- 32 Test Suites Passed
+- 409 Tests Passed
 - 0 Failures, 0 Warnings
 
 ### Test Command 2: Run Storybook Component Testing Library Exclusively
@@ -127,8 +140,8 @@ npm test
 npm run test:storybook
 ```
 **Expected Output**:
-- All 16 registered UI component stories validated
-- 118 automated tests passed without crash (including play interactions, hover, and press states)
+- All 24 registered UI component stories validated
+- 188 automated tests passed without crash (including play interactions, hover, and press states)
 
 ### Test Command 3: Validate Code Coverage
 ```bash

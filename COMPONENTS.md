@@ -26,11 +26,11 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
                               │     BaseBadge      │
                               └─────────┬──────────┘
                                         │
-             ┌──────────────────────────┴──────────────────────────┐
-             ▼                                                     ▼
-      ┌─────────────┐                                       ┌─────────────┐
-      │ StatusBadge │                                       │ AmenityBadge│
-      └─────────────┘                                       └─────────────┘
+             ┌──────────────────────────┼──────────────────────────┐
+             ▼                          ▼                          ▼
+      ┌─────────────┐            ┌─────────────┐            ┌──────────────────┐
+      │ StatusBadge │            │ AmenityBadge│            │ RouteRewardBadge │
+      └─────────────┘            └─────────────┘            └──────────────────┘
 
                               ┌────────────────────┐
                               │     BaseInput      │
@@ -44,11 +44,26 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
                               ┌────────────────────┐
                               │      BaseCard      │
                               └─────────┬──────────┘
+             ┌──────────────────────────┼──────────────────────────┬──────────────────────┐
+             │                          │                          │                      │
+             ▼                          ▼                          ▼                      ▼
+      ┌─────────────┐            ┌─────────────┐            ┌───────────────┐      ┌───────────────────┐
+      │  TrainCard  │            │   Navbar    │            │RouteFinderCard│      │ MarketingShowcase │
+      └─────────────┘            └─────────────┘            └───────────────┘      └───────────────────┘
+
+                              ┌────────────────────┐
+                              │   LoadingSpinner   │
+                              └─────────┬──────────┘
                                         │
                                         ▼
                                  ┌─────────────┐
-                                 │  TrainCard  │
+                                 │ ScreenLoader│
                                  └─────────────┘
+
+      ┌────────────────────────┐                   ┌────────────────────────┐
+      │  CozyHoneyBackground   │                   │       MascotBee        │
+      │ (Ambient Atmosphere)   │                   │ (Vector Persona System)│
+      └────────────────────────┘                   └────────────────────────┘
 ```
 
 ### Golden Rule for All Agents
@@ -386,6 +401,195 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 
 ---
 
+### 13. `LoadingSpinner`
+- **File**: [`frontend/src/components/LoadingSpinner.tsx`](frontend/src/components/LoadingSpinner.tsx)
+- **Lineage**: Root Foundational Feedback Component
+- **Description**: High-contrast Beeline Yellow animated circular spinner with central transit bee/dot placeholder mark, customizable size tiers (`sm`, `md`, `lg`, `xl`), and accessible progressbar role.
+- **Props**:
+  - `size`?: `'sm' | 'md' | 'lg' | 'xl'` (default `'md'`)
+  - `color`?: string (defaults to Beeline Yellow `#FFC700`)
+  - `trackColor`?: string
+  - `label`?: string
+  - `subtitle`?: string
+  - `placeholderIcon`?: boolean (default `true`)
+- **When to Use**: Feedback indicators, async network requests, screen loaders, button states.
+
+---
+
+### 14. `ScreenLoader`
+- **File**: [`frontend/src/components/ScreenLoader.tsx`](frontend/src/components/ScreenLoader.tsx)
+- **Lineage**: Extends `BaseCard` & composes `LoadingSpinner`
+- **Description**: Dedicated full-screen and inline route transition loader with backdrop wash, Beeline brand text, placeholder favicon/icon indicator, and spinner.
+- **Props**:
+  - `visible`?: boolean (default `true`)
+  - `message`?: string
+  - `subtitle`?: string
+  - `spinnerSize`?: `SpinnerSize` (default `'lg'`)
+  - `fullScreen`?: boolean (default `true`)
+- **When to Use**: During screen transitions and page navigation.
+
+---
+
+### 15. `Navbar`
+- **File**: [`frontend/src/components/Navbar.tsx`](frontend/src/components/Navbar.tsx)
+- **Lineage**: Composed Navigation Component (built with `BaseCard`, `BaseButton`, `IconButton`)
+- **Description**: Top header navigation bar for the Beeline website featuring placeholder brand icon, placeholder favicon tag, route links (`/`, `/trains`, `/my-trip`), quick action CTA, and light/dark theme toggle.
+- **Props**:
+  - `activeRoute`?: string
+  - `onNavigate`?: (route: string) => void
+  - `showThemeToggle`?: boolean (default `true`)
+  - `showQuickAction`?: boolean (default `true`)
+- **When to Use**: Site-wide top navigation in root layout and page headers.
+
+---
+
+### 16. Theme System & Providers
+- **`ThemeContext`**: [`frontend/src/context/ThemeContext.tsx`](frontend/src/context/ThemeContext.tsx) — Beeline Yellow (`#FFC700`), White (`#FFFFFF`), and Black (`#000000` / `#09090B`) color token system with complete light and dark mode support via `ThemeProvider` and `useTheme()` hook.
+  - Dynamically consumed by foundational components (`BaseButton`, `BaseCard`, `BaseInput`, `BaseBadge`) and composite screens (`TrainCard`, `FilterBar`, `TrainDetailModal`, `TripSummaryBanner`, `Navbar`, `LoadingSpinner`, `ScreenLoader`).
+  - High-contrast compliance: WCAG AAA on Beeline Yellow (`#000000` text on `#FFC700` background: 13.8:1 ratio), ensuring zero contrast degradation.
+- **`ScreenTransitionContext`**: [`frontend/src/context/ScreenTransitionContext.tsx`](frontend/src/context/ScreenTransitionContext.tsx) — Coordinates screen change loading transitions with `useScreenTransition()`.
+  - Single-flight concurrency safety: Automatically clears any in-flight transition timers when new transitions are triggered to prevent race conditions and premature spinner dismissal during rapid clicks.
+  - Lifecycle unmount protection: Cleans up pending transition timeouts on component unmount to prevent memory leaks and React state update warnings.
+  - Custom transition message preservation: Root layout app shell detects in-flight transitions and preserves custom route change status messages instead of overriding them with generic fallbacks.
+
+---
+
+### 17. `RouteFinderCard`
+- **File**: [`frontend/src/components/RouteFinderCard.tsx`](frontend/src/components/RouteFinderCard.tsx)
+- **Lineage**: Extends `BaseCard`, composes `BaseInput`, `BaseBadge`, `BaseButton`, `IconButton`, `MascotBee`, `LocationSelectDropdown`
+- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with dynamic Current City selection (with GPS "Detect Near Me" and quick Romanian city chips: București, Galați, Cluj-Napoca, Timișoara, Brașov, Constanța, etc.), searchable featured location dropdowns with type badges (Train Station 🚆, Metro 🚇, Bus/Tram 🚌, Airport ✈️, Current Location 📍), smart auto-suggestion heuristics (inner-city priority when Metro/Bus selected; auto-pairing origin to Current Location or current city train station when destination in another city is picked), recent searches history, transport mode filters ("Trains", "Metro", "Busses"), station swap action, diacritic-insensitive duplicate validation, stylized **Waggle flight dashed connector trail** (`[Origin] ── 🐝 ~ ~ ── [Destination]`) flanking the swap button (`testID="route-waggle-connector"`), warm honey palette styling (`surfaceWarm` `#FFFBEB` in light, `#1C1917` in dark; `honeyBorder` `#FDE68A` in light, `#3E3204` in dark), prepared submission feedback showcasing the **Curated Trifecta** paired with their companion mascots (⚡ Fastest: Barnaby, 💰 Best Value: Honey, 🛡️ Most Reliable: Bumble), and a direct shortcut button to view live departures on `/schedules`.
+- **States & Handlers**:
+  - `currentCity`: Active city context defaulting to `'București'` (or detected city); dynamically populates dropdowns.
+  - `handleDetectLocation`: Triggers GPS geolocation via `transitScheduleService.detectNearestCity` or fast test fallback, setting origin to `📍 My Current Location (${city})`.
+  - `origin` & `destination`: Controlled text inputs with searchable dropdown overlays and clearable actions extending `BaseInput`.
+  - `activeDropdown`: Manages visibility of origin or destination dropdown popovers.
+  - `recentChoices`: Remembers recently submitted/selected stations at the top of the dropdown.
+  - `swap`: Swaps origin and destination stations using `IconButton` (`swap-vertical`).
+  - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`).
+  - `onSubmitRoute`: Validates inputs and prepares template query `{ origin, destination, modes }`.
+  - **Invariant**: Strictly does NOT execute accidental router redirection on submit (template preview mode). Direct navigation button provided for `/schedules`.
+- **Props**:
+  - `initialOrigin`?: string (default `'București Nord'`)
+  - `initialDestination`?: string (default `'Brașov'`)
+  - `initialCity`?: string (default `'București'`)
+  - `initialModes`?: `TransportMode[]` (default `['Trains', 'Metro', 'Busses']`)
+  - `onSubmitRoute`?: `(params: RouteSearchParams) => void`
+  - `onNavigateSchedules`?: `(url: string) => void`
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: HomePage hero action shorthand to capture user travel intent quickly with city-aware transit hubs.
+
+---
+
+### 18. `MarketingShowcase`
+- **File**: [`frontend/src/components/MarketingShowcase.tsx`](frontend/src/components/MarketingShowcase.tsx)
+- **Lineage**: Composed Feature Component (built with `BaseCard`, `BaseBadge`, `BaseButton`, `MascotBee`)
+- **Description**: HomePage Role 2 streamlined marketing showcase embodying "The Cozy Hive": warm honey-accented hero banner ("Plan your European rail journey"), 3 companion pillar cards (Barnaby the Scout for Direct Rail Connections, Honey the Hive Saver for Clear Fares, Bumble the Buffer Guard for Protected Transfers), and animated Waggle flight paths connecting Romanian transit corridors (`București Nord ⇄ Brașov`, `București Nord ⇄ Constanța`, `Cluj-Napoca ⇄ București Nord`, `București Nord ⇄ Viena Hbf`) as static informative route cards. Strictly contains NO map implementation and NO fake redirection.
+- **Props**:
+  - `onExplorePress`?: `() => void`
+  - `onCorridorPress`?: `(corridor: FeaturedCorridor) => void`
+  - `animated`?: boolean (default `true`)
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **Helpers**: `getCorridorTestId(from: string, to: string): string` generates normalized test identifiers for featured corridor cards.
+- **When to Use**: HomePage marketing promotion and corridor discovery without loading heavy maps.
+
+---
+
+### 19. `MascotBee`
+- **File**: [`frontend/src/components/MascotBee.tsx`](frontend/src/components/MascotBee.tsx)
+- **Lineage**: Zero-Dependency Vector Mascot System (built with composite React Native primitives and `@expo/vector-icons`)
+- **Description**: Vector mascot persona component bringing "The Cozy Hive" characters to life without heavy binary or SVG dependencies. Supports Barnaby the Scout Bee (fastest routes with lightning antennae and rocket thruster), Honey the Hive Saver (smart value engine with scholar spectacles and embossed gold coin), and Bumble the Buffer Guard (Romanian transfer shield, cozy scarf, and heraldic crest).
+- **Features**:
+  - 4 Size Tiers: `sm` (24px), `md` (40px), `lg` (64px), `xl` (96px).
+  - Wing Oscillation Micro-Animation: Gentle 140ms wing flutter loop with auto-stop safeguard for test environments.
+  - Full Accessibility: Declares `image` or `button` role with descriptive persona announcements.
+  - Interactive callbacks: Optional `onPress`, `onHoverIn`, and `onHoverOut` support.
+- **Props**:
+  - `name`: `'barnaby' | 'honey' | 'bumble'`
+  - `size`?: `'sm' | 'md' | 'lg' | 'xl'` (default `'md'`)
+  - `animated`?: boolean (default `true`)
+  - `onPress`?: (event) => void
+  - `onHoverIn`?: () => void
+  - `onHoverOut`?: () => void
+  - `accessibilityRole`?: AccessibilityRole
+  - `accessibilityLabel`?: string
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: Brand hero banners, showcase cards, and route preview highlights.
+
+---
+
+### 20. `RouteRewardBadge`
+- **File**: [`frontend/src/components/RouteRewardBadge.tsx`](frontend/src/components/RouteRewardBadge.tsx)
+- **Lineage**: Extends `BaseBadge` pattern with specialized vector reward icons
+- **Description**: Compact reward badges stamped on qualifying train journey cards representing the Mascot Trifecta algorithmic pillars: Lightning Wing (`lightning` for fastest routes), Nectar Jar (`nectar` for best value under the €10/hr rule), and Honey Shield (`shield` for safe 25–35 min Romanian transfer buffers).
+- **Props**:
+  - `type`: `'lightning' | 'nectar' | 'shield'`
+  - `size`?: `'sm' | 'md'` (default `'md'`)
+  - `label`?: string (defaults to pillar title)
+  - `disabled`?: boolean
+  - `onPress`?: () => void
+  - `onHoverIn`?: () => void
+  - `onHoverOut`?: () => void
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: Stamped on timetable journey cards (`TrainCard`) to indicate qualifying Trifecta value pillars.
+
+---
+
+### 21. `CozyHoneyBackground`
+- **File**: [`frontend/src/components/CozyHoneyBackground.tsx`](frontend/src/components/CozyHoneyBackground.tsx)
+- **Lineage**: Ambient Atmosphere Wrapper Component
+- **Description**: Ambient background rendering 8–16 floating golden pollen particles with gentle opacity breathing and a subtle hexagonal honeycomb watermark. Built with pure CSS keyframes on Web and native `Animated` loops on mobile (60fps, 0 layout reflows), isolated in an absolute layer with `pointerEvents="none"` to prevent layout recalculation or interference with interactive elements. Respects `prefers-reduced-motion` and adapts automatically across Light (`#FFFDF7`) and Dark (`#121110`) modes.
+- **Props**:
+  - `children`?: ReactNode
+  - `animated`?: boolean (default `true`)
+  - `particleCount`?: number (default `8`)
+  - `pointerEvents`?: `'box-none' | 'none' | 'box-only' | 'auto'`
+  - `style`?: StyleProp<ViewStyle>
+  - `testID`?: string
+- **When to Use**: Full-screen and page background wrapper for warm honeycomb atmosphere.
+
+---
+
+### 22. `TransitScheduleCard`
+- **File**: [`frontend/src/components/TransitScheduleCard.tsx`](frontend/src/components/TransitScheduleCard.tsx)
+- **Lineage**: Composed Schedule Item Component (built with `BaseCard`, `BaseBadge`, `Ionicons`)
+- **Description**: Visualizes real-time Romanian transit departures across Urban Transit (Tram, Bus, Metro) and Intercity Rail. Renders mode icons (Sky Blue for Metro, Emerald for Tram, Amber for Bus, Red for Train), line code badges, provider tag (Metrorex, Transurb Galați, STB, CFR Călători, etc.), origin/destination route arrow, live countdown pills (`in 3m`, `in 9m`), live tracking pulse dot, fare in LEI, status badge, and an expandable key stopover accordion.
+- **Props**:
+  - `schedule`: `TransitLineSchedule`
+  - `onPress`?: `(schedule: TransitLineSchedule) => void`
+  - `style`?: `StyleProp<ViewStyle>`
+  - `testID`?: string
+- **When to Use**: Schedule screen listings in `app/schedules.tsx`.
+
+---
+
+### 23. `LocationSelectDropdown`
+- **File**: [`frontend/src/components/LocationSelectDropdown.tsx`](frontend/src/components/LocationSelectDropdown.tsx)
+- **Lineage**: Composed Interactive Dropdown Overlay (built with `Pressable`, `ScrollView`, `Ionicons`)
+- **Description**: Dropdown overlay menu presenting curated transit locations for a selected Romanian city. Organizes options into:
+  - 📍 `My Current Location` GPS shortcut (for origin point).
+  - 🕒 `Recent Searches` history.
+  - 🏛️ `Featured in {City}` categorized with colored badges: Train Station 🚆, Metro 🚇, Bus/Tram 🚌, Airport ✈️.
+  - 🚆 `Major Hubs in Other Romanian Cities` (for intercity journeys).
+  Supports inner-city mode prioritization and real-time text query filtering.
+- **Props**:
+  - `currentCity`: string
+  - `field`: `'origin' | 'destination'`
+  - `searchQuery`?: string
+  - `selectedModes`?: `TransportMode[]`
+  - `recentChoices`?: string[]
+  - `isLocationActive`?: boolean
+  - `onSelectLocation`: `(locationName: string, location?: FeaturedLocation) => void`
+  - `onClose`: `() => void`
+  - `style`?: `StyleProp<ViewStyle>`
+  - `testID`?: string
+- **When to Use**: Origin and Destination pickers in `RouteFinderCard`.
+
+---
+
 ## 4. Automated Storybook Testing Library
 
 ### Structure
@@ -421,7 +625,24 @@ npm run build:web
 
 ---
 
-## 5. Guide: Creating and Extending Components for Future Agents
+## 5. Standardized Data & Multi-Modal Itinerary Contract
+
+### Standard Contract Architecture
+- **Location**: [`frontend/src/types/routePlan.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/types/routePlan.ts)
+- **Primary Contract**: `TransitRoutePlan`
+- **Core Entities**:
+  - `TransitLeg`: Sequential multi-modal journey legs with mandatory `coords` (GeoJSON `LineString` compatible), `names`, `transportType`, `timings`, and `risk`.
+  - `RouteRiskAnalysis` & `LegRiskProfile`: Punctuality, buffer adequacy, hazard factors, and connection risk score.
+  - `RouteFareSummary`: Aggregated multi-carrier ticket costs in LEI and EUR.
+  - `EcoBenchmark`: CO₂ footprint vs driving on Romanian national roads (DN1/DN25).
+- **Service**:
+  - [`frontend/src/services/riskScoreCalculator.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/services/riskScoreCalculator.ts): Evaluates the *Romanian Transfer Shield* buffer margin (25-35 min buffer rule).
+- **Canonical Reference Data**:
+  - [`frontend/src/data/sampleRoutePlans.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/data/sampleRoutePlans.ts): Canonical fixtures including Galați Micro 19 ➔ București Piața Unirii.
+
+---
+
+## 6. Guide: Creating and Extending Components for Future Agents
 
 When asked to create a new component `NewWidget`:
 1. **Search Catalog**:
@@ -440,3 +661,121 @@ When asked to create a new component `NewWidget`:
    - Verify `storybookAuto.test.tsx` passes automatically.
 5. **Update This Document**:
    - Add the new component to the inheritance tree, catalog, and instructions in this Markdown file.
+
+---
+
+## 7. FastAPI Backend & Enterprise Authentication System
+
+### Architecture & Service Layer
+- **Root Directory**: [`backend/`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/)
+- **Application Entrypoint**: [`backend/app/main.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/main.py)
+- **Core Configuration**: [`backend/app/core/config.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/config.py)
+- **Database Engine**: [`backend/app/core/database.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/database.py) (Async SQLAlchemy + aiosqlite / asyncpg)
+- **SQL DDL Schema**: [`backend/schema.sql`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/schema.sql) (ANSI/SQLite/PostgreSQL compatible)
+- **SQL Seed Data**: [`backend/seed.sql`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/seed.sql) & [`backend/scripts/init_and_seed_db.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/scripts/init_and_seed_db.py)
+- **Docker Compose (PostgreSQL)**: [`backend/docker-compose.yml`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/docker-compose.yml)
+- **Security & Cryptography**: [`backend/app/core/security.py`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/core/security.py) (Native bcrypt, JWT HS256, SHA-256 token hashing)
+
+### Authentication & MFA Features
+- **Sign Up & Login**: `POST /api/v1/auth/signup`, `POST /api/v1/auth/login`
+- **Guest Account Lifecycle**:
+  - `POST /api/v1/auth/guest`: 1-tap ephemeral session provisioning.
+  - `POST /api/v1/auth/guest/convert`: Seamlessly upgrades guest to permanent user, retaining all saved itineraries and trip history.
+- **Session-Based Interface**:
+  - `GET /api/v1/users/me/sessions`: Lists active sessions with device/IP info.
+  - `DELETE /api/v1/users/me/sessions/{session_id}`: Revokes a specific remote device session.
+  - `DELETE /api/v1/users/me/sessions`: Revokes all sessions except current.
+- **JWT Refresh Token Rotation**:
+  - `POST /api/v1/auth/refresh`: Immediately invalidates the consumed refresh token and issues a new access/refresh pair (strict replay attack defense).
+- **Multi-Factor Authentication (MFA)**:
+  - `POST /api/v1/auth/mfa/setup`: Provisions RFC 6238 TOTP base32 secret, `otpauth://` URI, base64 QR code image, and 8 single-use emergency backup recovery codes.
+  - `POST /api/v1/auth/mfa/verify`: Activates MFA upon valid 6-digit verification code.
+  - `POST /api/v1/auth/mfa/challenge`: Authenticates login challenge using TOTP code or burns a single-use backup recovery code.
+  - `POST /api/v1/auth/mfa/disable`: Disables MFA with password verification.
+- **Password Reset**:
+  - `POST /api/v1/auth/forgot-password` & `POST /api/v1/auth/reset-password`: Resets password and revokes all active sessions.
+
+### Standard Route Contract Facilitation
+- **Route Planning**: `POST /api/v1/routes/plan` delivering the complete [`TransitRoutePlan`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/schemas/route_plan.py) contract with GeoJSON `LineString` geometries, multi-modal legs (e.g. *Galați Micro 19 ➔ București Piața Unirii*), and the **Romanian Transfer Shield** risk scoring engine.
+- **Schedules**: `GET /api/v1/schedules` serving Metrorex, Transurb Galați, STB, CFR Călători, Astra Trans Carpatic, and TFC.
+- **Trip Wallet**: `POST /api/v1/routes/saved`, `GET /api/v1/routes/saved`, `DELETE /api/v1/routes/saved/{id}`.
+
+### Frontend Integration Layer
+- **Client**: [`frontend/src/services/apiClient.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/services/apiClient.ts) (Automated Bearer token injection, storage management, and automatic 401 refresh interceptor).
+- **Context**: [`frontend/src/context/AuthContext.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/context/AuthContext.tsx) (Global user, guest status, login, signup, guest conversion, and MFA modal challenge state).
+- **Types**: [`frontend/src/types/auth.ts`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/types/auth.ts).
+
+---
+
+## 8. Multi-Modal Booking & Trip Results Tab
+
+### 1. `BookingTripCard`
+- **Location**: [`frontend/src/components/BookingTripCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BookingTripCard.tsx)
+- **Storybook Stories**: [`frontend/src/components/stories/BookingTripCard.stories.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/stories/BookingTripCard.stories.tsx)
+- **Unit Tests**: [`frontend/__tests__/BookingTripCard.test.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/__tests__/BookingTripCard.test.tsx)
+- **Extension**: Extends [`BaseCard`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseCard.tsx) (`variant="elevated"`) and utilizes [`BaseButton`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseButton.tsx) and [`BaseBadge`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseBadge.tsx).
+- **Features**:
+  - **Booking Layout**: Inspired by Trainline, Omio, and Google Flights. Shows prominent departure and arrival times, station names, total travel duration, and transfers count ("Direct" or "X transfers").
+  - **Curated Trifecta Badge**: Visual companion indicator with mascot avatars (Barnaby for `⚡ FASTEST`, Honey for `💰 BEST VALUE`, Bumble for `🛡️ MOST RELIABLE`, and `🌿 ECO HERO`).
+  - **Romanian Transfer Shield Banner**: Risk score (0-100), risk tier classification (`LOW`, `MODERATE`, `HIGH`), and transfer buffer adequacy evaluation.
+  - **Dual Currency Pricing**: Prominently formats total fare in Romanian LEI (e.g. `63.00 LEI`) and approximate EUR conversion (`€12.60`).
+  - **Expandable Leg-by-Leg Timeline Accordion**: Toggles step-by-step transit itinerary showing leg transit modes, operator codes, vehicle identifiers, intermediate stopovers list toggle, and protected transfer buffer indicators.
+  - **Carrier Breakdown**: Itemized fare summary across Romanian operators (CFR Călători, Astra Trans Carpatic, Transferoviar Călători, Metrorex, Transurb Galați, STB).
+  - **TripContext Integration**: "Book Trip" / "In Trip ✓" button directly converts the route plan into a [`TrainJourney`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/types/train.ts) and adds/removes it from the active itinerary.
+
+### 2. `TripFilterBar`
+- **Location**: [`frontend/src/components/TripFilterBar.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TripFilterBar.tsx)
+- **Storybook Stories**: [`frontend/src/components/stories/TripFilterBar.stories.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/stories/TripFilterBar.stories.tsx)
+- **Unit Tests**: [`frontend/__tests__/TripFilterBar.test.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/__tests__/TripFilterBar.test.tsx)
+- **Extension**: Extends [`BaseCard`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseCard.tsx) and [`BaseButton`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseButton.tsx).
+- **Features**:
+  - **Trifecta Pillar Chips**: Quick filters for `ALL`, `⚡ Fastest Direct`, `💰 Best Value`, and `🛡️ Most Reliable`.
+  - **Transit Modes Filter**: Toggle Train, Metro, Tram, Bus filters with interactive badges.
+  - **Romanian Operator Chips**: Multi-select filter for CFR Călători, Astra Trans Carpatic, Transferoviar Călători (TFC), Metrorex, Transurb Galați, and STB.
+  - **Price Tiers**: Quick max price filters (`Any Price`, `< 50 LEI`, `< 70 LEI`, `< 100 LEI`).
+  - **Sorting Selector**: Departure time, shortest duration, lowest price, or lowest risk score (most shielded).
+  - **Live Filter Counter & Reset**: Active filter counter badge with 1-tap "Reset Filters" action.
+
+### 3. `TripsScreen` (`/trips` Route)
+- **Location**: [`frontend/app/trips.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/app/trips.tsx)
+- **Unit Tests**: [`frontend/__tests__/tripsRoute.test.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/__tests__/tripsRoute.test.tsx)
+- **Features**:
+  - **2-Point Location Selector**: Origin & destination inputs with instant station swap and clear actions.
+  - **Departure Time Presets**: One-tap departure options ("Now", "08:00 AM", "12:00 PM", "16:00 PM").
+  - **Popular Corridor Quick Chips**: Instant presets for *București ⇄ Brașov*, *Galați ⇄ București*, and *Cluj ⇄ Timișoara*.
+  - **Matrix Ribbon**: At-a-glance metrics for Best Price, Fastest Transit, and Honey Shield reliability rate.
+  - **Seamless Handoff**: Reads URL query parameters (`origin`, `destination`, `pillar`) passed from `RouteFinderCard` and HomePage.
+  - **Strict Invariants**: ZERO maps rendered; wrapped in ambient [`CozyHoneyBackground`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/CozyHoneyBackground.tsx).
+
+---
+
+## 9. Next.js TypeScript App Router Architecture
+
+The frontend application has been upgraded to **Next.js (App Router)** with **TypeScript Strict** and **Tailwind CSS**, preserving the full mobile setup in [`mobile/`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/mobile).
+
+### App Router Directory Structure
+- [`frontend/src/app/layout.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/layout.tsx): Root layout with metadata, ambient `CozyHoneyBackground`, and client provider tree.
+- [`frontend/src/app/providers.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/providers.tsx): Client provider wrapper for `ThemeProvider`, `AuthProvider`, and `TripProvider`.
+- [`frontend/src/app/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/page.tsx): Home route (`/`) featuring 2-point `RouteFinderCard` and `MarketingShowcase` (Zero map invariant strictly preserved).
+- [`frontend/src/app/trips/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/trips/page.tsx): Multi-modal booking trip explorer (`/trips`) with dual currency formatting (LEI & EUR), Trifecta badges, Transfer Shield indicator, and live matrix summary ribbon.
+- [`frontend/src/app/schedules/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/schedules/page.tsx): Romanian transit schedules directory (`/schedules`).
+- [`frontend/src/app/trains/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/trains/page.tsx): Rail timetable (`/trains`) with real-time status tracking, fare tiers, and intermediate stops modal.
+- [`frontend/src/app/my-trip/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/my-trip/page.tsx): Active trip itinerary wallet (`/my-trip`) with total pricing, travel duration, carbon reduction benchmarks, and JSON export.
+
+### Next.js Component Library (`src/components/`)
+- [`frontend/src/components/Navbar.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/Navbar.tsx): Sticky responsive header with brand mascot bee, navigation links, and guest/traveler user pill.
+- [`frontend/src/components/CozyHoneyBackground.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/CozyHoneyBackground.tsx): Honeycomb SVG geometric pattern overlay with drifting golden pollen particles.
+- [`frontend/src/components/MascotBee.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/MascotBee.tsx): SVG companion avatars (Barnaby Scout ⚡, Honey Saver 💰, Bumble Guard 🛡️).
+- [`frontend/src/components/BaseButton.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseButton.tsx): Reusable button primitive supporting 6 color variants and 3 size scales.
+- [`frontend/src/components/BaseCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseCard.tsx): Reusable card primitive with elevated, outlined, and flat variants.
+- [`frontend/src/components/BaseBadge.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseBadge.tsx): Chip and badge primitive with custom honey tokens.
+- [`frontend/src/components/BaseInput.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseInput.tsx): Input field with icon and 1-tap clear action.
+- [`frontend/src/components/BookingTripCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BookingTripCard.tsx): Booking-inspired trip card with dual pricing, Transfer Shield indicator, leg accordion, and `TripContext` integration.
+- [`frontend/src/components/TripFilterBar.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TripFilterBar.tsx): Filter bar for pillars, transit modes, Romanian operators, price tiers, and sorting.
+- [`frontend/src/components/TransitScheduleCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TransitScheduleCard.tsx): Transit timetable card with departures list and intermediate stops expander.
+- [`frontend/src/components/TrainCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainCard.tsx): Rail timetable card with amenities, seat availability, delay badges, and "+ Plan" action.
+- [`frontend/src/components/TrainDetailModal.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainDetailModal.tsx): Modal for intermediate stops, fare breakdown, and onboard amenities.
+- [`frontend/src/components/MascotDebugModal.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/MascotDebugModal.tsx): Developer testing & debug modal for manually forcing and previewing mascot gear states (`default`, `fast`, `safe`, `economy`) with focus trap and ARIA dialog semantics.
+
+
+

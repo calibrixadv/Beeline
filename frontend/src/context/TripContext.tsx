@@ -1,11 +1,39 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+'use client';
+
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode } from 'react';
 import { TrainClass, TrainJourney } from '../types/train';
 import { TripContextType, TripItem } from '../types/trip';
 
 const TripContext = createContext<TripContextType | undefined>(undefined);
 
+const STORAGE_KEY = 'beeline_user_trips';
+
 export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [trips, setTrips] = useState<TripItem[]>([]);
+  const [isHydrated, setIsHydrated] = useState<boolean>(false);
+
+  // Hydrate from localStorage once mounted
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = window.localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          setTrips(JSON.parse(stored));
+        }
+      }
+    } catch {}
+    setIsHydrated(true);
+  }, []);
+
+  // Save to localStorage whenever trips change
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
+      }
+    } catch {}
+  }, [trips, isHydrated]);
 
   const addTrainToTrip = useCallback(
     (
@@ -62,17 +90,29 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTrips([]);
   }, []);
 
-  const getTripTotalCost = useCallback((): number => {
-    return trips.reduce((acc, item) => {
+  const totalCost = useMemo(() => {
+    return trips.reduce((sum, item) => {
       const fare = item.journey.fares.find((f) => f.classType === item.selectedClass);
-      const cost = fare ? fare.price : (item.journey.fares[0]?.price ?? 0);
-      return acc + cost;
+      return sum + (fare?.price || 0);
     }, 0);
   }, [trips]);
 
-  const getTripItemCount = useCallback((): number => trips.length, [trips.length]);
+  const totalDurationMinutes = useMemo(() => {
+    return trips.reduce((sum, item) => sum + item.journey.durationMinutes, 0);
+  }, [trips]);
 
-  const contextValue = useMemo<TripContextType>(
+  const totalCo2Kg = useMemo(() => {
+    return trips.reduce((sum, item) => sum + (item.journey.carbonFootprintKg || 0), 0);
+  }, [trips]);
+
+  const totalCo2SavedKg = useMemo(() => {
+    return trips.reduce((sum, item) => sum + Math.round((item.journey.carbonFootprintKg || 12) * 5), 0);
+  }, [trips]);
+
+  const getTripTotalCost = useCallback(() => totalCost, [totalCost]);
+  const getTripItemCount = useCallback(() => trips.length, [trips.length]);
+
+  const value = useMemo<TripContextType>(
     () => ({
       trips,
       addTrainToTrip,
@@ -81,6 +121,10 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       clearTrip,
       getTripTotalCost,
       getTripItemCount,
+      totalCost,
+      totalDurationMinutes,
+      totalCo2Kg,
+      totalCo2SavedKg,
     }),
     [
       trips,
@@ -90,16 +134,20 @@ export const TripProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       clearTrip,
       getTripTotalCost,
       getTripItemCount,
+      totalCost,
+      totalDurationMinutes,
+      totalCo2Kg,
+      totalCo2SavedKg,
     ]
   );
 
-  return <TripContext.Provider value={contextValue}>{children}</TripContext.Provider>;
+  return <TripContext.Provider value={value}>{children}</TripContext.Provider>;
 };
 
-export const useTripPlanner = (): TripContextType => {
+export const useTrip = (): TripContextType => {
   const context = useContext(TripContext);
   if (!context) {
-    throw new Error('useTripPlanner must be used within a TripProvider');
+    throw new Error('useTrip must be used within a TripProvider');
   }
   return context;
 };

@@ -1,0 +1,50 @@
+/* eslint-env jest */
+const mockRouter = {
+  push: jest.fn(),
+  replace: jest.fn(),
+  back: jest.fn(),
+};
+
+const mockUseLocalSearchParams = jest.fn(() => ({}));
+
+jest.mock('expo-router', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const MockStack = ({ children }) => React.createElement(View, null, children);
+  MockStack.Screen = () => null;
+  return {
+    useRouter: () => mockRouter,
+    useLocalSearchParams: mockUseLocalSearchParams,
+    usePathname: () => '/',
+    useSegments: () => [],
+    Link: ({ children, ...props }) => React.createElement(View, props, children),
+    Stack: MockStack,
+    mockRouter,
+    mockUseLocalSearchParams,
+  };
+});
+
+jest.mock('@expo/vector-icons', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    Ionicons: (props) => React.createElement(Text, props, props.name),
+    MaterialIcons: (props) => React.createElement(Text, props, props.name),
+    MaterialCommunityIcons: (props) => React.createElement(Text, props, props.name),
+    Feather: (props) => React.createElement(Text, props, props.name),
+  };
+});
+
+if (typeof global !== 'undefined') {
+  if (!global.window) {
+    global.window = global;
+  }
+  global.window.window = global.window;
+  global.window.parent = global.window;
+  if (!global.window.location) {
+    global.window.location = { search: '' };
+  }
+  global.window.__STORYBOOK_ADDON_INTERACTIONS_INSTRUMENTER_STATE__ = {
+    parentCallId: '',
+  };
+}
