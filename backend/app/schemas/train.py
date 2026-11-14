@@ -63,6 +63,37 @@ class TrainJourney(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
+class TrainCreate(BaseModel):
+    id: Optional[str] = None
+    trainNumber: str
+    operator: str
+    origin: TrainStation
+    destination: TrainStation
+    departureTime: str
+    arrivalTime: str
+    durationMinutes: int
+    durationFormatted: Optional[str] = None
+    status: TrainStatus = "ON_TIME"
+    delayMinutes: int = 0
+    fares: Optional[List[TrainFare]] = None
+    stops: Optional[List[TrainStop]] = None
+    amenities: Optional[List[Amenity]] = None
+    carbonFootprintKg: Optional[float] = 12.5
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class TrainUpdate(BaseModel):
+    operator: Optional[str] = None
+    status: Optional[TrainStatus] = None
+    delayMinutes: Optional[int] = None
+    amenities: Optional[List[Amenity]] = None
+    fares: Optional[List[TrainFare]] = None
+    carbonFootprintKg: Optional[float] = None
+
+    model_config = ConfigDict(extra="ignore")
+
+
 class RailwayOperator(BaseModel):
     id: str
     name: str

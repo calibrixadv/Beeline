@@ -7,14 +7,31 @@ from app.schemas.user import UserProfile
 class SignUpRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+    username: Optional[str] = Field(None, min_length=3, max_length=50, description="Unique traveler username")
     full_name: Optional[str] = None
     device_info: Optional[str] = "Web Browser"
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: Optional[str] = None
+    username: Optional[str] = None
     password: str
     device_info: Optional[str] = "Web Browser"
+
+
+class BreachCheckRequest(BaseModel):
+    password: Optional[str] = None
+    email: Optional[str] = None
+
+
+class BreachCheckResponse(BaseModel):
+    is_password_compromised: bool = False
+    password_breach_count: int = 0
+    is_email_compromised: bool = False
+    email_breach_count: int = 0
+    breaches: List[str] = Field(default_factory=list)
+    warning: Optional[str] = None
+    recommendation: str = "Use a unique password with at least 8 characters, combining uppercase, lowercase, numbers, and symbols."
 
 
 class GuestLoginRequest(BaseModel):

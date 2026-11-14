@@ -13,6 +13,25 @@ class StationSearchResult(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
 
+class StationCreate(BaseModel):
+    code: str
+    name: str
+    city: str
+    modes: List[TransitMode] = [TransitMode.TRAIN]
+    coordinates: GeoPoint
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class StationUpdate(BaseModel):
+    name: Optional[str] = None
+    city: Optional[str] = None
+    modes: Optional[List[TransitMode]] = None
+    coordinates: Optional[GeoPoint] = None
+
+    model_config = ConfigDict(extra="ignore")
+
+
 class StationSearchResponse(BaseModel):
     stations: List[StationSearchResult]
 

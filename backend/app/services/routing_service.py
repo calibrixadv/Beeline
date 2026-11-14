@@ -29,6 +29,7 @@ from app.schemas.route_plan import (
     TransitRoutePlan,
     TransitRouteQuery,
 )
+from app.services.risk_service import risk_service
 
 
 def compute_risk_analysis(legs: List[TransitLeg], min_buffer_required: int = 20) -> RouteRiskAnalysis:
@@ -41,10 +42,14 @@ def compute_risk_analysis(legs: List[TransitLeg], min_buffer_required: int = 20)
             overallRiskScore=0.0,
             riskLevel=RiskLevel.LOW,
             historicalPunctualityRate=1.0,
-            tightestBufferMinutes=999,
+            tightestBufferMinutes=0,
             bufferAdequacy=BufferAdequacy.GENEROUS,
             riskSummaryText="Direct transit route with no connection risk.",
-            factors=[]
+            factors=[],
+            expectedDelayMinutes=0,
+            missedConnectionProbability=0.0,
+            riskFactors=["Direct transit route with no connection risk."],
+            isMlComputed=False,
         )
 
     # 1. Punctuality rate average
@@ -117,7 +122,11 @@ def compute_risk_analysis(legs: List[TransitLeg], min_buffer_required: int = 20)
         tightestBufferMinutes=tightest_buffer if tightest_buffer != 999 else 0,
         bufferAdequacy=adequacy,
         riskSummaryText=summary,
-        factors=factors
+        factors=factors,
+        expectedDelayMinutes=0,
+        missedConnectionProbability=0.03 if tightest_buffer >= 20 else (0.50 if tightest_buffer < 15 else 0.15),
+        riskFactors=[summary],
+        isMlComputed=False,
     )
 
 
@@ -604,7 +613,7 @@ class RoutingService:
         )
 
     @classmethod
-    def plan_routes(cls, query: TransitRouteQuery) -> List[TransitRoutePlan]:
+    def _build_candidate_plans(cls, query: TransitRouteQuery) -> List[TransitRoutePlan]:
         orig = query.origin.name.lower()
         dest = query.destination.name.lower()
         orig_city = (query.origin.city or "").lower()
@@ -612,16 +621,24 @@ class RoutingService:
 
         # Check for Galați Micro 19 -> București Piața Unirii
         if ("micro 19" in orig or "micro19" in orig or "gala" in orig_city) and ("uniri" in dest or "bucur" in dest_city):
-            primary = cls.generate_micro19_to_unirii_plan(query)
-            return [primary]
+            return [cls.generate_micro19_to_unirii_plan(query)]
 
         # Check for București -> Brașov
         if ("bucur" in orig or "gara de nord" in orig) and ("bra" in dest or "bra" in dest_city):
-            primary = cls.generate_bucharest_to_brasov_plan(query)
-            return [primary]
+            return [cls.generate_bucharest_to_brasov_plan(query)]
 
         # Generic generator
         return [cls.generate_generic_plan(query)]
+
+    @classmethod
+    async def plan_routes(cls, query: TransitRouteQuery) -> List[TransitRoutePlan]:
+        candidate_plans = cls._build_candidate_plans(query)
+        return await risk_service.enrich_route_plans(candidate_plans)
+
+    @classmethod
+    def plan_routes_sync(cls, query: TransitRouteQuery) -> List[TransitRoutePlan]:
+        candidate_plans = cls._build_candidate_plans(query)
+        return risk_service.enrich_route_plans_sync(candidate_plans)
 
 
 routing_service = RoutingService()

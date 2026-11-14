@@ -1,6 +1,17 @@
+import uuid
 from typing import List, Optional
+from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.transit import Schedule
 from app.schemas.route_plan import TransitMode
-from app.schemas.schedule import DepartureTime, TransitLineSchedule, TransitProvider
+from app.schemas.schedule import (
+    DepartureTime,
+    ScheduleCreate,
+    ScheduleUpdate,
+    TransitLineSchedule,
+    TransitProvider,
+)
 
 ROMANIAN_PROVIDERS = {
     "metrorex": TransitProvider(
@@ -280,6 +291,118 @@ class ScheduleService:
             {"name": "Constanța", "modes": [TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
             {"name": "Craiova", "modes": [TransitMode.TRAM, TransitMode.BUS, TransitMode.TRAIN], "hasRealtime": True},
         ]
+
+    @staticmethod
+    async def create_schedule(data: ScheduleCreate, db: Optional[AsyncSession] = None) -> TransitLineSchedule:
+        sch_id = data.id or f"sch-{data.lineCode.lower()}-{uuid.uuid4().hex[:6]}"
+        for s in SCHEDULE_DATA:
+            if s.id == sch_id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Schedule entry with ID '{sch_id}' already exists."
+                )
+
+        if db is not None:
+            res = await db.execute(select(Schedule).where(Schedule.id == sch_id))
+            if res.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Schedule entry with ID '{sch_id}' already exists."
+                )
+            mode_str = data.mode.value if hasattr(data.mode, "value") else str(data.mode)
+            db_sch = Schedule(
+                id=sch_id,
+                line_code=data.lineCode.strip(),
+                route_name=data.lineName.strip(),
+                city=data.city.strip(),
+                mode=mode_str,
+                provider_id=data.provider.id,
+                provider_name=data.provider.name,
+                origin_station=data.origin.strip(),
+                destination_station=data.destination.strip(),
+                frequency_minutes=data.frequencyMinutes or 15,
+                first_departure=data.firstDeparture or "05:00",
+                last_departure=data.lastDeparture or "23:30",
+                fare_lei=data.fareLei,
+                is_active=True
+            )
+            db.add(db_sch)
+            await db.commit()
+
+        next_deps = data.nextDepartures or [
+            DepartureTime(time="08:15", minutesUntil=5, crowdingLevel="LOW", platform="1", isLiveTracking=True),
+            DepartureTime(time="08:25", minutesUntil=15, crowdingLevel="MEDIUM", platform="1", isLiveTracking=True),
+        ]
+
+        new_schedule = TransitLineSchedule(
+            id=sch_id,
+            lineCode=data.lineCode.strip(),
+            lineName=data.lineName.strip(),
+            mode=data.mode,
+            provider=data.provider,
+            city=data.city.strip(),
+            origin=data.origin.strip(),
+            destination=data.destination.strip(),
+            nextDepartures=next_deps,
+            frequencyDescription=data.frequencyDescription or "Every 10-15 mins",
+            status=data.status,
+            fareLei=data.fareLei,
+            viaStops=data.viaStops
+        )
+        SCHEDULE_DATA.append(new_schedule)
+        return new_schedule
+
+    @staticmethod
+    async def update_schedule(schedule_id: str, data: ScheduleUpdate, db: Optional[AsyncSession] = None) -> TransitLineSchedule:
+        sch = next((s for s in SCHEDULE_DATA if s.id == schedule_id), None)
+        if not sch:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Schedule with ID '{schedule_id}' not found."
+            )
+        if db is not None:
+            res = await db.execute(select(Schedule).where(Schedule.id == schedule_id))
+            db_sch = res.scalar_one_or_none()
+            if db_sch:
+                if data.lineName is not None:
+                    db_sch.route_name = data.lineName.strip()
+                if data.fareLei is not None:
+                    db_sch.fare_lei = data.fareLei
+                if data.frequencyMinutes is not None:
+                    db_sch.frequency_minutes = data.frequencyMinutes
+                await db.commit()
+
+        if data.lineName is not None:
+            sch.lineName = data.lineName.strip()
+        if data.frequencyDescription is not None:
+            sch.frequencyDescription = data.frequencyDescription
+        if data.status is not None:
+            sch.status = data.status
+        if data.fareLei is not None:
+            sch.fareLei = data.fareLei
+        if data.nextDepartures is not None:
+            sch.nextDepartures = data.nextDepartures
+        if data.viaStops is not None:
+            sch.viaStops = data.viaStops
+        return sch
+
+    @staticmethod
+    async def delete_schedule(schedule_id: str, db: Optional[AsyncSession] = None) -> bool:
+        sch = next((s for s in SCHEDULE_DATA if s.id == schedule_id), None)
+        if not sch:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Schedule with ID '{schedule_id}' not found."
+            )
+        if db is not None:
+            res = await db.execute(select(Schedule).where(Schedule.id == schedule_id))
+            db_sch = res.scalar_one_or_none()
+            if db_sch:
+                await db.delete(db_sch)
+                await db.commit()
+
+        SCHEDULE_DATA.remove(sch)
+        return True
 
 
 schedule_service = ScheduleService()

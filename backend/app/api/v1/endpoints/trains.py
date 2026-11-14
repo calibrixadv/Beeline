@@ -1,10 +1,15 @@
 from typing import Any, Optional
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_db
+from app.schemas.auth import MessageResponse
 from app.schemas.common import PaginatedResponse
 from app.schemas.train import (
     RailwayOperatorsResponse,
+    TrainCreate,
     TrainJourney,
+    TrainUpdate,
 )
 from app.services.train_service import train_service
 
@@ -42,6 +47,15 @@ async def search_trains(
     return PaginatedResponse[TrainJourney](data=trains, pagination=pagination)
 
 
+@router.post("", response_model=TrainJourney, status_code=status.HTTP_201_CREATED)
+async def create_train(
+    data: TrainCreate,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Register a new scheduled train service."""
+    return await train_service.create_train(data, db=db)
+
+
 @router.get("/operators", response_model=RailwayOperatorsResponse)
 async def list_railway_operators() -> Any:
     """Returns registered Romanian railway operators, live GTFS-RT feed health, and contact channels."""
@@ -59,3 +73,23 @@ async def get_train_details(train_id: str) -> Any:
             detail=f"Train journey with ID '{train_id}' not found."
         )
     return train
+
+
+@router.patch("/{train_id}", response_model=TrainJourney)
+async def update_train(
+    train_id: str,
+    data: TrainUpdate,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Update train service status, delay minutes, carrier, or onboard amenities."""
+    return await train_service.update_train(train_id, data, db=db)
+
+
+@router.delete("/{train_id}", response_model=MessageResponse)
+async def delete_train(
+    train_id: str,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Delete a scheduled train journey."""
+    await train_service.delete_train(train_id, db=db)
+    return MessageResponse(message=f"Train journey '{train_id}' deleted successfully")

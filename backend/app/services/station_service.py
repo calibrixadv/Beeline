@@ -1,8 +1,18 @@
+import json
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import HTTPException, status
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.transit import Station, Train
 from app.schemas.route_plan import GeoPoint, TransitMode
-from app.schemas.station import StationBoardItem, StationBoardResponse, StationSearchResult
+from app.schemas.station import (
+    StationBoardItem,
+    StationBoardResponse,
+    StationSearchResult,
+    StationCreate,
+    StationUpdate,
+)
 from app.services.train_service import TRAINS_DATA
 
 STATIONS_DATA: List[StationSearchResult] = [
@@ -250,6 +260,133 @@ class StationService:
             generatedAt=datetime.now(timezone.utc).isoformat(),
             items=board_items
         )
+
+    def list_all_stations(
+        self,
+        city: Optional[str] = None,
+        mode: Optional[TransitMode] = None,
+        limit: Optional[int] = None
+    ) -> List[StationSearchResult]:
+        results = STATIONS_DATA
+        if city:
+            results = [s for s in results if s.city.lower() == city.lower()]
+        if mode:
+            results = [s for s in results if mode in s.modes]
+        if limit and limit > 0:
+            results = results[:limit]
+        return results
+
+    @staticmethod
+    def get_station_by_code(station_code: str) -> Optional[StationSearchResult]:
+        for s in STATIONS_DATA:
+            if s.code.upper() == station_code.upper():
+                return s
+        return None
+
+    async def create_station(self, data: StationCreate, db: Optional[AsyncSession] = None) -> StationSearchResult:
+        code_upper = data.code.strip().upper()
+        existing = self.get_station_by_code(code_upper)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Station with code '{code_upper}' already exists."
+            )
+        if db is not None:
+            res = await db.execute(select(Station).where(Station.code == code_upper))
+            if res.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Station with code '{code_upper}' already exists."
+                )
+            modes_json = json.dumps([m.value if hasattr(m, "value") else str(m) for m in data.modes])
+            db_station = Station(
+                code=code_upper,
+                name=data.name.strip(),
+                city=data.city.strip(),
+                latitude=data.coordinates.latitude,
+                longitude=data.coordinates.longitude,
+                modes=modes_json,
+                is_active=True
+            )
+            db.add(db_station)
+            await db.commit()
+
+        new_station = StationSearchResult(
+            code=code_upper,
+            name=data.name.strip(),
+            city=data.city.strip(),
+            modes=data.modes,
+            coordinates=data.coordinates
+        )
+        STATIONS_DATA.append(new_station)
+        return new_station
+
+    async def update_station(self, station_code: str, data: StationUpdate, db: Optional[AsyncSession] = None) -> StationSearchResult:
+        code_upper = station_code.strip().upper()
+        st = self.get_station_by_code(code_upper)
+        if not st:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Station with code '{station_code}' not found."
+            )
+        if db is not None:
+            res = await db.execute(select(Station).where(Station.code == code_upper))
+            db_st = res.scalar_one_or_none()
+            if db_st:
+                if data.name is not None:
+                    db_st.name = data.name.strip()
+                if data.city is not None:
+                    db_st.city = data.city.strip()
+                if data.coordinates is not None:
+                    db_st.latitude = data.coordinates.latitude
+                    db_st.longitude = data.coordinates.longitude
+                if data.modes is not None:
+                    db_st.modes = json.dumps([m.value if hasattr(m, "value") else str(m) for m in data.modes])
+                await db.commit()
+
+        if data.name is not None:
+            st.name = data.name.strip()
+        if data.city is not None:
+            st.city = data.city.strip()
+        if data.modes is not None:
+            st.modes = data.modes
+        if data.coordinates is not None:
+            st.coordinates = data.coordinates
+        return st
+
+    async def delete_station(self, station_code: str, db: Optional[AsyncSession] = None) -> bool:
+        code_upper = station_code.strip().upper()
+        st = self.get_station_by_code(code_upper)
+        if not st:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Station with code '{station_code}' not found."
+            )
+        # Foreign Key check: ensure no active trains refer to this station
+        for tr in TRAINS_DATA:
+            if tr.origin.code.upper() == code_upper or tr.destination.code.upper() == code_upper:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Cannot delete station '{st.code}': referenced by active train journey '{tr.trainNumber}' (Foreign Key constraint)."
+                )
+        if db is not None:
+            res_tr = await db.execute(
+                select(Train).where(or_(Train.origin_code == code_upper, Train.destination_code == code_upper))
+            )
+            conflict_tr = res_tr.scalars().first()
+            if conflict_tr:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Cannot delete station '{st.code}': referenced by active train journey '{conflict_tr.train_number}' (Foreign Key constraint)."
+                )
+            res_st = await db.execute(select(Station).where(Station.code == code_upper))
+            db_st = res_st.scalar_one_or_none()
+            if db_st:
+                await db.delete(db_st)
+                await db.commit()
+
+        STATIONS_DATA.remove(st)
+        return True
 
 
 station_service = StationService()

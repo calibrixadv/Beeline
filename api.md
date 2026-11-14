@@ -246,8 +246,10 @@ POST /api/v1/auth/logout
 ### 5.8 Current User & Device Sessions
 - `GET /api/v1/users/me`: Retrieves authenticated traveler profile.
 - `PATCH /api/v1/users/me`: Partial updates to name or preferences.
+- `DELETE /api/v1/users/me`: Permanently deletes current user account and cascading relations. Returns `200 OK`.
 - `GET /api/v1/users/me/sessions`: Lists all active logged-in device sessions (IP, device name, last active).
 - `DELETE /api/v1/users/me/sessions/{sessionId}`: Revokes a specific session remotely.
+- `DELETE /api/v1/users/me/sessions`: Revokes all other sessions except current.
 - `DELETE /api/v1/users/me/sessions`: Revokes all other sessions except current.
 
 ---
@@ -304,14 +306,27 @@ The core algorithmic engine for Beeline. Calculates door-to-door synchronised tr
         "advice": "Transfer Shield active: 100% connection guarantee in Gara de Nord!"
       },
       "riskAnalysis": {
-        "overallRiskScore": 14,
+        "overallRiskScore": 14.2,
         "riskLevel": "LOW",
         "historicalPunctualityRate": 0.94,
-        "tightestBufferMinutes": 25,
+        "tightestBufferMinutes": 20,
         "bufferAdequacy": "OPTIMAL",
-        "delayRiskFactors": [
-          "CFR InterRegio punctuality on Ploiești-București is 92%"
-        ]
+        "expectedDelayMinutes": 4,
+        "missedConnectionProbability": 0.03,
+        "riskSummaryText": "Shielded connection: 20-min buffer safely absorbs standard Romanian transit delays.",
+        "riskFactors": [
+          "Shielded: 20-min buffer safely absorbs standard Romanian transit delays.",
+          "Single-track railway segment on Galați-Făurei branch."
+        ],
+        "factors": [
+          {
+            "code": "SINGLE_TRACK_RAIL",
+            "severity": "INFO",
+            "description": "Single-track railway segment on Galați-Făurei branch.",
+            "affectedLegIndex": 1
+          }
+        ],
+        "isMlComputed": true
       },
       "fare": {
         "totalAmountLei": 68.50,
@@ -372,6 +387,32 @@ The core algorithmic engine for Beeline. Calculates door-to-door synchronised tr
 }
 ```
 
+### 6.1.1 RouteRiskAnalysis Field Specification & Aliasing Contract
+The `riskAnalysis` object provides explainable ML-inferred delay risks, missed connection probabilities, and buffer adequacy metrics for each candidate itinerary. Bidirectional serialization supports both camelCase (client standard) and snake_case (prompt / backend standard):
+
+| JSON Field (camelCase) | Supported Aliases | Data Type | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `overallRiskScore` | `risk_score`, `riskScore` | `float` (0.0–100.0) | Required | Calibrated journey composite risk score. |
+| `riskLevel` | `risk_level` | `RiskLevel` Enum | Required | Risk tier: `LOW` ($\le 20$), `MODERATE` ($\le 45$), `HIGH` ($\le 70$), `CRITICAL` ($> 70$). |
+| `historicalPunctualityRate`| `historical_punctuality_rate` | `float` (0.0–1.0) | `0.88` | Aggregated carrier and line punctuality baseline. |
+| `tightestBufferMinutes` | `tightest_buffer_minutes` | `int` | `999` | Minimum transfer buffer between any connecting legs in minutes. |
+| `bufferAdequacy` | `buffer_adequacy` | `BufferAdequacy` Enum| Required | Buffer classification: `GENEROUS`, `OPTIMAL`, `TIGHT`, `INSUFFICIENT`. |
+| `expectedDelayMinutes` | `expected_delay_minutes` | `int` ($\ge 0$) | `0` | Predicted arrival delay from LightGBM Huber regressor. |
+| `missedConnectionProbability`| `missed_connection_probability` | `float` (0.0–1.0)| `0.0` | Calibrated connection failure probability from LightGBM classifier. |
+| `riskSummaryText` | `risk_summary_text` | `string` | Required | Natural-language route risk summary. |
+| `riskFactors` | `risk_factors`, `delayRiskFactors` | `List[string]` | `[]` | Human-readable bullet list of contributing risk factors for UI display. |
+| `factors` | `factors` | `List[RouteRiskFactor]` | `[]` | Structured risk factor objects with hazard code, severity, and leg index. |
+| `isMlComputed` | `is_ml_computed` | `boolean` | `false` | `true` when evaluated by the ONNX ML pipeline; `false` on deterministic fallback. |
+
+### 6.1.2 In-Process ONNX Inference & Redis Online Feature Store Architecture
+Beeline serves machine learning predictions in-process with sub-millisecond latency:
+- **In-Process ONNX Runtime Serving:** At server startup, FastAPI's `lifespan` handler compiles and loads `backend/app/ml_models/risk_model.onnx` into CPU memory via `onnxruntime.InferenceSession`. Batch inference for 3–5 candidate routes executes in $< 1.5\text{ms}$ with zero network hops.
+- **Dual Fused ML Models:** The ONNX artifact fuses a LightGBM delay regressor (Huber loss, MAE $< 4.5$ min) and a LightGBM missed connection classifier (ROC-AUC $> 0.92$) using `onnx.compose.merge_models` with an 18-element feature vector.
+- **Redis Online Feature Store:** A lightweight Redis 7 cache indexes real-time corridor metrics (`feature:corridor:{corridor_slug}`), transfer hub congestion (`feature:station:{station_code}`), and carrier punctuality (`feature:carrier:{carrier_id}`) with pipelined reads (`< 1.0ms`).
+- **Non-Blocking Background Sync:** A background asyncio worker refreshes feature hashes every 60 seconds from live disruption feeds and ANM weather alerts with 24-hour sliding TTLs without blocking SQLite/PostgreSQL operations.
+- **Distributed Idempotency Locking:** `IdempotencyService` uses Redis distributed locks (`SET NX EX 120`) to eliminate database row contention under high-concurrency multi-worker deployments, automatically falling back to SQL records when Redis is unavailable.
+- **Zero-Downtime Deterministic Fallback:** If the ONNX model is missing or Redis is unreachable, the engine degrades gracefully to the deterministic Romanian Transfer Shield heuristic with zero 500 errors.
+
 ### 6.2 Popular Corridors Showcase
 ```http
 GET /api/v1/routes/corridors/popular
@@ -425,7 +466,21 @@ GET /api/v1/routes/saved?page=1&pageSize=20
 ```
 **Auth:** Bearer Token. Returns paginated list of saved itineraries for the current user.
 
-### 6.5 Delete Saved Itinerary
+### 6.5 Update Saved Itinerary
+```http
+PATCH /api/v1/routes/saved/{routeId}
+```
+**Auth:** Bearer Token. Updates custom label, notes, origin/destination names, or plan payload.
+- **Request Body:**
+```json
+{
+  "origin_name": "Galați Centru Acasă",
+  "destination_name": "București Birou Unirii"
+}
+```
+- **Response `200 OK`:** Returns updated `SavedRouteResponse`.
+
+### 6.6 Delete Saved Itinerary
 ```http
 DELETE /api/v1/routes/saved/{routeId}
 ```
@@ -541,6 +596,30 @@ GET /api/v1/trains/operators
 ```
 Returns registered operators, contact channels, live GTFS-RT feed health, and logo URLs.
 
+### 7.4 Create Scheduled Train Journey
+```http
+POST /api/v1/trains
+```
+Registers a new scheduled railway service with origin, destination, intermediate stops, fares, and onboard amenities.
+- **Response `201 Created`:** Returns created `TrainJourney`.
+- **Response `409 Conflict`:** Train number or ID already registered.
+
+### 7.5 Update Train Journey
+```http
+PATCH /api/v1/trains/{trainId}
+```
+Updates real-time status (`ON_TIME`, `DELAYED`, `CANCELLED`), delay minutes, operating carrier, or amenities.
+- **Response `200 OK`:** Returns updated `TrainJourney`.
+- **Response `404 Not Found`:** Train ID does not exist.
+
+### 7.6 Delete Train Journey
+```http
+DELETE /api/v1/trains/{trainId}
+```
+Deletes a train service from the schedule registry.
+- **Response `200 OK`:** `{ "message": "Train journey '{trainId}' deleted successfully" }`.
+- **Response `404 Not Found`:** Train ID not found.
+
 ---
 
 ## 8. Transit Schedules & Line Timetables
@@ -607,13 +686,44 @@ GET /api/v1/schedules/cities
 ```
 Returns supported cities and coverage flags.
 
+### 8.4 Create Transit Line Schedule
+```http
+POST /api/v1/schedules
+```
+Creates a new urban or regional line transit timetable schedule.
+- **Response `201 Created`:** Returns created `TransitLineSchedule`.
+- **Response `409 Conflict`:** Schedule ID already exists.
+
+### 8.5 Update Transit Line Schedule
+```http
+PATCH /api/v1/schedules/{scheduleId}
+```
+Updates departures, platform, fare, or route stops.
+- **Response `200 OK`:** Returns updated `TransitLineSchedule`.
+- **Response `404 Not Found`:** Schedule ID not found.
+
+### 8.6 Delete Transit Line Schedule
+```http
+DELETE /api/v1/schedules/{scheduleId}
+```
+Removes a transit line schedule from service.
+- **Response `200 OK`:** `{ "message": "Schedule '{scheduleId}' deleted successfully" }`.
+- **Response `404 Not Found`:** Schedule ID not found.
+
 ---
 
 ## 9. Station Search & Live Station Boards
 
 Base path: `/api/v1/stations`
 
-### 9.1 Autocomplete Station Search
+### 9.1 List All Stations
+```http
+GET /api/v1/stations?city=București&limit=20
+```
+Returns a list of all transit stations and multimodal nodes matching query filters.
+- **Response `200 OK`:** Returns `List[StationSearchResult]`.
+
+### 9.2 Autocomplete Station Search
 ```http
 GET /api/v1/stations/search?query=Bucur&limit=10
 ```
@@ -644,7 +754,40 @@ GET /api/v1/stations/search?query=Bucur&limit=10
 }
 ```
 
-### 9.2 Live Station Departure / Arrival Board
+### 9.3 Get Station Details
+```http
+GET /api/v1/stations/{stationCode}
+```
+Returns station details, city, supported modes, and GPS coordinates.
+- **Response `200 OK`:** Returns `StationSearchResult`.
+- **Response `404 Not Found`:** Station code does not exist.
+
+### 9.4 Create Station
+```http
+POST /api/v1/stations
+```
+Registers a new station node.
+- **Response `201 Created`:** Returns `StationSearchResult`.
+- **Response `409 Conflict`:** Station code already exists.
+
+### 9.5 Update Station
+```http
+PATCH /api/v1/stations/{stationCode}
+```
+Updates station name, city, supported modes, or GPS coordinates.
+- **Response `200 OK`:** Returns updated `StationSearchResult`.
+- **Response `404 Not Found`:** Station code not found.
+
+### 9.6 Delete Station
+```http
+DELETE /api/v1/stations/{stationCode}
+```
+Deletes a station node. Enforces relational integrity: rejects deletion with `409 Conflict` if active scheduled trains reference the station code as origin or destination.
+- **Response `200 OK`:** `{ "message": "Station '{stationCode}' deleted successfully" }`.
+- **Response `404 Not Found`:** Station code not found.
+- **Response `409 Conflict`:** Station is referenced by active train journey (Foreign Key constraint).
+
+### 9.7 Live Station Departure / Arrival Board
 ```http
 GET /api/v1/stations/{stationCode}/board?type=DEPARTURES&windowHours=2
 ```
@@ -725,7 +868,23 @@ GET /api/v1/bookings?page=1&pageSize=10
 ```
 **Auth:** Bearer Token. Returns paginated list of active and archived traveler bookings.
 
-### 10.3 Cancel Booking
+### 10.3 Get Single Booking Details
+```http
+GET /api/v1/bookings/{bookingId}
+```
+**Auth:** Bearer Token. Retrieves booking reference, pricing, status, and issued tickets.
+- **Response `200 OK`:** Returns `BookingResponse`.
+- **Response `404 Not Found`:** Booking ID not found.
+
+### 10.4 Update Booking
+```http
+PATCH /api/v1/bookings/{bookingId}
+```
+**Auth:** Bearer Token. Updates passenger contact email/phone or booking status (`CONFIRMED`, `CANCELLED`, `PENDING`, `REFUNDED`).
+- **Response `200 OK`:** Returns updated `BookingResponse`.
+- **Response `404 Not Found`:** Booking ID not found.
+
+### 10.5 Cancel Booking
 ```http
 DELETE /api/v1/bookings/{bookingId}
 ```
@@ -761,6 +920,38 @@ GET /api/v1/disruptions?severity=WARNING
 }
 ```
 
+### 11.2 Get Disruption Details
+```http
+GET /api/v1/disruptions/{disruptionId}
+```
+Returns detailed description, severity, and affected corridor lines for a specific incident.
+- **Response `200 OK`:** Returns `DisruptionItem`.
+- **Response `404 Not Found`:** Disruption ID not found.
+
+### 11.3 Report Disruption Incident
+```http
+POST /api/v1/disruptions
+```
+Reports a new transit delay, catenary failure, or infrastructure maintenance incident.
+- **Response `201 Created`:** Returns created `DisruptionItem`.
+- **Response `409 Conflict`:** Disruption ID already exists.
+
+### 11.4 Update Disruption Incident
+```http
+PATCH /api/v1/disruptions/{disruptionId}
+```
+Updates delay minutes, severity (`INFO`, `WARNING`, `CRITICAL`), or affected transit corridors.
+- **Response `200 OK`:** Returns updated `DisruptionItem`.
+- **Response `404 Not Found`:** Disruption ID not found.
+
+### 11.5 Delete/Archive Disruption
+```http
+DELETE /api/v1/disruptions/{disruptionId}
+```
+Archives or removes a resolved transit disruption incident.
+- **Response `200 OK`:** `{ "message": "Disruption '{disruptionId}' deleted successfully" }`.
+- **Response `404 Not Found`:** Disruption ID not found.
+
 ---
 
 ## 12. Backend Implementation Status Matrix
@@ -783,23 +974,45 @@ GET /api/v1/disruptions?severity=WARNING
 | **Users** | `/users/me` | `PATCH` | ✅ Implemented | Profile settings modal |
 | **Users** | `/users/me/sessions` | `GET` | ✅ Implemented | Security settings |
 | **Users** | `/users/me/sessions/{id}` | `DELETE` | ✅ Implemented | Security settings |
+| **Users** | `/users/me` | `DELETE` | ✅ Implemented | Account self-deletion |
 | **Routes** | `/routes/plan` | `POST` | ✅ Implemented | HomePage (`/`), TripsPage (`/trips`) |
 | **Routes** | `/routes/corridors/popular` | `GET` | ✅ Implemented | HomePage Corridor Pills |
 | **Routes** | `/routes/saved` | `POST` | ✅ Implemented | `apiClient.saveRoute()` |
 | **Routes** | `/routes/saved` | `GET` | ✅ Implemented | `MyTripPage` (`/my-trip`) |
+| **Routes** | `/routes/saved/{id}` | `PATCH` | ✅ Implemented | Custom itinerary notes / labels |
 | **Routes** | `/routes/saved/{id}` | `DELETE` | ✅ Implemented | `MyTripPage` (`/my-trip`) |
 | **Trains** | `/trains` | `GET` | ✅ Implemented | `TrainsPage` (`/trains`) |
+| **Trains** | `/trains` | `POST` | ✅ Implemented | Timetable management / Admin |
 | **Trains** | `/trains/{id}` | `GET` | ✅ Implemented | `TrainDetailModal` |
+| **Trains** | `/trains/{id}` | `PATCH` | ✅ Implemented | Train live status / delay dispatch |
+| **Trains** | `/trains/{id}` | `DELETE` | ✅ Implemented | Train cancellation / registry |
 | **Trains** | `/trains/operators` | `GET` | ✅ Implemented | `TrainsPage` operator filter |
 | **Schedules** | `/schedules` | `GET` | ✅ Implemented | `SchedulesPage` (`/schedules`) |
+| **Schedules** | `/schedules` | `POST` | ✅ Implemented | Line schedule registration |
 | **Schedules** | `/schedules/{id}` | `GET` | ✅ Implemented | Schedule detail modal |
+| **Schedules** | `/schedules/{id}` | `PATCH` | ✅ Implemented | Timetable / frequency update |
+| **Schedules** | `/schedules/{id}` | `DELETE` | ✅ Implemented | Schedule decommissioning |
 | **Schedules** | `/schedules/cities` | `GET` | ✅ Implemented | Schedule city dropdown |
+| **Stations** | `/stations` | `GET` | ✅ Implemented | Station catalog / directory |
+| **Stations** | `/stations` | `POST` | ✅ Implemented | Station node creation |
+| **Stations** | `/stations/{code}` | `GET` | ✅ Implemented | Station details / GPS |
+| **Stations** | `/stations/{code}` | `PATCH` | ✅ Implemented | Station metadata / coordinates update |
+| **Stations** | `/stations/{code}` | `DELETE` | ✅ Implemented | Station decommissioning (FK protected) |
 | **Stations** | `/stations/search` | `GET` | ✅ Implemented | Autocomplete in inputs |
 | **Stations** | `/stations/{code}/board`| `GET` | ✅ Implemented | Live Station Departure view |
 | **Bookings** | `/bookings` | `POST` | ✅ Implemented | `MyTripPage` checkout |
 | **Bookings** | `/bookings` | `GET` | ✅ Implemented | User travel history |
+| **Bookings** | `/bookings/{id}` | `GET` | ✅ Implemented | Booking lookup / Ticket details |
+| **Bookings** | `/bookings/{id}` | `PATCH` | ✅ Implemented | Booking passenger / contact update |
 | **Bookings** | `/bookings/{id}` | `DELETE` | ✅ Implemented | Booking cancellation |
 | **Disruptions**| `/disruptions` | `GET` | ✅ Implemented | Transfer Shield live warnings |
+| **Disruptions**| `/disruptions` | `POST` | ✅ Implemented | Incident reporting / Operator dispatch |
+| **Disruptions**| `/disruptions/{id}` | `GET` | ✅ Implemented | Disruption incident detail |
+| **Disruptions**| `/disruptions/{id}` | `PATCH` | ✅ Implemented | Incident update / Delay escalation |
+| **Disruptions**| `/disruptions/{id}` | `DELETE` | ✅ Implemented | Incident archival / Resolution |
+| **ML Engine** | In-Process ONNX Inference | `Internal` | ✅ Implemented | Batched inference in `RiskService` (< 1.5ms) |
+| **Feature Store** | Redis 7 Online Store | `Internal` | ✅ Implemented | `FeatureStoreService` (Corridor, Station, Carrier) |
+| **Concurrency** | Distributed Idempotency Lock | `Internal` | ✅ Implemented | Redis `SET NX EX` with automatic SQL fallback |
 
 ---
 
@@ -811,3 +1024,6 @@ GET /api/v1/disruptions?severity=WARNING
 - [x] **Pagination Standard:** Enforces standard `page`, `pageSize`, `totalItems`, `totalPages`.
 - [x] **Zero Breaking Changes:** Extends existing FastAPI endpoints without breaking existing implementations.
 - [x] **Security:** Password hashing (bcrypt), token rotation, TOTP MFA, and scoped session invalidation.
+- [x] **ML Serving & In-Process Inference:** ONNX Runtime session warm in RAM with < 5ms total route enrichment SLA.
+- [x] **Online Feature Store:** Sub-millisecond Redis pipelining with non-blocking 60s lifespan sync worker.
+- [x] **Graceful Circuit Breaker:** Zero 500 errors via automatic deterministic Romanian Transfer Shield fallback.

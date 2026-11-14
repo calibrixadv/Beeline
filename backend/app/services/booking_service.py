@@ -11,6 +11,7 @@ from app.models.booking import Booking, Ticket
 from app.models.user import User
 from app.schemas.booking import (
     BookingResponse,
+    BookingUpdate,
     CreateBookingRequest,
     TicketResponse,
 )
@@ -116,6 +117,9 @@ class BookingService:
 
             car_counter += 1
 
+        total_passengers = sum(len(item.passengers) for item in data.items) or 1
+        seat_pref = (data.items[0].seatPreferences.position if (data.items and data.items[0].seatPreferences and data.items[0].seatPreferences.position) else "WINDOW")
+
         booking_obj = Booking(
             id=booking_id,
             user_id=user.id,
@@ -123,6 +127,8 @@ class BookingService:
             status="CONFIRMED",
             total_amount_lei=round(total_amount, 2),
             currency="RON",
+            passenger_count=total_passengers,
+            seat_preference=seat_pref,
             contact_email=str(data.contactEmail),
             contact_phone=data.contactPhone,
             raw_data=json.dumps(data.model_dump()),
@@ -143,6 +149,8 @@ class BookingService:
             createdAt=created_at_str,
             totalAmountLei=round(total_amount, 2),
             currency="RON",
+            passengerCount=total_passengers,
+            seatPreference=seat_pref,
             contactEmail=str(data.contactEmail),
             contactPhone=data.contactPhone,
             tickets=ticket_responses
@@ -205,6 +213,8 @@ class BookingService:
                     createdAt=b.created_at.isoformat(),
                     totalAmountLei=b.total_amount_lei,
                     currency=b.currency,
+                    passengerCount=b.passenger_count,
+                    seatPreference=b.seat_preference,
                     contactEmail=b.contact_email,
                     contactPhone=b.contact_phone,
                     tickets=ticket_res_list
@@ -275,6 +285,124 @@ class BookingService:
             createdAt=booking.created_at.isoformat(),
             totalAmountLei=booking.total_amount_lei,
             currency=booking.currency,
+            passengerCount=booking.passenger_count,
+            seatPreference=booking.seat_preference,
+            contactEmail=booking.contact_email,
+            contactPhone=booking.contact_phone,
+            tickets=ticket_res_list
+        )
+
+    @staticmethod
+    async def get_booking_by_id(
+        db: AsyncSession,
+        user: User,
+        booking_id: str
+    ) -> BookingResponse:
+        stmt = select(Booking).where(Booking.id == booking_id, Booking.user_id == user.id)
+        result = await db.execute(stmt)
+        booking = result.scalar_one_or_none()
+        if not booking:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Booking with ID '{booking_id}' not found."
+            )
+
+        t_stmt = select(Ticket).where(Ticket.booking_id == booking.id)
+        t_res = await db.execute(t_stmt)
+        tickets = t_res.scalars().all()
+
+        ticket_res_list = [
+            TicketResponse(
+                ticketNumber=t.ticket_number,
+                trainNumber=t.train_number,
+                carNumber=t.car_number,
+                seatNumber=t.seat_number,
+                classType=t.class_type,
+                passengerName=t.passenger_name,
+                qrCodePayload=t.qr_code_payload,
+                departureTime=t.departure_time,
+                arrivalTime=t.arrival_time,
+                origin=t.origin,
+                destination=t.destination
+            )
+            for t in tickets
+        ]
+
+        return BookingResponse(
+            bookingId=booking.id,
+            bookingReference=booking.booking_reference,
+            status=booking.status,  # type: ignore
+            createdAt=booking.created_at.isoformat(),
+            totalAmountLei=booking.total_amount_lei,
+            currency=booking.currency,
+            passengerCount=booking.passenger_count,
+            seatPreference=booking.seat_preference,
+            contactEmail=booking.contact_email,
+            contactPhone=booking.contact_phone,
+            tickets=ticket_res_list
+        )
+
+    @staticmethod
+    async def update_booking(
+        db: AsyncSession,
+        user: User,
+        booking_id: str,
+        data: BookingUpdate
+    ) -> BookingResponse:
+        stmt = select(Booking).where(Booking.id == booking_id, Booking.user_id == user.id)
+        result = await db.execute(stmt)
+        booking = result.scalar_one_or_none()
+        if not booking:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Booking with ID '{booking_id}' not found."
+            )
+
+        if data.passengerCount is not None:
+            booking.passenger_count = data.passengerCount
+        if data.seatPreference is not None:
+            booking.seat_preference = data.seatPreference
+        if data.contactEmail is not None:
+            booking.contact_email = str(data.contactEmail)
+        if data.contactPhone is not None:
+            booking.contact_phone = data.contactPhone
+        if data.status is not None:
+            booking.status = data.status
+
+        booking.updated_at = datetime.now(timezone.utc)
+        await db.commit()
+        await db.refresh(booking)
+
+        t_stmt = select(Ticket).where(Ticket.booking_id == booking.id)
+        t_res = await db.execute(t_stmt)
+        tickets = t_res.scalars().all()
+
+        ticket_res_list = [
+            TicketResponse(
+                ticketNumber=t.ticket_number,
+                trainNumber=t.train_number,
+                carNumber=t.car_number,
+                seatNumber=t.seat_number,
+                classType=t.class_type,
+                passengerName=t.passenger_name,
+                qrCodePayload=t.qr_code_payload,
+                departureTime=t.departure_time,
+                arrivalTime=t.arrival_time,
+                origin=t.origin,
+                destination=t.destination
+            )
+            for t in tickets
+        ]
+
+        return BookingResponse(
+            bookingId=booking.id,
+            bookingReference=booking.booking_reference,
+            status=booking.status,  # type: ignore
+            createdAt=booking.created_at.isoformat(),
+            totalAmountLei=booking.total_amount_lei,
+            currency=booking.currency,
+            passengerCount=booking.passenger_count,
+            seatPreference=booking.seat_preference,
             contactEmail=booking.contact_email,
             contactPhone=booking.contact_phone,
             tickets=ticket_res_list

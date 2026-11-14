@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List, Literal, Optional, Tuple, Union
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
 
 class TransitMode(str, Enum):
@@ -139,6 +139,8 @@ class TransitLeg(BaseModel):
 
 
 class RouteRiskFactor(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     code: Literal[
         "SINGLE_TRACK_RAIL",
         "URBAN_RUSH_HOUR_TRAFFIC",
@@ -148,17 +150,77 @@ class RouteRiskFactor(BaseModel):
     ]
     severity: Literal["INFO", "WARNING", "CRITICAL"]
     description: str
-    affectedLegIndex: Optional[int] = None
+    affectedLegIndex: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("affectedLegIndex", "affected_leg_index"),
+        serialization_alias="affectedLegIndex",
+    )
 
 
 class RouteRiskAnalysis(BaseModel):
-    overallRiskScore: float
-    riskLevel: RiskLevel
-    historicalPunctualityRate: float
-    tightestBufferMinutes: int
-    bufferAdequacy: BufferAdequacy
-    riskSummaryText: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    overallRiskScore: float = Field(
+        ...,
+        validation_alias=AliasChoices("overallRiskScore", "overall_risk_score", "risk_score", "riskScore"),
+        serialization_alias="overallRiskScore",
+        description="Calibrated overall journey risk score (0.0..100.0)"
+    )
+    riskLevel: RiskLevel = Field(
+        ...,
+        validation_alias=AliasChoices("riskLevel", "risk_level"),
+        serialization_alias="riskLevel",
+        description="Categorical risk band (LOW, MODERATE, HIGH, CRITICAL)"
+    )
+    historicalPunctualityRate: float = Field(
+        ...,
+        validation_alias=AliasChoices("historicalPunctualityRate", "historical_punctuality_rate"),
+        serialization_alias="historicalPunctualityRate",
+        description="Historical on-time punctuality rate (0.0..1.0)"
+    )
+    tightestBufferMinutes: int = Field(
+        ...,
+        validation_alias=AliasChoices("tightestBufferMinutes", "tightest_buffer_minutes"),
+        serialization_alias="tightestBufferMinutes",
+        description="Tightest transfer buffer in minutes (0 for direct trips)"
+    )
+    bufferAdequacy: BufferAdequacy = Field(
+        ...,
+        validation_alias=AliasChoices("bufferAdequacy", "buffer_adequacy"),
+        serialization_alias="bufferAdequacy",
+        description="Buffer adequacy category"
+    )
+    riskSummaryText: str = Field(
+        ...,
+        validation_alias=AliasChoices("riskSummaryText", "risk_summary_text"),
+        serialization_alias="riskSummaryText",
+        description="Human-readable summary of journey connection risk"
+    )
     factors: List[RouteRiskFactor] = Field(default_factory=list)
+    expectedDelayMinutes: int = Field(
+        default=0,
+        validation_alias=AliasChoices("expectedDelayMinutes", "expected_delay_minutes"),
+        serialization_alias="expectedDelayMinutes",
+        description="Predicted delay in minutes from ML regressor"
+    )
+    missedConnectionProbability: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("missedConnectionProbability", "missed_connection_probability"),
+        serialization_alias="missedConnectionProbability",
+        description="Calibrated probability of missing a transfer"
+    )
+    riskFactors: List[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("riskFactors", "risk_factors", "delayRiskFactors"),
+        serialization_alias="riskFactors",
+        description="Human-readable bullet explanations for UI"
+    )
+    isMlComputed: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("isMlComputed", "is_ml_computed"),
+        serialization_alias="isMlComputed",
+        description="True if ONNX engine inferred, False if fallback"
+    )
 
 
 class EcoBenchmark(BaseModel):
@@ -237,6 +299,7 @@ class RoutePlanResponse(BaseModel):
 
 class SaveRouteRequest(BaseModel):
     plan: TransitRoutePlan
+    notes: Optional[str] = None
 
 
 class SavedRouteResponse(BaseModel):
@@ -244,4 +307,14 @@ class SavedRouteResponse(BaseModel):
     origin_name: str
     destination_name: str
     plan: TransitRoutePlan
+    notes: Optional[str] = None
     created_at: str
+
+
+class SavedRouteUpdate(BaseModel):
+    origin_name: Optional[str] = None
+    destination_name: Optional[str] = None
+    plan: Optional[TransitRoutePlan] = None
+    notes: Optional[str] = None
+
+    model_config = ConfigDict(extra="ignore")

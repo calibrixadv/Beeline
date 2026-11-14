@@ -1,12 +1,21 @@
+import json
 import math
+import uuid
+from datetime import datetime, timezone
 from typing import List, Optional, Tuple
+from fastapi import HTTPException, status
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.transit import Station, Train
 from app.schemas.common import PaginationMeta
 from app.schemas.train import (
     RailwayOperator,
+    TrainCreate,
     TrainFare,
     TrainJourney,
     TrainStation,
     TrainStop,
+    TrainUpdate,
 )
 
 OPERATORS_DATA: List[RailwayOperator] = [
@@ -408,6 +417,163 @@ class TrainService:
     @staticmethod
     def list_operators() -> List[RailwayOperator]:
         return OPERATORS_DATA
+
+    @staticmethod
+    async def create_train(data: TrainCreate, db: Optional[AsyncSession] = None) -> TrainJourney:
+        train_id = data.id or f"trn-{data.trainNumber.lower().replace(' ', '-')}-{uuid.uuid4().hex[:6]}"
+        for t in TRAINS_DATA:
+            if t.id == train_id or t.trainNumber.upper() == data.trainNumber.strip().upper():
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Train journey with number '{data.trainNumber}' or ID '{train_id}' already exists."
+                )
+
+        if db is not None:
+            res = await db.execute(select(Train).where(or_(Train.id == train_id, Train.train_number == data.trainNumber.strip())))
+            if res.scalar_one_or_none():
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Train journey with number '{data.trainNumber}' or ID '{train_id}' already exists."
+                )
+
+            # Ensure origin and destination stations exist in db for FK constraints
+            for st_info in [data.origin, data.destination]:
+                st_res = await db.execute(select(Station).where(Station.code == st_info.code.upper()))
+                if not st_res.scalar_one_or_none():
+                    db.add(Station(
+                        code=st_info.code.upper(),
+                        name=st_info.name,
+                        city=st_info.city,
+                        latitude=44.44,
+                        longitude=26.07,
+                        modes='["TRAIN"]',
+                        is_active=True
+                    ))
+                    await db.flush()
+
+            try:
+                dep_dt = datetime.fromisoformat(data.departureTime.replace("Z", "+00:00"))
+            except Exception:
+                dep_dt = datetime.now(timezone.utc)
+            try:
+                arr_dt = datetime.fromisoformat(data.arrivalTime.replace("Z", "+00:00"))
+            except Exception:
+                arr_dt = datetime.now(timezone.utc)
+
+            base_price = min(f.price for f in data.fares) if data.fares else 50.0
+            avail_seats = max(f.seatsAvailable for f in data.fares) if data.fares else 100
+            amenities_json = json.dumps(data.amenities or ["WIFI", "POWER_OUTLETS"])
+
+            db_train = Train(
+                id=train_id,
+                train_number=data.trainNumber.strip(),
+                operator_name=data.operator.strip(),
+                operator_code=data.operator.strip()[:16],
+                origin_code=data.origin.code.upper(),
+                destination_code=data.destination.code.upper(),
+                departure_time=dep_dt,
+                arrival_time=arr_dt,
+                duration_minutes=data.durationMinutes,
+                status=data.status,
+                delay_minutes=data.delayMinutes,
+                base_price_lei=base_price,
+                available_seats=avail_seats,
+                amenities=amenities_json
+            )
+            db.add(db_train)
+            await db.commit()
+
+        # Formatted duration
+        dur_h = data.durationMinutes // 60
+        dur_m = data.durationMinutes % 60
+        duration_fmt = data.durationFormatted or (f"{dur_h}h {dur_m}m" if dur_h > 0 else f"{dur_m}m")
+
+        fares = data.fares or [
+            TrainFare(classType="STANDARD", price=55.0, currency="RON", seatsAvailable=95),
+            TrainFare(classType="FIRST", price=95.0, currency="RON", seatsAvailable=28)
+        ]
+        stops = data.stops or [
+            TrainStop(stopNumber=1, station=data.origin, scheduledDeparture=data.departureTime),
+            TrainStop(stopNumber=2, station=data.destination, scheduledArrival=data.arrivalTime)
+        ]
+        amenities = data.amenities or ["WIFI", "POWER_OUTLETS"]
+
+        new_train = TrainJourney(
+            id=train_id,
+            trainNumber=data.trainNumber.strip(),
+            operator=data.operator.strip(),
+            origin=data.origin,
+            destination=data.destination,
+            departureTime=data.departureTime,
+            arrivalTime=data.arrivalTime,
+            durationMinutes=data.durationMinutes,
+            durationFormatted=duration_fmt,
+            status=data.status,
+            delayMinutes=data.delayMinutes,
+            fares=fares,
+            stops=stops,
+            amenities=amenities,
+            carbonFootprintKg=data.carbonFootprintKg or 12.5
+        )
+        TRAINS_DATA.append(new_train)
+        return new_train
+
+    @staticmethod
+    async def update_train(train_id: str, data: TrainUpdate, db: Optional[AsyncSession] = None) -> TrainJourney:
+        train = TrainService.get_train_by_id(train_id)
+        if not train:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Train journey with ID '{train_id}' not found."
+            )
+        if db is not None:
+            res = await db.execute(select(Train).where(Train.id == train_id))
+            db_tr = res.scalar_one_or_none()
+            if db_tr:
+                if data.operator is not None:
+                    db_tr.operator_name = data.operator.strip()
+                if data.status is not None:
+                    db_tr.status = data.status
+                if data.delayMinutes is not None:
+                    db_tr.delay_minutes = data.delayMinutes
+                if data.amenities is not None:
+                    db_tr.amenities = json.dumps(data.amenities)
+                if data.fares is not None and data.fares:
+                    db_tr.base_price_lei = min(f.price for f in data.fares)
+                    db_tr.available_seats = max(f.seatsAvailable for f in data.fares)
+                await db.commit()
+
+        if data.operator is not None:
+            train.operator = data.operator.strip()
+        if data.status is not None:
+            train.status = data.status
+        if data.delayMinutes is not None:
+            train.delayMinutes = data.delayMinutes
+        if data.amenities is not None:
+            train.amenities = data.amenities
+        if data.fares is not None:
+            train.fares = data.fares
+        if data.carbonFootprintKg is not None:
+            train.carbonFootprintKg = data.carbonFootprintKg
+        return train
+
+    @staticmethod
+    async def delete_train(train_id: str, db: Optional[AsyncSession] = None) -> bool:
+        train = TrainService.get_train_by_id(train_id)
+        if not train:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Train journey with ID '{train_id}' not found."
+            )
+        if db is not None:
+            res = await db.execute(select(Train).where(Train.id == train_id))
+            db_tr = res.scalar_one_or_none()
+            if db_tr:
+                await db.delete(db_tr)
+                await db.commit()
+
+        TRAINS_DATA.remove(train)
+        return True
 
 
 train_service = TrainService()

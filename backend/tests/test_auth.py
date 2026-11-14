@@ -171,3 +171,69 @@ async def test_guest_cannot_setup_mfa(client: AsyncClient):
 async def test_unauthorized_endpoints(client: AsyncClient):
     res_me = await client.get("/api/v1/users/me")
     assert res_me.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_signup_and_login_with_username(client: AsyncClient):
+    # 1. Signup with email, password, and custom username
+    res = await client.post("/api/v1/auth/signup", json={
+        "email": "beeline.user@domain.ro",
+        "username": "alexandra_transit",
+        "password": "SafePass#2026!",
+        "full_name": "Alexandra Transit"
+    })
+    assert res.status_code == 201
+    user_data = res.json()["user"]
+    assert user_data["username"] == "alexandra_transit"
+    assert user_data["email"] == "beeline.user@domain.ro"
+
+    # 2. Login with username instead of email
+    res_user_login = await client.post("/api/v1/auth/login", json={
+        "username": "alexandra_transit",
+        "password": "SafePass#2026!"
+    })
+    assert res_user_login.status_code == 200
+    assert "access_token" in res_user_login.json()
+    assert res_user_login.json()["user"]["username"] == "alexandra_transit"
+
+    # 3. Login with email also works
+    res_email_login = await client.post("/api/v1/auth/login", json={
+        "email": "beeline.user@domain.ro",
+        "password": "SafePass#2026!"
+    })
+    assert res_email_login.status_code == 200
+    assert "access_token" in res_email_login.json()
+
+    # 4. Duplicate username rejected
+    res_dup = await client.post("/api/v1/auth/signup", json={
+        "email": "another.user@domain.ro",
+        "username": "alexandra_transit",
+        "password": "SafePass#2026!"
+    })
+    assert res_dup.status_code == 400
+    assert "An account with this username already exists" in res_dup.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_check_breach_detection(client: AsyncClient):
+    # 1. Compromised password test (known breach)
+    res_breached = await client.post("/api/v1/auth/check-breach", json={
+        "password": "password123",
+        "email": "compromised.test@example.com"
+    })
+    assert res_breached.status_code == 200
+    data = res_breached.json()
+    assert data["is_password_compromised"] is True
+    assert data["password_breach_count"] > 0
+    assert data["warning"] is not None
+    assert "credential-stuffing" in data["warning"] or "public data breaches" in data["warning"]
+
+    # 2. Clean, strong password test
+    res_clean = await client.post("/api/v1/auth/check-breach", json={
+        "password": "Xk9#mP$7vL@qZ2!wE9",
+        "email": "clean.user@beeline.io"
+    })
+    assert res_clean.status_code == 200
+    clean_data = res_clean.json()
+    assert clean_data["is_password_compromised"] is False
+    assert clean_data["password_breach_count"] == 0
