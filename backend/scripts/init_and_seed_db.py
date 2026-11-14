@@ -30,7 +30,7 @@ async def seed_users():
                 id="usr-seed-traveler-001",
                 email="traveler@beeline.io",
                 hashed_password=hash_password("Password123!"),
-                full_name="Andrei Popescu",
+                full_name="Andrei Iordache",
                 is_guest=False,
                 is_active=True,
                 mfa_enabled=False
@@ -85,27 +85,34 @@ async def seed_users():
             session.add(guest)
             await session.flush()
 
+            from app.schemas.route_plan import TransitRouteQuery, LocationQuery, GeoPoint
+            from app.services.routing_service import routing_service
+            q = TransitRouteQuery(
+                origin=LocationQuery(name="Micro 19", city="Galați", coords=GeoPoint(latitude=45.4125, longitude=27.9982, city="Galați")),
+                destination=LocationQuery(name="Piața Unirii", city="București", coords=GeoPoint(latitude=44.4276, longitude=26.1026, city="București"))
+            )
+            full_plan = routing_service.generate_micro19_to_unirii_plan(q)
             route = SavedRoute(
                 id="route-seed-micro19-unirii-001",
                 user_id=guest.id,
                 origin_name="Micro 19",
                 destination_name="Piața Unirii",
-                plan_data=json.dumps({
-                    "id": "itinerary-gl-micro19-buc-piata-unirii-001",
-                    "summary": "Transurb Bus 102 ➔ CFR IR 1572 ➔ Metrorex M2",
-                    "departureTime": "2026-10-21T06:40:00+03:00",
-                    "arrivalTime": "2026-10-21T11:15:00+03:00",
-                    "totalDurationMinutes": 275,
-                    "totalWalkMinutes": 12,
-                    "totalWalkDistanceMeters": 680,
-                    "transfersCount": 2,
-                    "curatedPillar": "MOST_RELIABLE"
-                })
+                plan_data=full_plan.model_dump_json(),
+                notes="Traseu multimodal complet Galați Micro 19 spre București Unirii cu Transurb 102, CFR IR 1572 și Metrorex M2"
             )
             session.add(route)
-            print("Created seed guest: usr-seed-guest-003 with saved route 'Micro 19 ➔ Piața Unirii'")
+            print("Created seed guest: usr-seed-guest-003 with full saved route 'Micro 19 ➔ Piața Unirii'")
 
         await session.commit()
+
+        # Execute seed.sql for stations, trains, schedules, disruptions
+        seed_sql_file = backend_dir / "seed.sql"
+        if seed_sql_file.exists():
+            from app.core.database import apply_sql_script
+            print("Applying comprehensive fixtures from seed.sql...")
+            await apply_sql_script(session, seed_sql_file.read_text(encoding="utf-8"))
+            await session.commit()
+            print("Fixtures from seed.sql applied successfully.")
 
         # Print statistics
         user_count = (await session.execute(select(text("count(*)")).select_from(User))).scalar()

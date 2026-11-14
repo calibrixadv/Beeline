@@ -1,6 +1,7 @@
 from app.models.user import User, UserSession, MFACredential, PasswordResetToken
 from app.models.route import SavedRoute
 from app.models.booking import Booking, Ticket, IdempotencyRecord
+from app.models.transit import Station, Train, Schedule, Disruption
 
 __all__ = [
     "User",
@@ -11,4 +12,8 @@ __all__ = [
     "Booking",
     "Ticket",
     "IdempotencyRecord",
+    "Station",
+    "Train",
+    "Schedule",
+    "Disruption",
 ]

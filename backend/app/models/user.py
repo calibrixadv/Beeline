@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, String, Text, text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -21,14 +21,20 @@ class User(Base):
 
     id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
     email = Column(String(255), unique=True, index=True, nullable=True)
+    username = Column(String(255), unique=True, index=True, nullable=True)
     hashed_password = Column(String(255), nullable=True)
     full_name = Column(String(255), nullable=True)
+    role = Column(String(32), default="TRAVELER", server_default=text("'TRAVELER'"), nullable=False)
     preferences = Column(Text, nullable=True, default="{}")
     is_guest = Column(Boolean, default=False, nullable=False, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
     mfa_enabled = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("role IN ('TRAVELER', 'OPERATOR', 'ADMIN')", name="ck_users_role"),
+    )
 
     # Relationships
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
