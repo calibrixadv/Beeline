@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:16-alpine
@@ -16,5 +14,21 @@ services:
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
 
+  redis:
+    image: redis:7-alpine
+    container_name: beeline_redis
+    restart: always
+    command: redis-server --maxmemory 256mb --maxmemory-policy volatile-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - beeline_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 volumes:
   pgdata:
+  beeline_redis_data:

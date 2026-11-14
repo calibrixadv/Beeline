@@ -1,4 +1,6 @@
+import asyncio
 from contextlib import asynccontextmanager
+import logging
 from typing import AsyncGenerator
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,8 +9,13 @@ from fastapi.responses import JSONResponse
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.redis import close_redis_pool
+from app.services.feature_store_service import corridor_feature_sync_worker
+from app.services.risk_service import risk_service
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger(__name__)
 
 
 STATUS_CODE_MAP = {
@@ -27,8 +34,40 @@ STATUS_CODE_MAP = {
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup: initialize database tables
     await init_db()
+
+    # Initialize in-process ONNX ML Inference Session
+    try:
+        risk_service.init_session(app=app)
+    except Exception as exc:
+        logger.warning(
+            f"Could not initialize ML risk session: {exc}. Server operating in fallback mode."
+        )
+        app.state.risk_session = None
+
+    # Start non-blocking feature sync background worker
+    sync_task = asyncio.create_task(corridor_feature_sync_worker())
+    app.state.corridor_feature_sync_task = sync_task
+
     yield
-    # Shutdown logic (if any)
+
+    # Shutdown: cleanly cancel background task
+    sync_task.cancel()
+    try:
+        await sync_task
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        pass
+
+    # Clean up ML risk session
+    try:
+        risk_service.close()
+    except Exception:
+        pass
+    app.state.risk_session = None
+
+    # Disconnect Redis pool
+    await close_redis_pool()
 
 
 app = FastAPI(
