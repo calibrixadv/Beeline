@@ -108,4 +108,49 @@ describe('BookingTripCard component', () => {
 
     expect(handleRemove).toHaveBeenCalledWith(SAMPLE_ROUTE_PLAN_BUCHAREST_TO_BRASOV.id);
   });
+
+  it('renders ML delay badge and connection guarantee indicator when isMlComputed is true', () => {
+    const planWithMl = {
+      ...SAMPLE_ROUTE_PLAN_MICRO19_TO_PIATA_UNIRII,
+      riskAnalysis: {
+        ...SAMPLE_ROUTE_PLAN_MICRO19_TO_PIATA_UNIRII.riskAnalysis,
+        expectedDelayMinutes: 4,
+        missedConnectionProbability: 0.03,
+        isMlComputed: true,
+      },
+    };
+
+    const { getByTestId, getByText, queryByTestId } = renderCard({
+      plan: planWithMl,
+    });
+
+    expect(getByTestId(`ml-delay-badge-${planWithMl.id}`)).toBeTruthy();
+    expect(getByText(/⏱️ \+4m expected delay/i)).toBeTruthy();
+    expect(getByTestId(`ml-guarantee-badge-${planWithMl.id}`)).toBeTruthy();
+    expect(getByText(/🛡️ 97% connection guarantee/i)).toBeTruthy();
+
+    // Rule-based shield risk badge is replaced when isMlComputed is true
+    expect(queryByTestId(`shield-risk-badge-${planWithMl.id}`)).toBeNull();
+  });
+
+  it('renders On Time pill when expectedDelayMinutes is zero with ML', () => {
+    const planWithMl = {
+      ...SAMPLE_ROUTE_PLAN_BUCHAREST_TO_BRASOV,
+      riskAnalysis: {
+        ...SAMPLE_ROUTE_PLAN_BUCHAREST_TO_BRASOV.riskAnalysis,
+        expectedDelayMinutes: 0,
+        missedConnectionProbability: 0.01,
+        isMlComputed: true,
+      },
+    };
+
+    const { getByTestId, getByText } = renderCard({
+      plan: planWithMl,
+    });
+
+    expect(getByTestId(`ml-delay-badge-${planWithMl.id}`)).toBeTruthy();
+    expect(getByText(/✅ On Time/i)).toBeTruthy();
+    expect(getByTestId(`ml-guarantee-badge-${planWithMl.id}`)).toBeTruthy();
+    expect(getByText(/🛡️ 99% connection guarantee/i)).toBeTruthy();
+  });
 });

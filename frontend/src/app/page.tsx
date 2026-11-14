@@ -434,6 +434,20 @@ export default function HomePage() {
                       ? `${Math.floor(searchResults.safe.totalDurationMinutes / 60)}h ${searchResults.safe.totalDurationMinutes % 60}m` 
                       : '2h 05m'} • {searchResults.safe?.riskAnalysis ? `${Math.round(100 - searchResults.safe.riskAnalysis.overallRiskScore)}/100 Buffer` : '96/100 Buffer'}
                   </div>
+                  {searchResults.safe?.riskAnalysis?.isMlComputed && (
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        {(searchResults.safe.riskAnalysis.expectedDelayMinutes ?? 0) > 0
+                          ? `⏱️ +${searchResults.safe.riskAnalysis.expectedDelayMinutes}m expected delay`
+                          : '✅ On Time'}
+                      </span>
+                      {searchResults.safe.riskAnalysis.missedConnectionProbability !== undefined && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                          🛡️ {Math.round((1 - searchResults.safe.riskAnalysis.missedConnectionProbability) * 100)}% connection guarantee
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-2 text-xs font-bold text-emerald-700">
                     {searchResults.safe?.fare?.totalAmountLei 
                       ? `${searchResults.safe.fare.totalAmountLei.toFixed(2)} LEI` 
@@ -465,6 +479,20 @@ export default function HomePage() {
                       ? `${Math.floor(searchResults.fast.totalDurationMinutes / 60)}h ${searchResults.fast.totalDurationMinutes % 60}m` 
                       : '1h 45m'} • {searchResults.fast ? (searchResults.fast.transfersCount === 0 ? '0 Stopovers' : `${searchResults.fast.transfersCount} Stopover${searchResults.fast.transfersCount > 1 ? 's' : ''}`) : '0 Stopovers'}
                   </div>
+                  {searchResults.fast?.riskAnalysis?.isMlComputed && (
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                        {(searchResults.fast.riskAnalysis.expectedDelayMinutes ?? 0) > 0
+                          ? `⏱️ +${searchResults.fast.riskAnalysis.expectedDelayMinutes}m expected delay`
+                          : '✅ On Time'}
+                      </span>
+                      {searchResults.fast.riskAnalysis.missedConnectionProbability !== undefined && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800">
+                          🛡️ {Math.round((1 - searchResults.fast.riskAnalysis.missedConnectionProbability) * 100)}% connection guarantee
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-2 text-xs font-bold text-blue-700">
                     {searchResults.fast?.fare?.totalAmountLei 
                       ? `${searchResults.fast.fare.totalAmountLei.toFixed(2)} LEI` 
@@ -496,6 +524,20 @@ export default function HomePage() {
                       ? `${Math.floor(searchResults.economy.totalDurationMinutes / 60)}h ${searchResults.economy.totalDurationMinutes % 60}m` 
                       : '2h 30m'} • Lowest Fare
                   </div>
+                  {searchResults.economy?.riskAnalysis?.isMlComputed && (
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                        {(searchResults.economy.riskAnalysis.expectedDelayMinutes ?? 0) > 0
+                          ? `⏱️ +${searchResults.economy.riskAnalysis.expectedDelayMinutes}m expected delay`
+                          : '✅ On Time'}
+                      </span>
+                      {searchResults.economy.riskAnalysis.missedConnectionProbability !== undefined && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                          🛡️ {Math.round((1 - searchResults.economy.riskAnalysis.missedConnectionProbability) * 100)}% connection guarantee
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-2 text-xs font-bold text-amber-700">
                     {searchResults.economy?.fare?.totalAmountLei 
                       ? `${searchResults.economy.fare.totalAmountLei.toFixed(2)} LEI` 

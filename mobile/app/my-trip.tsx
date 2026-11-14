@@ -137,6 +137,73 @@ export default function MyTripScreen() {
                   />
                 </View>
 
+                {/* ML Delay Pill & Connection Guarantee Indicator when available */}
+                {item.journey.riskAnalysis?.isMlComputed && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                    <View
+                      style={{
+                        paddingHorizontal: 8,
+                        paddingVertical: 2,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        backgroundColor:
+                          (item.journey.riskAnalysis.expectedDelayMinutes ?? 0) <= 5
+                            ? isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5'
+                            : (item.journey.riskAnalysis.expectedDelayMinutes ?? 0) <= 15
+                            ? isDark ? 'rgba(245, 158, 11, 0.15)' : '#FFFBEB'
+                            : isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
+                        borderColor:
+                          (item.journey.riskAnalysis.expectedDelayMinutes ?? 0) <= 5
+                            ? isDark ? '#059669' : '#A7F3D0'
+                            : (item.journey.riskAnalysis.expectedDelayMinutes ?? 0) <= 15
+                            ? isDark ? '#D97706' : '#FDE68A'
+                            : isDark ? '#DC2626' : '#FECACA',
+                      }}
+                      testID={`ml-delay-badge-${item.id}`}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: '700',
+                          color:
+                            (item.journey.riskAnalysis.expectedDelayMinutes ?? 0) <= 5
+                              ? isDark ? '#34D399' : '#065F46'
+                              : (item.journey.riskAnalysis.expectedDelayMinutes ?? 0) <= 15
+                              ? isDark ? '#FBBF24' : '#92400E'
+                              : isDark ? '#F87171' : '#991B1B',
+                        }}
+                      >
+                        {(item.journey.riskAnalysis.expectedDelayMinutes ?? 0) > 0
+                          ? `⏱️ +${item.journey.riskAnalysis.expectedDelayMinutes}m expected delay`
+                          : '✅ On Time'}
+                      </Text>
+                    </View>
+                    {item.journey.riskAnalysis.missedConnectionProbability !== undefined && (
+                      <View
+                        style={{
+                          paddingHorizontal: 8,
+                          paddingVertical: 2,
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5',
+                          borderColor: isDark ? '#059669' : '#A7F3D0',
+                        }}
+                        testID={`ml-guarantee-badge-${item.id}`}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '700',
+                            color: isDark ? '#34D399' : '#065F46',
+                          }}
+                        >
+                          🛡️ {Math.max(0, Math.min(100, Math.round((1 - item.journey.riskAnalysis.missedConnectionProbability) * 100)))}% connection guarantee
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+
                 {/* Stations */}
                 <View style={styles.routeRow}>
                   <View style={styles.routeCol}>

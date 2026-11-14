@@ -91,8 +91,8 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
   })();
 
   const shield = plan.riskAnalysis;
-  const isLowRisk = shield.overallRiskScore <= 35;
-  const isHighRisk = shield.overallRiskScore > 65;
+  const isLowRisk = (shield?.overallRiskScore ?? 0) <= 35;
+  const isHighRisk = (shield?.overallRiskScore ?? 0) > 65;
 
   return (
     <BaseCard
@@ -115,20 +115,43 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
           </span>
         </div>
 
-        {/* Transfer Shield Pill */}
-        <div
-          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold ${
-            isLowRisk
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-              : isHighRisk
-              ? 'bg-red-50 text-red-800 border-red-200'
-              : 'bg-amber-50 text-amber-800 border-amber-200'
-          }`}
-          title={shield.riskSummaryText}
-        >
-          {isLowRisk ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-          <span>Shield: {100 - shield.overallRiskScore}%</span>
-        </div>
+        {/* ML Delay Pill & Connection Guarantee Indicator OR Rule-Based Shield Pill */}
+        {shield?.isMlComputed ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-xs font-semibold ${
+                (shield.expectedDelayMinutes ?? 0) <= 5
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : (shield.expectedDelayMinutes ?? 0) <= 15
+                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                  : 'bg-red-50 text-red-800 border-red-200'
+              }`}
+            >
+              {(shield.expectedDelayMinutes ?? 0) > 0
+                ? `⏱️ +${shield.expectedDelayMinutes}m expected delay`
+                : '✅ On Time'}
+            </span>
+            {shield.missedConnectionProbability !== undefined && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-200">
+                🛡️ {Math.max(0, Math.min(100, Math.round((1 - shield.missedConnectionProbability) * 100)))}% connection guarantee
+              </span>
+            )}
+          </div>
+        ) : shield ? (
+          <div
+            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold ${
+              isLowRisk
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : isHighRisk
+                ? 'bg-red-50 text-red-800 border-red-200'
+                : 'bg-amber-50 text-amber-800 border-amber-200'
+            }`}
+            title={shield.riskSummaryText}
+          >
+            {isLowRisk ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+            <span>Shield: {100 - shield.overallRiskScore}%</span>
+          </div>
+        ) : null}
       </div>
 
       {/* Main Row: Time & Route Header + Price & Action */}

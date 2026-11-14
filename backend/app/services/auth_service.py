@@ -48,11 +48,37 @@ class AuthService:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User]:
+        clean_user = username.lower().strip()
+        result = await db.execute(
+            select(User)
+            .options(selectinload(User.mfa_credential))
+            .where(User.username == clean_user)
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_user_by_identifier(db: AsyncSession, identifier: str) -> Optional[User]:
+        clean_id = identifier.lower().strip()
+        # Check by email first, then username, then fallback to full_name
+        result = await db.execute(
+            select(User)
+            .options(selectinload(User.mfa_credential))
+            .where(
+                (User.email == clean_id) |
+                (User.username == clean_id) |
+                (User.full_name == identifier.strip())
+            )
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def create_user(
         db: AsyncSession,
         email: str,
         password: str,
-        full_name: Optional[str] = None
+        full_name: Optional[str] = None,
+        username: Optional[str] = None
     ) -> User:
         clean_email = email.lower().strip()
         existing = await AuthService.get_user_by_email(db, clean_email)
@@ -62,9 +88,19 @@ class AuthService:
                 detail="An account with this email address already exists"
             )
 
+        clean_username = username.lower().strip() if username else None
+        if clean_username:
+            existing_user = await AuthService.get_user_by_username(db, clean_username)
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="An account with this username already exists"
+                )
+
         hashed = hash_password(password)
         new_user = User(
             email=clean_email,
+            username=clean_username,
             hashed_password=hashed,
             full_name=full_name,
             is_guest=False,

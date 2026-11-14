@@ -15,7 +15,6 @@ npm-debug.*
 *.orig.*
 .system_generated/
 .DS_Store
-AI_LOG.md
 *.swp
 .*.swp
 __pycache__/

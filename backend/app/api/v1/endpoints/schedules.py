@@ -1,11 +1,16 @@
 import math
 from typing import Any, List, Optional, Union
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_db
+from app.schemas.auth import MessageResponse
 from app.schemas.common import PaginatedResponse, PaginationMeta
 from app.schemas.route_plan import TransitMode
 from app.schemas.schedule import (
+    ScheduleCreate,
     ScheduleDetailResponse,
+    ScheduleUpdate,
     SupportedCitiesResponse,
     TransitLineSchedule,
 )
@@ -52,6 +57,15 @@ async def list_schedules(
     return schedules
 
 
+@router.post("", response_model=TransitLineSchedule, status_code=status.HTTP_201_CREATED)
+async def create_schedule(
+    data: ScheduleCreate,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Create a new urban or regional line transit schedule."""
+    return await schedule_service.create_schedule(data, db=db)
+
+
 @router.get("/cities", response_model=SupportedCitiesResponse)
 async def list_supported_cities() -> Any:
     """Returns supported cities and coverage flags."""
@@ -69,3 +83,22 @@ async def get_schedule_details(schedule_id: str) -> Any:
         )
     return details
 
+
+@router.patch("/{schedule_id}", response_model=TransitLineSchedule)
+async def update_schedule(
+    schedule_id: str,
+    data: ScheduleUpdate,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Update timetable departures, platform, fare, or route stops."""
+    return await schedule_service.update_schedule(schedule_id, data, db=db)
+
+
+@router.delete("/{schedule_id}", response_model=MessageResponse)
+async def delete_schedule(
+    schedule_id: str,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Delete a transit line schedule."""
+    await schedule_service.delete_schedule(schedule_id, db=db)
+    return MessageResponse(message=f"Schedule '{schedule_id}' deleted successfully")

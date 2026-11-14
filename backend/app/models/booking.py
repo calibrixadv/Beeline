@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -23,6 +23,8 @@ class Booking(Base):
     status = Column(String(32), default="CONFIRMED", nullable=False)
     total_amount_lei = Column(Float, nullable=False)
     currency = Column(String(8), default="RON", nullable=False)
+    passenger_count = Column(Integer, default=1, nullable=False)
+    seat_preference = Column(String(32), default="WINDOW", nullable=True)
     contact_email = Column(String(255), nullable=True)
     contact_phone = Column(String(64), nullable=True)
     raw_data = Column(Text, nullable=True)
@@ -31,6 +33,12 @@ class Booking(Base):
 
     user = relationship("User", back_populates="bookings")
     tickets = relationship("Ticket", back_populates="booking", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        CheckConstraint("status IN ('CONFIRMED', 'CANCELLED', 'COMPLETED', 'REFUNDED')", name="ck_bookings_status"),
+        CheckConstraint("total_amount_lei >= 0", name="ck_bookings_total_amount"),
+        CheckConstraint("passenger_count >= 1", name="ck_bookings_passenger_count"),
+    )
 
 
 class Ticket(Base):
@@ -53,12 +61,16 @@ class Ticket(Base):
 
     booking = relationship("Booking", back_populates="tickets")
 
+    __table_args__ = (
+        CheckConstraint("class_type IN ('STANDARD', 'FIRST', 'BUSINESS', 'SLEEPER')", name="ck_tickets_class_type"),
+    )
+
 
 class IdempotencyRecord(Base):
     __tablename__ = "idempotency_records"
 
     id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
-    user_id = Column(String(36), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     idempotency_key = Column(String(255), nullable=False, index=True)
     request_hash = Column(String(64), nullable=False)
     status = Column(String(32), default="COMPLETED", nullable=False)  # "IN_PROGRESS", "COMPLETED"
@@ -69,4 +81,5 @@ class IdempotencyRecord(Base):
 
     __table_args__ = (
         UniqueConstraint("user_id", "idempotency_key", name="uq_user_idempotency_key"),
+        CheckConstraint("status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED')", name="ck_idempotency_status"),
     )

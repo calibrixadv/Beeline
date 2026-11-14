@@ -22,6 +22,7 @@ class SavedRoute(Base):
     origin_name = Column(String(255), nullable=False)
     destination_name = Column(String(255), nullable=False)
     plan_data = Column(Text, nullable=False)  # JSON-encoded TransitRoutePlan
+    notes = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     user = relationship("User", back_populates="saved_routes")

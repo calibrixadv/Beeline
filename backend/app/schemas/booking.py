@@ -61,8 +61,20 @@ class BookingResponse(BaseModel):
     createdAt: str
     totalAmountLei: float
     currency: str = "RON"
+    passengerCount: int = 1
+    seatPreference: Optional[str] = "WINDOW"
     contactEmail: Optional[str] = None
     contactPhone: Optional[str] = None
     tickets: List[TicketResponse] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class BookingUpdate(BaseModel):
+    passengerCount: Optional[int] = Field(None, ge=1)
+    seatPreference: Optional[str] = None
+    contactEmail: Optional[EmailStr] = None
+    contactPhone: Optional[str] = None
+    status: Optional[Literal["CONFIRMED", "CANCELLED", "PENDING", "REFUNDED"]] = None
 
     model_config = ConfigDict(extra="ignore")

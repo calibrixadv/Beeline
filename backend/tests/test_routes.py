@@ -1,3 +1,4 @@
+import time
 import pytest
 from httpx import AsyncClient
 
@@ -52,6 +53,15 @@ async def test_route_plan_micro19_to_unirii_contract(client: AsyncClient):
     assert risk["tightestBufferMinutes"] == 20
     assert risk["bufferAdequacy"] == "OPTIMAL"
     assert len(risk["riskSummaryText"]) > 0
+    assert "expectedDelayMinutes" in risk
+    assert isinstance(risk["expectedDelayMinutes"], int)
+    assert risk["expectedDelayMinutes"] >= 0
+    assert "missedConnectionProbability" in risk
+    assert 0.0 <= risk["missedConnectionProbability"] <= 1.0
+    assert "isMlComputed" in risk
+    assert risk["isMlComputed"] is True
+    assert "riskFactors" in risk
+    assert len(risk["riskFactors"]) >= 1
 
     # Fares
     assert plan["fare"]["totalAmountLei"] == 69.00
@@ -113,6 +123,13 @@ async def test_route_plan_bucharest_to_brasov(client: AsyncClient):
     assert len(plan["legs"]) == 1
     assert plan["legs"][0]["transportType"] == "TRAIN"
     assert plan["legs"][0]["names"]["lineCode"] == "IR 1631"
+
+    # ML Inference validation
+    risk = plan["riskAnalysis"]
+    assert risk["isMlComputed"] is True
+    assert risk["expectedDelayMinutes"] >= 0
+    assert 0.0 <= risk["missedConnectionProbability"] <= 1.0
+    assert len(risk["riskFactors"]) >= 1
 
 
 @pytest.mark.asyncio
@@ -176,6 +193,41 @@ async def test_generic_route_plan(client: AsyncClient):
     plan = data["plans"][0]
     assert plan["curatedPillar"] == "BEST_VALUE"
     assert len(plan["legs"]) >= 1
+
+    # ML risk enrichment assertions
+    risk = plan["riskAnalysis"]
+    assert "overallRiskScore" in risk
+    assert risk["riskLevel"] in ["LOW", "MODERATE", "HIGH", "CRITICAL"]
+    assert "isMlComputed" in risk
+    assert risk["isMlComputed"] is True
+    assert "expectedDelayMinutes" in risk
+    assert isinstance(risk["expectedDelayMinutes"], int)
+    assert risk["expectedDelayMinutes"] >= 0
+    assert "missedConnectionProbability" in risk
+    assert 0.0 <= risk["missedConnectionProbability"] <= 1.0
+    assert "riskFactors" in risk
+    assert len(risk["riskFactors"]) >= 1
+
+
+@pytest.mark.asyncio
+async def test_route_plan_request_duration_sla(client: AsyncClient):
+    """Verifies that route planning with ML enrichment responds well within the production SLA (< 200ms)."""
+    query_payload = {
+        "origin": {"name": "București Nord", "city": "București"},
+        "destination": {"name": "Gara Brașov", "city": "Brașov"},
+        "allowedModes": ["TRAIN"]
+    }
+
+    # Warmup
+    _ = await client.post("/api/v1/routes/plan", json=query_payload)
+
+    # Timed run
+    t0 = time.perf_counter()
+    res = await client.post("/api/v1/routes/plan", json=query_payload)
+    duration_ms = (time.perf_counter() - t0) * 1000.0
+
+    assert res.status_code == 200
+    assert duration_ms < 200.0, f"Route plan SLA exceeded: {duration_ms:.2f}ms"
 
 
 @pytest.mark.asyncio

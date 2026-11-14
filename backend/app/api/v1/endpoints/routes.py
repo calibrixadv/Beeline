@@ -17,6 +17,7 @@ from app.schemas.route_plan import (
     RoutePlanResponse,
     SaveRouteRequest,
     SavedRouteResponse,
+    SavedRouteUpdate,
     TransitRoutePlan,
     TransitRouteQuery,
 )
@@ -43,7 +44,7 @@ async def plan_route(
     Computes door-to-door multi-modal journeys across Romania and Europe with
     Romanian Transfer Shield risk scores and mascot companion recommendations.
     """
-    plans = routing_service.plan_routes(query)
+    plans = await routing_service.plan_routes(query)
     recommended_id = plans[0].id if plans else ""
 
     return RoutePlanResponse(
@@ -75,7 +76,8 @@ async def save_route(
             user_id=current_user.id,
             origin_name=data.plan.query.origin.name,
             destination_name=data.plan.query.destination.name,
-            plan_data=serialized
+            plan_data=serialized,
+            notes=data.notes
         )
         db.add(saved)
         await db.commit()
@@ -86,6 +88,7 @@ async def save_route(
             origin_name=saved.origin_name,
             destination_name=saved.destination_name,
             plan=data.plan,
+            notes=saved.notes,
             created_at=saved.created_at.isoformat()
         )
 
@@ -131,6 +134,7 @@ async def list_saved_routes(
                 origin_name=r.origin_name,
                 destination_name=r.destination_name,
                 plan=plan_obj,
+                notes=r.notes,
                 created_at=r.created_at.isoformat()
             ))
         except Exception:
@@ -155,6 +159,44 @@ async def list_saved_routes(
         return PaginatedResponse[SavedRouteResponse](data=data, pagination=pagination)
 
     return response_items
+
+
+@router.patch("/saved/{route_id}", response_model=SavedRouteResponse)
+async def update_saved_route(
+    route_id: str,
+    update_data: SavedRouteUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Update a saved itinerary label, destination, or plan details."""
+    result = await db.execute(
+        select(SavedRoute).where(
+            SavedRoute.id == route_id,
+            SavedRoute.user_id == current_user.id
+        )
+    )
+    route = result.scalar_one_or_none()
+    if not route:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved route not found")
+
+    if update_data.origin_name is not None:
+        route.origin_name = update_data.origin_name
+    if update_data.destination_name is not None:
+        route.destination_name = update_data.destination_name
+    if update_data.plan is not None:
+        route.plan_data = update_data.plan.model_dump_json()
+
+    await db.commit()
+    await db.refresh(route)
+
+    plan_obj = TransitRoutePlan.model_validate_json(route.plan_data)
+    return SavedRouteResponse(
+        id=route.id,
+        origin_name=route.origin_name,
+        destination_name=route.destination_name,
+        plan=plan_obj,
+        created_at=route.created_at.isoformat()
+    )
 
 
 @router.delete("/saved/{route_id}", response_model=MessageResponse)

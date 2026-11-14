@@ -24,6 +24,7 @@ import {
 } from '../data/featuredLocations';
 import { LocationSelectDropdown } from './LocationSelectDropdown';
 import { transitScheduleService } from '../services/transitScheduleService';
+import { TransitRoutePlan } from '../types/routePlan';
 
 export type TransportMode = 'Trains' | 'Metro' | 'Busses';
 
@@ -50,6 +51,8 @@ export interface RouteFinderCardProps {
   onNavigateTrips?: (url: string) => void;
   /** Callback when user clicks explore trips */
   onExploreTrips?: (params: RouteSearchParams) => void;
+  /** Optional preview route plans with ML delay and guarantee fields */
+  previewPlans?: TransitRoutePlan[];
   /** Custom container style */
   style?: StyleProp<ViewStyle>;
   /** Test identifier */
@@ -72,6 +75,9 @@ export interface TrifectaPreviewPillar {
   testID: string;
   mascotName: 'barnaby' | 'honey' | 'bumble';
   mascot: React.ReactNode;
+  expectedDelayMinutes?: number;
+  missedConnectionProbability?: number;
+  isMlComputed?: boolean;
 }
 
 export const CURATED_TRIFECTA_PILLARS: TrifectaPreviewPillar[] = [
@@ -195,6 +201,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
   onNavigateSchedules,
   onNavigateTrips,
   onExploreTrips,
+  previewPlans,
   style,
   testID = 'route-finder-card',
 }) => {
@@ -777,8 +784,8 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
         </View>
       ) : null}
 
-      {/* Prepared Submission Confirmation Banner (No Redirect Performed) */}
-      {submittedQuery ? (
+      {/* Prepared Submission Confirmation Banner (No Redirect Performed) / Preview Plans */}
+      {submittedQuery || (previewPlans && previewPlans.length > 0) ? (
         <View
           testID="route-submission-feedback"
           style={[
@@ -797,7 +804,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                 aria-level={3}
                 style={[styles.feedbackTitle, { color: isDark ? '#FFFFFF' : theme.colors.textCharcoal }]}
               >
-                Route Search Prepared
+                {submittedQuery ? 'Route Search Prepared' : 'Curated Route Previews'}
               </Text>
             </View>
             <BaseBadge
@@ -813,24 +820,39 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
             />
           </View>
 
-          <Text
-            numberOfLines={2}
-            ellipsizeMode="tail"
-            style={[styles.feedbackDetails, { color: isDark ? theme.colors.brandHoney : theme.colors.textCharcoal }]}
-          >
-            {submittedQuery.origin} ➔ {submittedQuery.destination}
-          </Text>
-          <Text
-            numberOfLines={1}
-            ellipsizeMode="tail"
-            style={[styles.feedbackModes, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
-          >
-            Active filters: {submittedQuery.modes.join(', ')}
-          </Text>
+          {submittedQuery && (
+            <>
+              <Text
+                numberOfLines={2}
+                ellipsizeMode="tail"
+                style={[styles.feedbackDetails, { color: isDark ? theme.colors.brandHoney : theme.colors.textCharcoal }]}
+              >
+                {submittedQuery.origin} ➔ {submittedQuery.destination}
+              </Text>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.feedbackModes, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}
+              >
+                Active filters: {submittedQuery.modes.join(', ')}
+              </Text>
+            </>
+          )}
 
           {/* Curated Trifecta 3 Preview Cards with Mascot Companions */}
           <View style={styles.trifectaContainer}>
             {CURATED_TRIFECTA_PILLARS.map((pillar) => {
+              const matchingPlan = previewPlans?.find((p) => {
+                if (pillar.id === 'fastest') return p.curatedPillar === 'FASTEST';
+                if (pillar.id === 'best-value') return p.curatedPillar === 'BEST_VALUE';
+                if (pillar.id === 'most-reliable') return p.curatedPillar === 'MOST_RELIABLE';
+                return false;
+              });
+
+              const isMl = Boolean(matchingPlan?.riskAnalysis?.isMlComputed ?? pillar.isMlComputed);
+              const expectedDelay = matchingPlan?.riskAnalysis?.expectedDelayMinutes ?? pillar.expectedDelayMinutes;
+              const missedProb = matchingPlan?.riskAnalysis?.missedConnectionProbability ?? pillar.missedConnectionProbability;
+
               const isBestValue = pillar.id === 'best-value';
               const isMostReliable = pillar.id === 'most-reliable';
 
@@ -913,9 +935,24 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                   <Text style={[styles.trifectaCardDesc, { color: isDark ? theme.colors.textSecondary : theme.colors.textCharcoalMuted }]}>
                     {pillar.description}
                   </Text>
-                  <Text style={[styles.trifectaCardMeta, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
-                    {pillar.meta}
-                  </Text>
+                  {isMl ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#34D399' : '#166534' }}>
+                        {(expectedDelay ?? 0) > 0
+                          ? `⏱️ +${expectedDelay}m expected delay`
+                          : '✅ On Time'}
+                      </Text>
+                      {missedProb !== undefined && (
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: isDark ? '#60A5FA' : '#1E40AF' }}>
+                          🛡️ {Math.max(0, Math.min(100, Math.round((1 - missedProb) * 100)))}% connection guarantee
+                        </Text>
+                      )}
+                    </View>
+                  ) : (
+                    <Text style={[styles.trifectaCardMeta, { color: isDark ? theme.colors.brandHoney : '#92400E' }]}>
+                      {pillar.meta}
+                    </Text>
+                  )}
                 </BaseCard>
               );
             })}

@@ -36,6 +36,17 @@ async def update_me(
     return UserProfile.model_validate(updated)
 
 
+@router.delete("/me", response_model=MessageResponse)
+async def delete_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Permanently delete user profile and cascading relational records."""
+    await db.delete(current_user)
+    await db.commit()
+    return MessageResponse(message="User account deleted successfully")
+
+
 
 @router.get("/me/sessions", response_model=List[SessionResponse])
 async def get_my_sessions(

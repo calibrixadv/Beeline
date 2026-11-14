@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR}/beeline.db"
 
+    # Redis & Online Feature Store
+    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_FEATURE_PREFIX: str = "feature:"
+    REDIS_FEATURE_TTL_SECONDS: int = 86400
+    FEATURE_SYNC_INTERVAL_SECONDS: int = 60
+    ENABLE_ML_INFERENCE: bool = True
+    ML_MODEL_PATH: str = str(BASE_DIR / "app" / "ml_models" / "risk_model.onnx")
+    ML_METADATA_PATH: str = str(BASE_DIR / "app" / "ml_models" / "risk_model_metadata.json")
+
     @property
     def SYNC_DATABASE_URL(self) -> str:
         """Synchronous database URL for Alembic migrations and raw SQL CLI tools."""

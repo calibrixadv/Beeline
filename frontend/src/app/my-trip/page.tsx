@@ -173,6 +173,38 @@ export default function MyTripPage() {
                         </span>
                       </div>
                       <span className="text-[11px] text-stone-400 mt-1 block">Travel Date: {item.travelDate}</span>
+
+                      {/* ML Delay Pill & Connection Guarantee Indicator when available */}
+                      {j.riskAnalysis?.isMlComputed ? (
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                              (j.riskAnalysis.expectedDelayMinutes ?? 0) <= 5
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : (j.riskAnalysis.expectedDelayMinutes ?? 0) <= 15
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-red-50 text-red-800 border-red-200'
+                            }`}
+                          >
+                            {(j.riskAnalysis.expectedDelayMinutes ?? 0) > 0
+                              ? `⏱️ +${j.riskAnalysis.expectedDelayMinutes}m expected delay`
+                              : '✅ On Time'}
+                          </span>
+                          {j.riskAnalysis.missedConnectionProbability !== undefined && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              🛡️ {Math.max(0, Math.min(100, Math.round((1 - j.riskAnalysis.missedConnectionProbability) * 100)))}% connection guarantee
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        j.delayMinutes > 0 && (
+                          <div className="mt-1.5">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                              ⏱️ +{j.delayMinutes}m delay
+                            </span>
+                          </div>
+                        )
+                      )}
                     </div>
                   </div>
 

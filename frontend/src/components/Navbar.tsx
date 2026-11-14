@@ -104,13 +104,21 @@ export const Navbar: React.FC = () => {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => continueAsGuest()}
-                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-stone-950 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Explore as Guest</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="text-xs font-bold text-stone-200 hover:text-white px-3 py-2 rounded-xl hover:bg-stone-800 transition-colors"
+                >
+                  Sign In
+                </Link>
+                <button
+                  onClick={() => continueAsGuest()}
+                  className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-stone-950 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Explore as Guest</span>
+                </button>
+              </div>
             )}
           </div>
 
@@ -167,15 +175,24 @@ export const Navbar: React.FC = () => {
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => {
-                continueAsGuest();
-                setMobileMenuOpen(false);
-              }}
-              className="w-full mt-2 bg-amber-500 text-stone-950 font-semibold py-2 rounded-xl text-sm"
-            >
-              Explore as Guest
-            </button>
+            <div className="pt-2 border-t border-stone-800 space-y-2">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-center w-full border border-stone-700 hover:bg-stone-800 text-stone-200 font-semibold py-2 rounded-xl text-sm"
+              >
+                Sign In / Register
+              </Link>
+              <button
+                onClick={() => {
+                  continueAsGuest();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full bg-amber-500 text-stone-950 font-semibold py-2 rounded-xl text-sm"
+              >
+                Explore as Guest
+              </button>
+            </div>
           )}
         </div>
       )}

@@ -10,8 +10,8 @@ interface AuthContextType {
   isGuest: boolean;
   isLoading: boolean;
   mfaChallenge: MFALoginChallengeResponse | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, fullName?: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<boolean>;
+  signup: (email: string, password: string, username?: string, fullName?: string) => Promise<void>;
   continueAsGuest: () => Promise<void>;
   convertGuest: (email: string, password: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -49,10 +49,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initializeAuth();
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const res = await apiClient.login({ email, password });
+      const isEmail = identifier.includes('@');
+      const res = await apiClient.login({
+        email: isEmail ? identifier : undefined,
+        username: isEmail ? undefined : identifier,
+        password,
+      });
       if ('mfa_required' in res && res.mfa_required) {
         setMfaChallenge(res);
         setIsLoading(false);
@@ -69,10 +74,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const signup = async (email: string, password: string, fullName?: string): Promise<void> => {
+  const signup = async (
+    email: string,
+    password: string,
+    usernameOrFullName?: string,
+    fullName?: string
+  ): Promise<void> => {
     setIsLoading(true);
     try {
-      const res = await apiClient.signup({ email, password, full_name: fullName });
+      const username = fullName !== undefined ? usernameOrFullName : undefined;
+      const name = fullName !== undefined ? fullName : usernameOrFullName;
+      const res = await apiClient.signup({
+        email,
+        password,
+        username: username || (usernameOrFullName && !fullName && !usernameOrFullName.includes(' ') ? usernameOrFullName : undefined),
+        full_name: name || usernameOrFullName,
+      });
       setUser(res.user);
     } finally {
       setIsLoading(false);

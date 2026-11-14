@@ -1,0 +1,8 @@
+-r requirements.txt
+lightgbm>=4.3.0
+scikit-learn>=1.4.0
+onnxmltools>=1.12.0
+skl2onnx>=1.16.0
+onnx>=1.16.0
+pandas>=2.2.0
+scipy>=1.12.0

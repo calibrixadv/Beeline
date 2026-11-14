@@ -216,6 +216,19 @@ export interface RouteRiskAnalysis {
 
   /** Breakdown of contributing hazard factors */
   factors: RouteRiskFactor[];
+
+  // ML-Engine Enriched Properties
+  /** Predicted delay in minutes from ML regressor (0 if on time) */
+  expectedDelayMinutes?: number;
+
+  /** Calibrated probability of missing a connection (0.00 - 1.00) */
+  missedConnectionProbability?: number;
+
+  /** Human-readable bullet explanations for UI */
+  riskFactors?: string[];
+
+  /** True if evaluated via in-process ONNX ML model, False if deterministic fallback */
+  isMlComputed?: boolean;
 }
 
 /**

@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.models.user import User
 from app.schemas.booking import (
     BookingResponse,
+    BookingUpdate,
     CreateBookingRequest,
 )
 from app.schemas.common import PaginatedResponse
@@ -74,6 +75,27 @@ async def list_bookings(
         status_filter=status
     )
     return PaginatedResponse[BookingResponse](data=bookings, pagination=pagination)
+
+
+@router.get("/{booking_id}", response_model=BookingResponse)
+async def get_booking(
+    booking_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Retrieve details and tickets for a specific booking."""
+    return await booking_service.get_booking_by_id(db, user=current_user, booking_id=booking_id)
+
+
+@router.patch("/{booking_id}", response_model=BookingResponse)
+async def update_booking(
+    booking_id: str,
+    data: BookingUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Update passenger contact information or status for an existing booking."""
+    return await booking_service.update_booking(db, user=current_user, booking_id=booking_id, data=data)
 
 
 @router.delete("/{booking_id}", response_model=BookingResponse)
