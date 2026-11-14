@@ -55,6 +55,8 @@ export const getCarrierPunctualityDefault = (operatorName?: string): number => {
 
 /**
  * Computes the multi-factor route risk analysis for an itinerary.
+ *
+ * @deprecated Use backend ML endpoint POST /api/v1/routes/plan. Retained strictly for offline/mock fallback.
  */
 export const calculateRouteRisk = (params: RiskCalculationParams): RouteRiskAnalysis => {
   const { legs, customMinBufferMinutes } = params;
@@ -68,6 +70,10 @@ export const calculateRouteRisk = (params: RiskCalculationParams): RouteRiskAnal
       bufferAdequacy: 'GENEROUS',
       riskSummaryText: 'Direct journey with zero connection risk.',
       factors: [],
+      expectedDelayMinutes: 0,
+      missedConnectionProbability: 0.0,
+      riskFactors: [],
+      isMlComputed: false,
     };
   }
 
@@ -219,5 +225,9 @@ export const calculateRouteRisk = (params: RiskCalculationParams): RouteRiskAnal
     bufferAdequacy,
     riskSummaryText,
     factors,
+    expectedDelayMinutes: 0,
+    missedConnectionProbability: 0.05,
+    riskFactors: factors.map((f) => f.description),
+    isMlComputed: false,
   };
 };

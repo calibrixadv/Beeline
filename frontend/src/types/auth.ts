@@ -1,6 +1,7 @@
 export interface UserProfile {
   id: string;
   email?: string | null;
+  username?: string | null;
   full_name?: string | null;
   is_guest: boolean;
   is_active: boolean;
@@ -50,4 +51,14 @@ export interface SavedRouteResponse {
   destination_name: string;
   plan: any;
   created_at: string;
+}
+
+export interface BreachCheckResult {
+  is_password_compromised: boolean;
+  password_breach_count: number;
+  is_email_compromised: boolean;
+  email_breach_count: number;
+  breaches: string[];
+  warning?: string | null;
+  recommendation: string;
 }

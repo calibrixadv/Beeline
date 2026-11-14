@@ -3,6 +3,13 @@ import {
   getCarrierPunctualityDefault,
   ROMANIAN_TRANSFER_SHIELD,
 } from '../src/services/riskScoreCalculator';
+import {
+  apiClient,
+  formatExpectedDelay,
+  formatConnectionGuarantee,
+  formatExpectedDelayBadge,
+  formatConnectionGuaranteeBadge,
+} from '../src/services/apiClient';
 import { TransitLeg } from '../src/types/routePlan';
 
 describe('riskScoreCalculator (The Romanian Transfer Shield Engine)', () => {
@@ -212,5 +219,111 @@ describe('riskScoreCalculator (The Romanian Transfer Shield Engine)', () => {
     const risk = calculateRouteRisk({ legs: [] });
     expect(risk.overallRiskScore).toBe(0);
     expect(risk.riskLevel).toBe('LOW');
+    expect(risk.expectedDelayMinutes).toBe(0);
+    expect(risk.missedConnectionProbability).toBe(0.0);
+    expect(risk.isMlComputed).toBe(false);
+    expect(risk.riskFactors).toEqual([]);
+  });
+
+  it('populates default offline fallback properties for multi-leg journeys', () => {
+    const directLeg: Pick<TransitLeg, 'transportType' | 'names' | 'risk'> = {
+      transportType: 'TRAIN',
+      names: {
+        originName: 'București Nord',
+        originCity: 'București',
+        destinationName: 'Gara Brașov',
+        destinationCity: 'Brașov',
+        operatorName: 'CFR Călători',
+      },
+      risk: {
+        legRiskScore: 7,
+        historicalPunctualityPercent: 90.0,
+        transferBufferAfterMinutes: 20,
+        isShieldedBuffer: true,
+        disruptions: [],
+      },
+    };
+
+    const risk = calculateRouteRisk({ legs: [directLeg, directLeg] });
+    expect(risk.expectedDelayMinutes).toBe(0);
+    expect(risk.missedConnectionProbability).toBe(0.05);
+    expect(risk.isMlComputed).toBe(false);
+    expect(Array.isArray(risk.riskFactors)).toBe(true);
+  });
+});
+
+describe('mobile apiClient ML risk formatting & deserialization helpers', () => {
+  it('formats expected delay correctly into UI pill labels', () => {
+    expect(formatExpectedDelay(undefined)).toBe('On Time');
+    expect(formatExpectedDelay(0)).toBe('On Time');
+    expect(formatExpectedDelay(-2)).toBe('On Time');
+    expect(formatExpectedDelay(4)).toBe('+4m expected');
+    expect(formatExpectedDelay(5)).toBe('+5m expected');
+    expect(formatExpectedDelay(15)).toBe('+15m expected');
+
+    expect(formatExpectedDelayBadge(0)).toBe('✅ On Time');
+    expect(formatExpectedDelayBadge(4)).toBe('⏱️ +4m expected delay');
+  });
+
+  it('formats connection guarantee percentage from probability', () => {
+    expect(formatConnectionGuarantee(undefined)).toBe('100% connection safety');
+    expect(formatConnectionGuarantee(0.04)).toBe('96% connection safety');
+    expect(formatConnectionGuarantee(0.03, 'connection guarantee')).toBe('97% connection guarantee');
+    expect(formatConnectionGuaranteeBadge(0.03)).toBe('🛡️ 97% connection guarantee');
+  });
+
+  it('deserializes route plan responses with camelCase, snake_case, or absent ML fields', async () => {
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            plans: [
+              {
+                id: 'plan-ml-1',
+                riskAnalysis: {
+                  overallRiskScore: 12.5,
+                  riskLevel: 'LOW',
+                  expected_delay_minutes: 4,
+                  missed_connection_probability: 0.03,
+                  risk_factors: ['Minor junction friction'],
+                  is_ml_computed: true,
+                },
+              },
+              {
+                id: 'plan-legacy-2',
+                riskAnalysis: {
+                  overallRiskScore: 30.0,
+                  riskLevel: 'MODERATE',
+                },
+              },
+            ],
+            recommendedPlanId: 'plan-ml-1',
+            query: { origin: { name: 'Galați' }, destination: { name: 'București' } },
+            generatedAt: '2026-11-09T22:00:00Z',
+          }),
+      } as any)
+    );
+
+    const res = await apiClient.planRoute({
+      origin: { name: 'Galați' },
+      destination: { name: 'București' },
+      allowedModes: ['TRAIN', 'BUS'],
+      optimizationPreference: 'FASTEST',
+    });
+
+    expect(res.plans[0].riskAnalysis.expectedDelayMinutes).toBe(4);
+    expect(res.plans[0].riskAnalysis.missedConnectionProbability).toBe(0.03);
+    expect(res.plans[0].riskAnalysis.isMlComputed).toBe(true);
+    expect(res.plans[0].riskAnalysis.riskFactors).toEqual(['Minor junction friction']);
+
+    // Legacy plan defaults safely
+    expect(res.plans[1].riskAnalysis.expectedDelayMinutes).toBe(0);
+    expect(res.plans[1].riskAnalysis.missedConnectionProbability).toBe(0.0);
+    expect(res.plans[1].riskAnalysis.isMlComputed).toBe(false);
+    expect(res.plans[1].riskAnalysis.riskFactors).toEqual([]);
+
+    global.fetch = originalFetch;
   });
 });

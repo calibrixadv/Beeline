@@ -7,8 +7,18 @@ import MascotDebugModal from '../components/MascotDebugModal';
 import BaseBadge from '../components/BaseBadge';
 import BaseInput from '../components/BaseInput';
 import BookingTripCard from '../components/BookingTripCard';
+import { RouteFinderCard } from '../components/RouteFinderCard';
 import TripFilterBar from '../components/TripFilterBar';
 import { generateTripsForCorridor, DEFAULT_TRIP_FILTERS } from '../services/tripBookingService';
+
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    replace: jest.fn(),
+    prefetch: jest.fn(),
+  }),
+  usePathname: () => '/',
+}));
 
 describe('Next.js UI Components', () => {
   it('renders BaseButton and handles click events', () => {
@@ -250,5 +260,67 @@ describe('Next.js UI Components', () => {
     );
 
     expect(screen.getByText('Filters & Sorting')).toBeInTheDocument();
+  });
+
+  it('renders BookingTripCard with ML delay pill and connection guarantee when isMlComputed is true', () => {
+    const trips = generateTripsForCorridor('Galați', 'București Nord');
+    const planWithMl = {
+      ...trips[0],
+      riskAnalysis: {
+        ...trips[0].riskAnalysis,
+        expectedDelayMinutes: 4,
+        missedConnectionProbability: 0.03,
+        isMlComputed: true,
+      },
+    };
+
+    render(<BookingTripCard plan={planWithMl} />);
+    expect(screen.getByText(/⏱️ \+4m expected delay/i)).toBeInTheDocument();
+    expect(screen.getByText(/🛡️ 97% connection guarantee/i)).toBeInTheDocument();
+    // Rule-based Shield percentage is replaced by ML indicators
+    expect(screen.queryByText(/Shield: \d+%/i)).not.toBeInTheDocument();
+  });
+
+  it('renders BookingTripCard with On Time pill when expectedDelayMinutes is zero', () => {
+    const trips = generateTripsForCorridor('Galați', 'București Nord');
+    const planWithMl = {
+      ...trips[0],
+      riskAnalysis: {
+        ...trips[0].riskAnalysis,
+        expectedDelayMinutes: 0,
+        missedConnectionProbability: 0.01,
+        isMlComputed: true,
+      },
+    };
+
+    render(<BookingTripCard plan={planWithMl} />);
+    expect(screen.getByText(/✅ On Time/i)).toBeInTheDocument();
+    expect(screen.getByText(/🛡️ 99% connection guarantee/i)).toBeInTheDocument();
+  });
+
+  it('renders RouteFinderCard preview plans with ML badges and handles selection', () => {
+    const trips = generateTripsForCorridor('Galați', 'București Nord');
+    const previewPlans = [
+      {
+        ...trips[0],
+        riskAnalysis: {
+          ...trips[0].riskAnalysis,
+          expectedDelayMinutes: 5,
+          missedConnectionProbability: 0.04,
+          isMlComputed: true,
+        },
+      },
+    ];
+
+    const handleSelect = jest.fn();
+    render(<RouteFinderCard previewPlans={previewPlans} onSelectPlan={handleSelect} />);
+
+    expect(screen.getByText('Route Options')).toBeInTheDocument();
+    expect(screen.getByText(/⏱️ \+5m expected delay/i)).toBeInTheDocument();
+    expect(screen.getByText(/🛡️ 96% connection guarantee/i)).toBeInTheDocument();
+
+    const planCard = screen.getByText(previewPlans[0].summary).closest('div');
+    if (planCard) fireEvent.click(planCard);
+    expect(handleSelect).toHaveBeenCalledWith(previewPlans[0]);
   });
 });

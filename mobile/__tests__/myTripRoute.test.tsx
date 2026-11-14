@@ -61,4 +61,44 @@ describe('MyTripScreen route integration', () => {
     expect(queryByText('Leg 1')).toBeNull();
     expect(getByText('Your Itinerary is Empty')).toBeTruthy();
   });
+
+  it('renders ML delay badge and connection guarantee indicator when journey has ML risk analysis', () => {
+    const JourneyWithMl: React.FC = () => {
+      const { addTrainToTrip } = useTripPlanner();
+      const initialized = useRef(false);
+
+      useEffect(() => {
+        if (!initialized.current) {
+          initialized.current = true;
+          const journeyWithMl = {
+            ...SAMPLE_TRAINS[0],
+            riskAnalysis: {
+              overallRiskScore: 10,
+              riskLevel: 'LOW' as const,
+              historicalPunctualityRate: 0.95,
+              tightestBufferMinutes: 999,
+              bufferAdequacy: 'OPTIMAL' as const,
+              riskSummaryText: 'Shielded journey',
+              factors: [],
+              expectedDelayMinutes: 4,
+              missedConnectionProbability: 0.03,
+              isMlComputed: true,
+            },
+          };
+          addTrainToTrip(journeyWithMl, 'STANDARD', '2026-10-15');
+        }
+      }, [addTrainToTrip]);
+
+      return <MyTripScreen />;
+    };
+
+    const { getByText } = render(
+      <TripProvider>
+        <JourneyWithMl />
+      </TripProvider>
+    );
+
+    expect(getByText(/⏱️ \+4m expected delay/i)).toBeTruthy();
+    expect(getByText(/🛡️ 97% connection guarantee/i)).toBeTruthy();
+  });
 });

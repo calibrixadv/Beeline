@@ -2,11 +2,25 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeftRight, MapPin, Navigation, Train, Bus, Landmark, Search, Sparkles } from 'lucide-react';
+import { 
+  ArrowLeftRight, 
+  MapPin, 
+  Navigation, 
+  Train, 
+  Bus, 
+  Landmark, 
+  Search, 
+  Sparkles,
+  ShieldCheck,
+  ShieldAlert,
+  Clock,
+  ArrowRight
+} from 'lucide-react';
 import BaseCard from './BaseCard';
 import BaseInput from './BaseInput';
 import BaseButton from './BaseButton';
 import MascotBee from './MascotBee';
+import { TransitRoutePlan } from '../types/routePlan';
 
 export const POPULAR_CORRIDORS = [
   { origin: 'București Nord', destination: 'Brașov', label: 'București ⇄ Brașov' },
@@ -14,10 +28,24 @@ export const POPULAR_CORRIDORS = [
   { origin: 'Cluj-Napoca', destination: 'Timișoara Nord', label: 'Cluj ⇄ Timișoara' },
 ];
 
-export const RouteFinderCard: React.FC = () => {
+export interface RouteFinderCardProps {
+  initialOrigin?: string;
+  initialDestination?: string;
+  previewPlans?: TransitRoutePlan[];
+  onSelectPlan?: (plan: TransitRoutePlan) => void;
+  className?: string;
+}
+
+export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
+  initialOrigin = 'Galați',
+  initialDestination = 'București Nord',
+  previewPlans,
+  onSelectPlan,
+  className,
+}) => {
   const router = useRouter();
-  const [origin, setOrigin] = useState<string>('Galați');
-  const [destination, setDestination] = useState<string>('București Nord');
+  const [origin, setOrigin] = useState<string>(initialOrigin);
+  const [destination, setDestination] = useState<string>(initialDestination);
   const [selectedMode, setSelectedMode] = useState<'ALL' | 'TRAIN' | 'METRO' | 'BUS'>('ALL');
   const [error, setError] = useState<string | null>(null);
 
@@ -162,6 +190,97 @@ export const RouteFinderCard: React.FC = () => {
             Explore Trips &amp; Fares
           </BaseButton>
         </div>
+
+        {/* Route Preview Cards with ML Delay Badges & Connection Guarantee */}
+        {previewPlans && previewPlans.length > 0 && (
+          <div className="pt-4 border-t border-amber-100 space-y-3">
+            <span className="text-xs font-bold text-amber-900 uppercase tracking-wider block">
+              Route Options
+            </span>
+            <div className="grid grid-cols-1 gap-2.5">
+              {previewPlans.map((plan) => {
+                const shield = plan.riskAnalysis;
+                const isLowRisk = (shield?.overallRiskScore ?? 0) <= 35;
+
+                return (
+                  <div
+                    key={plan.id}
+                    onClick={() => onSelectPlan && onSelectPlan(plan)}
+                    className="p-3.5 rounded-xl border border-amber-200/90 bg-amber-50/40 hover:bg-amber-50 hover:border-amber-300 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-stone-900">{plan.summary}</span>
+                        {plan.curatedPillar && (
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+                            {plan.curatedPillar}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs text-stone-500 mt-1">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-stone-400" />
+                          {Math.floor(plan.totalDurationMinutes / 60)}h {plan.totalDurationMinutes % 60}m
+                        </span>
+                        <span>•</span>
+                        <span>{plan.transfersCount === 0 ? 'Direct' : `${plan.transfersCount} transfer${plan.transfersCount > 1 ? 's' : ''}`}</span>
+                        {plan.fare && (
+                          <>
+                            <span>•</span>
+                            <span className="font-bold text-amber-700">{plan.fare.totalAmountLei.toFixed(2)} LEI</span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* ML Delay Pill & Connection Guarantee Indicator OR Rule-Based Summary */}
+                      {shield?.isMlComputed ? (
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                              (shield.expectedDelayMinutes ?? 0) <= 5
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                : (shield.expectedDelayMinutes ?? 0) <= 15
+                                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                : 'bg-red-50 text-red-800 border-red-200'
+                            }`}
+                          >
+                            {(shield.expectedDelayMinutes ?? 0) > 0
+                              ? `⏱️ +${shield.expectedDelayMinutes}m expected delay`
+                              : '✅ On Time'}
+                          </span>
+                          {shield.missedConnectionProbability !== undefined && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              🛡️ {Math.max(0, Math.min(100, Math.round((1 - shield.missedConnectionProbability) * 100)))}% connection guarantee
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        shield && (
+                          <div className="mt-1.5 text-xs text-stone-500 flex items-center gap-1.5">
+                            {isLowRisk ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> : <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />}
+                            <span>Shield: {Math.round(100 - shield.overallRiskScore)}% • {shield.riskSummaryText}</span>
+                          </div>
+                        )
+                      )}
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <BaseButton
+                        variant="ghost"
+                        size="sm"
+                        rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                        className="text-amber-800 hover:text-amber-950 font-bold"
+                      >
+                        View
+                      </BaseButton>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </form>
     </BaseCard>
   );

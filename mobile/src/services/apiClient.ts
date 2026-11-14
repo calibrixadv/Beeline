@@ -310,7 +310,46 @@ export class ApiClient {
     });
 
     if (!res.ok) throw new Error('Failed to compute route plan');
-    return res.json();
+    const data: RoutePlanResponse = await res.json();
+
+    if (data && Array.isArray(data.plans)) {
+      data.plans = data.plans.map((plan) => {
+        if (plan && plan.riskAnalysis) {
+          const rawRisk = plan.riskAnalysis as unknown as Record<string, unknown>;
+          plan.riskAnalysis = {
+            ...plan.riskAnalysis,
+            expectedDelayMinutes:
+              typeof rawRisk.expectedDelayMinutes === 'number'
+                ? rawRisk.expectedDelayMinutes
+                : typeof rawRisk.expected_delay_minutes === 'number'
+                ? (rawRisk.expected_delay_minutes as number)
+                : 0,
+            missedConnectionProbability:
+              typeof rawRisk.missedConnectionProbability === 'number'
+                ? rawRisk.missedConnectionProbability
+                : typeof rawRisk.missed_connection_probability === 'number'
+                ? (rawRisk.missed_connection_probability as number)
+                : 0.0,
+            riskFactors: Array.isArray(rawRisk.riskFactors)
+              ? (rawRisk.riskFactors as string[])
+              : Array.isArray(rawRisk.risk_factors)
+              ? (rawRisk.risk_factors as string[])
+              : Array.isArray(rawRisk.delayRiskFactors)
+              ? (rawRisk.delayRiskFactors as string[])
+              : [],
+            isMlComputed:
+              typeof rawRisk.isMlComputed === 'boolean'
+                ? rawRisk.isMlComputed
+                : typeof rawRisk.is_ml_computed === 'boolean'
+                ? (rawRisk.is_ml_computed as boolean)
+                : false,
+          };
+        }
+        return plan;
+      });
+    }
+
+    return data;
   }
 
   async getSchedules(params?: ScheduleFilterParams): Promise<TransitLineSchedule[]> {
@@ -353,3 +392,53 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+/**
+ * Formats expected delay minutes into human-readable label.
+ * e.g. 0 -> "On Time", 5 -> "+5m expected"
+ */
+export function formatExpectedDelay(minutes?: number): string {
+  if (minutes === undefined || minutes === null || minutes <= 0) {
+    return 'On Time';
+  }
+  return `+${minutes}m expected`;
+}
+
+/**
+ * Formats connection guarantee percentage from missed connection probability.
+ * e.g. 0.04 -> "96% connection safety", 0.03 -> "97% connection safety"
+ */
+export function formatConnectionGuarantee(
+  missedProb?: number,
+  label: string = 'connection safety'
+): string {
+  if (missedProb === undefined || missedProb === null) {
+    return `100% ${label}`;
+  }
+  const pct = Math.max(0, Math.min(100, Math.round((1 - missedProb) * 100)));
+  return `${pct}% ${label}`;
+}
+
+/**
+ * Formats expected delay into pill badge text with icon.
+ */
+export function formatExpectedDelayBadge(minutes?: number): string {
+  if (minutes === undefined || minutes === null || minutes <= 0) {
+    return '✅ On Time';
+  }
+  return `⏱️ +${minutes}m expected delay`;
+}
+
+/**
+ * Formats connection guarantee into shield badge text with icon.
+ */
+export function formatConnectionGuaranteeBadge(
+  missedProb?: number,
+  label: string = 'connection guarantee'
+): string {
+  if (missedProb === undefined || missedProb === null) {
+    return `🛡️ 100% ${label}`;
+  }
+  const pct = Math.max(0, Math.min(100, Math.round((1 - missedProb) * 100)));
+  return `🛡️ ${pct}% ${label}`;
+}

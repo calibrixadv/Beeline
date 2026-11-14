@@ -187,56 +187,140 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
           />
         </View>
 
-        {/* Romanian Transfer Shield Risk Indicator */}
-        <View
-          style={[
-            styles.shieldBadge,
-            {
-              backgroundColor:
-                plan.riskAnalysis.riskLevel === 'LOW'
-                  ? isDark
-                    ? 'rgba(16, 185, 129, 0.15)'
-                    : '#ECFDF5'
-                  : isDark
-                  ? 'rgba(245, 158, 11, 0.15)'
-                  : '#FFFBEB',
-              borderColor:
-                plan.riskAnalysis.riskLevel === 'LOW'
-                  ? isDark
-                    ? '#059669'
-                    : '#A7F3D0'
-                  : isDark
-                  ? '#D97706'
-                  : '#FDE68A',
-            },
-          ]}
-          testID={`shield-risk-badge-${plan.id}`}
-        >
-          <Ionicons
-            name="shield-checkmark"
-            size={13}
-            color={plan.riskAnalysis.riskLevel === 'LOW' ? '#10B981' : '#F59E0B'}
-          />
-          <Text
+        {/* Romanian Transfer Shield Risk Indicator / ML Delay & Guarantee Indicators */}
+        {plan.riskAnalysis?.isMlComputed ? (
+          <View style={styles.mlBadgeRow}>
+            <View
+              style={[
+                styles.mlPill,
+                {
+                  backgroundColor:
+                    (plan.riskAnalysis.expectedDelayMinutes ?? 0) <= 5
+                      ? isDark
+                        ? 'rgba(16, 185, 129, 0.15)'
+                        : '#ECFDF5'
+                      : (plan.riskAnalysis.expectedDelayMinutes ?? 0) <= 15
+                      ? isDark
+                        ? 'rgba(245, 158, 11, 0.15)'
+                        : '#FFFBEB'
+                      : isDark
+                      ? 'rgba(239, 68, 68, 0.15)'
+                      : '#FEF2F2',
+                  borderColor:
+                    (plan.riskAnalysis.expectedDelayMinutes ?? 0) <= 5
+                      ? isDark
+                        ? '#059669'
+                        : '#A7F3D0'
+                      : (plan.riskAnalysis.expectedDelayMinutes ?? 0) <= 15
+                      ? isDark
+                        ? '#D97706'
+                        : '#FDE68A'
+                      : isDark
+                      ? '#DC2626'
+                      : '#FECACA',
+                },
+              ]}
+              testID={`ml-delay-badge-${plan.id}`}
+            >
+              <Text
+                style={[
+                  styles.mlBadgeText,
+                  {
+                    color:
+                      (plan.riskAnalysis.expectedDelayMinutes ?? 0) <= 5
+                        ? isDark
+                          ? '#34D399'
+                          : '#065F46'
+                        : (plan.riskAnalysis.expectedDelayMinutes ?? 0) <= 15
+                        ? isDark
+                          ? '#FBBF24'
+                          : '#92400E'
+                        : isDark
+                        ? '#F87171'
+                        : '#991B1B',
+                  },
+                ]}
+              >
+                {(plan.riskAnalysis.expectedDelayMinutes ?? 0) > 0
+                  ? `⏱️ +${plan.riskAnalysis.expectedDelayMinutes}m expected delay`
+                  : '✅ On Time'}
+              </Text>
+            </View>
+            {plan.riskAnalysis.missedConnectionProbability !== undefined && (
+              <View
+                style={[
+                  styles.mlPill,
+                  {
+                    backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : '#ECFDF5',
+                    borderColor: isDark ? '#059669' : '#A7F3D0',
+                  },
+                ]}
+                testID={`ml-guarantee-badge-${plan.id}`}
+              >
+                <Text
+                  style={[
+                    styles.mlBadgeText,
+                    {
+                      color: isDark ? '#34D399' : '#065F46',
+                    },
+                  ]}
+                >
+                  🛡️ {Math.max(0, Math.min(100, Math.round((1 - plan.riskAnalysis.missedConnectionProbability) * 100)))}% connection guarantee
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <View
             style={[
-              styles.shieldBadgeText,
+              styles.shieldBadge,
               {
-                color:
-                  plan.riskAnalysis.riskLevel === 'LOW'
+                backgroundColor:
+                  plan.riskAnalysis?.riskLevel === 'LOW'
                     ? isDark
-                      ? '#34D399'
-                      : '#065F46'
+                      ? 'rgba(16, 185, 129, 0.15)'
+                      : '#ECFDF5'
                     : isDark
-                    ? '#FBBF24'
-                    : '#92400E',
+                    ? 'rgba(245, 158, 11, 0.15)'
+                    : '#FFFBEB',
+                borderColor:
+                  plan.riskAnalysis?.riskLevel === 'LOW'
+                    ? isDark
+                      ? '#059669'
+                      : '#A7F3D0'
+                    : isDark
+                    ? '#D97706'
+                    : '#FDE68A',
               },
             ]}
+            testID={`shield-risk-badge-${plan.id}`}
           >
-            {plan.transfersCount === 0
-              ? 'Shield: Direct Route (0 Transfers)'
-              : `Shield Risk: ${plan.riskAnalysis.overallRiskScore}/100 (${plan.riskAnalysis.riskLevel})`}
-          </Text>
-        </View>
+            <Ionicons
+              name="shield-checkmark"
+              size={13}
+              color={plan.riskAnalysis?.riskLevel === 'LOW' ? '#10B981' : '#F59E0B'}
+            />
+            <Text
+              style={[
+                styles.shieldBadgeText,
+                {
+                  color:
+                    plan.riskAnalysis?.riskLevel === 'LOW'
+                      ? isDark
+                        ? '#34D399'
+                        : '#065F46'
+                      : isDark
+                      ? '#FBBF24'
+                      : '#92400E',
+                },
+              ]}
+            >
+              {plan.transfersCount === 0
+                ? 'Shield: Direct Route (0 Transfers)'
+                : `Shield Risk: ${plan.riskAnalysis?.overallRiskScore ?? 0}/100 (${plan.riskAnalysis?.riskLevel ?? 'LOW'})`}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Main Booking Summary Area */}
@@ -864,6 +948,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  mlBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  mlPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  mlBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   shieldBadge: {
     flexDirection: 'row',

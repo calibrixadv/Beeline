@@ -768,6 +768,66 @@ describe('RouteFinderCard component', () => {
         })
       );
     });
+
+    it('renders ML delay pill and connection guarantee badge when previewPlans with ML are supplied', () => {
+      const mockPreviewPlan = {
+        id: 'plan-preview-fastest',
+        curatedPillar: 'FASTEST' as const,
+        riskAnalysis: {
+          overallRiskScore: 12,
+          riskLevel: 'LOW' as const,
+          historicalPunctualityRate: 0.94,
+          tightestBufferMinutes: 999,
+          bufferAdequacy: 'OPTIMAL' as const,
+          riskSummaryText: 'Direct fast route',
+          factors: [],
+          expectedDelayMinutes: 4,
+          missedConnectionProbability: 0.03,
+          isMlComputed: true,
+        },
+        totalDurationMinutes: 105,
+        totalWalkMinutes: 5,
+        totalWalkDistanceMeters: 200,
+        transfersCount: 0,
+        summary: 'Direct InterCity',
+        departureTime: '2026-11-09T08:00:00Z',
+        arrivalTime: '2026-11-09T09:45:00Z',
+        query: {
+          origin: { name: 'București Nord' },
+          destination: { name: 'Brașov' },
+          allowedModes: ['TRAIN' as const],
+          optimizationPreference: 'FASTEST' as const,
+        },
+        mascotRecommendation: {
+          persona: 'barnaby' as const,
+          badgeLabel: 'FASTEST',
+          advice: 'Fastest train option',
+        },
+        fare: {
+          totalAmountLei: 50,
+          totalAmountEur: 10,
+          isIntegratedTicketAvailable: true,
+          legFares: [],
+        },
+        eco: {
+          routeEmissionsKgCO2: 5,
+          carEmissionsKgCO2: 25,
+          savedKgCO2: 20,
+          percentageSaved: 80,
+          treeDaysEquivalent: 3,
+        },
+        legs: [],
+        createdAt: '2026-11-09T08:00:00Z',
+        validUntil: '2026-11-09T09:00:00Z',
+      };
+
+      const { getByText } = renderComponent({
+        previewPlans: [mockPreviewPlan],
+      });
+
+      expect(getByText(/⏱️ \+4m expected delay/i)).toBeTruthy();
+      expect(getByText(/🛡️ 97% connection guarantee/i)).toBeTruthy();
+    });
   });
 });
 

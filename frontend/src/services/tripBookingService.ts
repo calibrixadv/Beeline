@@ -1388,11 +1388,12 @@ export function convertRoutePlanToTrainJourney(plan: TransitRoutePlan): TrainJou
     durationFormatted: `${Math.floor(plan.totalDurationMinutes / 60)}h ${
       plan.totalDurationMinutes % 60
     }m`,
-    status: 'ON_TIME',
-    delayMinutes: 0,
+    status: (plan.riskAnalysis?.expectedDelayMinutes ?? 0) > 5 ? 'DELAYED' : 'ON_TIME',
+    delayMinutes: plan.riskAnalysis?.expectedDelayMinutes ?? 0,
     fares,
     stops,
     amenities: uniqueAmenities,
     carbonFootprintKg: plan.eco.routeEmissionsKgCO2,
+    riskAnalysis: plan.riskAnalysis,
   };
 }

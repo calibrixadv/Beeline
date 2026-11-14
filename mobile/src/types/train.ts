@@ -1,3 +1,5 @@
+import { RouteRiskAnalysis } from './routePlan';
+
 export type TrainStatus = 'ON_TIME' | 'DELAYED' | 'CANCELLED' | 'BOARDING';
 
 export type TrainClass = 'STANDARD' | 'FIRST' | 'BUSINESS' | 'SLEEPER';
@@ -50,6 +52,7 @@ export interface TrainJourney {
   stops: TrainStop[];
   amenities: Amenity[];
   carbonFootprintKg: number;
+  riskAnalysis?: RouteRiskAnalysis;
 }
 
 export interface TrainFilterState {
