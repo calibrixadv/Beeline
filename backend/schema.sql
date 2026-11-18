@@ -13,11 +13,17 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) UNIQUE,
     hashed_password VARCHAR(255),
     full_name VARCHAR(255),
+    phone_number VARCHAR(32),
+    avatar_url VARCHAR(512),
     role VARCHAR(32) NOT NULL DEFAULT 'TRAVELER' CONSTRAINT ck_users_role CHECK (role IN ('TRAVELER', 'OPERATOR', 'ADMIN')),
-    preferences TEXT DEFAULT '{}',
+    preferences TEXT NOT NULL DEFAULT '{}',
     is_guest BOOLEAN NOT NULL DEFAULT FALSE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    account_status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' CONSTRAINT ck_users_account_status CHECK (account_status IN ('ACTIVE', 'FROZEN_PENDING_DELETION')),
+    frozen_at TIMESTAMPTZ,
+    deletion_scheduled_at TIMESTAMPTZ,
+    deletion_reminder_15d_sent BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,6 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_is_guest ON users(is_guest);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_account_status ON users(account_status);
 
 -- 2. USER SESSIONS TABLE
 -- Tracks multi-device sessions with rotating refresh token hashes and client metadata
@@ -33,8 +40,12 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     id VARCHAR(36) PRIMARY KEY,
     user_id VARCHAR(36) NOT NULL,
     refresh_token_hash VARCHAR(64) NOT NULL,
+    device_fingerprint VARCHAR(128),
+    device_name VARCHAR(255),
     device_info VARCHAR(255),
     ip_address VARCHAR(64),
+    user_agent VARCHAR(500),
+    remember_me BOOLEAN NOT NULL DEFAULT FALSE,
     is_revoked BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_active_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -51,8 +62,9 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_is_revoked ON user_sessions(is_revo
 CREATE TABLE IF NOT EXISTS mfa_credentials (
     id VARCHAR(36) PRIMARY KEY,
     user_id VARCHAR(36) NOT NULL UNIQUE,
-    secret_key VARCHAR(64) NOT NULL,
+    secret_key VARCHAR(255) NOT NULL,
     backup_codes_hash TEXT NOT NULL DEFAULT '[]',
+    backup_codes TEXT DEFAULT '[]',
     is_confirmed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

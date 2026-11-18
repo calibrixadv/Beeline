@@ -1,0 +1,6 @@
+agency_id,agency_name,agency_url,agency_timezone,agency_lang
+CFR,CFR Călători,https://cfrcalatori.ro,Europe/Bucharest,ro
+ASTRA,Astra Trans Carpatic,https://astratranscarpatic.ro,Europe/Bucharest,ro
+TFC,Transferoviar Călători,https://transferoviarcalatori.ro,Europe/Bucharest,ro
+SOFTRANS,Softrans,https://softrans.ro,Europe/Bucharest,ro
+REGIO,Regio Călători,https://regiocalatori.ro,Europe/Bucharest,ro

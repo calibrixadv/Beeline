@@ -4,15 +4,20 @@ services:
     container_name: beeline_postgres
     restart: always
     environment:
-      POSTGRES_USER: beeline
-      POSTGRES_PASSWORD: beeline_secret
-      POSTGRES_DB: beeline_db
+      POSTGRES_USER: ${POSTGRES_USER:-beeline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-beeline}
+      POSTGRES_DB: ${POSTGRES_DB:-beeline_db}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beeline} -d ${POSTGRES_DB:-beeline_db}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -28,6 +33,42 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: beeline_mailpit
+    restart: always
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+
+  api:
+    container_name: beeline_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-beeline}:${POSTGRES_PASSWORD:-beeline}@db:5432/${POSTGRES_DB:-beeline_db}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./app:/app/app
+      - ./scripts:/app/scripts
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   pgdata:

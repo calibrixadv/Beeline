@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+beeline.db
+scraper/.cache/
+*.parquet
+models/
+.git/
+.DS_Store
+.env

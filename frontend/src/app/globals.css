@@ -75,19 +75,23 @@
 
 @keyframes wingFlutterLeft {
   0%, 100% {
-    transform: rotate(-25deg) scaleY(1);
+    transform: rotate(-24deg) scaleY(1);
+    opacity: 0.78;
   }
   50% {
-    transform: rotate(-35deg) scaleY(0.8);
+    transform: rotate(-28deg) scaleY(0.92);
+    opacity: 0.70;
   }
 }
 
 @keyframes wingFlutterRight {
   0%, 100% {
-    transform: rotate(25deg) scaleY(1);
+    transform: rotate(24deg) scaleY(1);
+    opacity: 0.78;
   }
   50% {
-    transform: rotate(35deg) scaleY(0.8);
+    transform: rotate(28deg) scaleY(0.92);
+    opacity: 0.70;
   }
 }
 
@@ -98,46 +102,128 @@
 .animate-wing-left {
   transform-box: fill-box;
   transform-origin: 85% 65%;
-  animation: wingFlutterLeft 0.25s ease-in-out infinite;
+  animation: wingFlutterLeft 0.48s ease-in-out infinite;
 }
 
 .animate-wing-right {
   transform-box: fill-box;
   transform-origin: 15% 65%;
-  animation: wingFlutterRight 0.25s ease-in-out infinite;
+  animation: wingFlutterRight 0.48s ease-in-out infinite;
 }
 
-/* Dynamic Background Mascot Flight Animation - gentle ambient drifting path */
+/* Dynamic Background Mascot Flight Animation - serene, low-amplitude harmonic loop */
 @keyframes beeDynamicFlight {
   0% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
   20% {
-    transform: translate3d(-45px, 25px, 0) rotate(-4deg) scale(1.03);
+    transform: translate3d(-5px, -4px, 0) rotate(-1.5deg);
   }
   40% {
-    transform: translate3d(-95px, -15px, 0) rotate(3deg) scale(0.97);
+    transform: translate3d(6px, -2px, 0) rotate(1.8deg);
   }
   60% {
-    transform: translate3d(-55px, 40px, 0) rotate(-3deg) scale(1.02);
+    transform: translate3d(7px, 5px, 0) rotate(2.2deg);
   }
   80% {
-    transform: translate3d(15px, 10px, 0) rotate(2deg) scale(0.99);
+    transform: translate3d(-4px, 3px, 0) rotate(-1.2deg);
   }
   100% {
-    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    transform: translate3d(0, 0, 0) rotate(0deg);
   }
 }
 
 .animate-bee-dynamic-flight {
-  animation: beeDynamicFlight 22s cubic-bezier(0.42, 0, 0.58, 1) infinite;
+  animation: beeDynamicFlight 28s ease-in-out infinite;
   will-change: transform;
 }
 
-/* Smooth bee mouse-follow easing */
+/* Silky smooth bee mouse-follow damping */
 .bee-mouse-follow {
-  transition: transform 750ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 950ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
+}
+
+/* Nectar-Filled Honeycomb Cell Breathing & Shimmer Pulse */
+@keyframes honey-cell-breathe {
+  0%, 100% {
+    opacity: 0.22;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes honeyCellBreathe {
+  0%, 100% {
+    opacity: 0.22;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.03);
+  }
+}
+
+.animate-honey-cell-breathe {
+  animation: honeyCellBreathe 7.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+/* Calm Sinusoidal Pollen Mote Drift */
+@keyframes pollen-float-gentle {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.85);
+    opacity: 0.25;
+  }
+  30% {
+    transform: translate3d(8px, -24px, 0) scale(1.05);
+    opacity: 0.75;
+  }
+  60% {
+    transform: translate3d(-6px, -48px, 0) scale(0.95);
+    opacity: 0.85;
+  }
+  85% {
+    transform: translate3d(4px, -72px, 0) scale(1.02);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate3d(0, -96px, 0) scale(0.85);
+    opacity: 0;
+  }
+}
+
+@keyframes pollenFloatGentle {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.85);
+    opacity: 0.25;
+  }
+  30% {
+    transform: translate3d(8px, -24px, 0) scale(1.05);
+    opacity: 0.75;
+  }
+  60% {
+    transform: translate3d(-6px, -48px, 0) scale(0.95);
+    opacity: 0.85;
+  }
+  85% {
+    transform: translate3d(4px, -72px, 0) scale(1.02);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate3d(0, -96px, 0) scale(0.85);
+    opacity: 0;
+  }
+}
+
+.animate-pollen-gentle {
+  animation: pollenFloatGentle 14s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 /* ========================================================================== */
@@ -285,6 +371,166 @@
   animation: fadeIn 0.25s ease-out forwards;
 }
 
+/* ========================================================================== */
+/* MINI WORKER BEE & HIVE TOUR MICRO-ANIMATIONS                              */
+/* ========================================================================== */
+
+@keyframes miniBeeFast {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(6px, -4px, 0) scale(1.05);
+  }
+}
+
+@keyframes miniBeeSafe {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-3px, 3px, 0) rotate(4deg);
+  }
+}
+
+@keyframes miniBeeEconomy {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(2px, -3px, 0);
+  }
+}
+
+.animate-mini-bee-fast {
+  animation: miniBeeFast 1.4s ease-in-out infinite;
+}
+
+.animate-mini-bee-safe {
+  animation: miniBeeSafe 2.8s ease-in-out infinite;
+}
+
+.animate-mini-bee-economy {
+  animation: miniBeeEconomy 2.2s ease-in-out infinite;
+}
+
+/* Railway Track Locomotive Glides for Chapter 1 Telemetry Previews */
+@keyframes trainGlideSafe {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(145px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes trainGlideFast {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(155px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes trainGlideEconomy {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(140px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+.animate-train-glide-safe {
+  animation: trainGlideSafe 3.8s ease-in-out infinite;
+}
+
+.animate-train-glide-fast {
+  animation: trainGlideFast 2.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-train-glide-economy {
+  animation: trainGlideEconomy 4.4s ease-in-out infinite;
+}
+
+/* Panoramic Railway Corridor Train Pulse (Variant 3) */
+@keyframes corridorTrainGlide {
+  0% {
+    transform: translateX(0px);
+  }
+  50% {
+    transform: translateX(780px);
+  }
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+.animate-corridor-train-safe {
+  animation: corridorTrainGlide 10s ease-in-out infinite;
+}
+
+.animate-corridor-train-fast {
+  animation: corridorTrainGlide 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-corridor-train-economy {
+  animation: corridorTrainGlide 12s ease-in-out infinite;
+}
+
+/* Honey Dipper Nectar Stream Pulse */
+@keyframes drizzleNectar {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.04);
+  }
+}
+
+.animate-drizzle-nectar {
+  animation: drizzleNectar 2s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Honey Shimmer & Ripple Micro-Details for Hero Cards & Corridor Pills */
+.honey-shimmer-card {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.honey-shimmer-card:hover {
+  border-color: rgba(245, 158, 11, 0.7) !important;
+  box-shadow: 0 10px 25px -4px rgba(245, 158, 11, 0.16), 0 4px 10px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.honey-corridor-pill {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.honey-corridor-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px -1px rgba(245, 158, 11, 0.25);
+  border-color: rgba(217, 119, 6, 0.4);
+}
+
+.honey-corridor-pill:active {
+  transform: scale(0.97);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-mascot-float,
   .animate-bee-dynamic-flight,
@@ -293,13 +539,30 @@
   .animate-pollen-1,
   .animate-pollen-2,
   .animate-pollen-3,
+  .animate-pollen-gentle,
+  .animate-honey-cell-breathe,
   .animate-gear-radial-exit,
   .animate-gear-enter-top,
   .animate-gear-shockwave,
   .animate-gear-sparkle,
   .animate-gear-sparkle-delayed,
-  .animate-gear-sweep {
+  .animate-gear-sweep,
+  .animate-mini-bee-fast,
+  .animate-mini-bee-safe,
+  .animate-mini-bee-economy,
+  .animate-drizzle-nectar,
+  .animate-train-glide-safe,
+  .animate-train-glide-fast,
+  .animate-train-glide-economy,
+  .animate-corridor-train-safe,
+  .animate-corridor-train-fast,
+  .animate-corridor-train-economy {
     animation: none !important;
+  }
+
+  .animate-honey-cell-breathe {
+    opacity: 0.35 !important;
+    transform: none !important;
   }
 
   .animate-gear-radial-exit {
@@ -313,6 +576,10 @@
 
   .bee-mouse-follow {
     transition: none !important;
+    transform: none !important;
+  }
+
+  .honey-corridor-pill:hover {
     transform: none !important;
   }
 }

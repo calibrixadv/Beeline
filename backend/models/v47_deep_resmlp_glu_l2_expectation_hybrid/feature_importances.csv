@@ -1,0 +1,3 @@
+component,weight
+v46_catboost_lgbm,0.75
+resmlp_glu_l2,0.25

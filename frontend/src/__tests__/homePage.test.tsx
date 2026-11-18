@@ -426,4 +426,244 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     fireEvent.click(searchBtn);
     expect(screen.getByText(/Synchronized Corridors Found/i)).toBeInTheDocument();
   });
+
+  it('renders all rail & urban transit providers in the scrollytelling honeycomb (Test 17)', () => {
+    render(<HomePage />);
+
+    // Chapter 2 heading exists
+    expect(screen.getByRole('heading', { level: 3, name: /The Synchronized Transit Honeycomb/i })).toBeInTheDocument();
+
+    // All 7 Romanian railway operators are rendered
+    expect(screen.getByRole('button', { name: /Inspect CFR Călători/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Inspect Astra Trans Carpatic/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Inspect Softrans/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Inspect Transferoviar Călători/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Inspect Regio Călători/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Inspect Interregional Călători/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Inspect Ferotrafic TFI/i })).toBeInTheDocument();
+
+    // All 2 strategic rail junctions are rendered
+    expect(screen.getByRole('button', { name: /Inspect București Nord Hub/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Inspect Carpathian & Danube Hubs/i })).toBeInTheDocument();
+
+    // Test clicking/selecting a rail operator hexagon updates the Selected Provider Detail Inspector card
+    const tfcBtn = screen.getByRole('button', { name: /Inspect Transferoviar Călători/i });
+    fireEvent.click(tfcBtn);
+
+    // Inspector card displays Transferoviar Călători metadata
+    expect(screen.getByText(/REGIONAL & COMMUTER EXPRESS/i)).toBeInTheDocument();
+    expect(screen.getByText(/Transferoviar Călători S\.A\. \(TFC\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/176,000\+ runs analyzed/i)).toBeInTheDocument();
+
+    // Test clicking a strategic junction updates the inspector card
+    const bnrHubBtn = screen.getByRole('button', { name: /Inspect București Nord Hub/i });
+    fireEvent.click(bnrHubBtn);
+    expect(screen.getByText(/PRIMARY NATIONAL RAIL JUNCTION/i)).toBeInTheDocument();
+    expect(screen.getByText(/Gara de Nord Central Railway Terminal Hub/i)).toBeInTheDocument();
+
+    // Strict Invariant 2 Negative Assertions proving urban public transit is completely absent
+    expect(screen.queryByText(/Metrorex/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\bSTB\b/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Transurb/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CTP Cluj/i)).not.toBeInTheDocument();
+  });
+
+  it('renders the 3 Queen Bee cards, archetype-matched Mini Worker Bees, and rich SVG props (Test 18)', () => {
+    const { container } = render(<HomePage />);
+
+    // Chapter 1 heading
+    expect(screen.getByRole('heading', { level: 3, name: /The Three Queen Bees & Their Hive Swarms/i })).toBeInTheDocument();
+
+    // The 3 Queen Bee Cards exist
+    const safeQueenCard = container.querySelector('[data-testid="queen-card-safe"]');
+    const fastQueenCard = container.querySelector('[data-testid="queen-card-fast"]');
+    const economyQueenCard = container.querySelector('[data-testid="queen-card-economy"]');
+
+    expect(safeQueenCard).toBeInTheDocument();
+    expect(fastQueenCard).toBeInTheDocument();
+    expect(economyQueenCard).toBeInTheDocument();
+
+    expect(screen.getByRole('heading', { level: 4, name: /Queen Transfer Guard/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4, name: /Queen Express Scout/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4, name: /Queen Nectar Saver/i })).toBeInTheDocument();
+
+    // Archetype-matched minimalist Mini Worker Bees exist
+    const fastMiniBees = container.querySelectorAll('[data-mini-bee-variant="fast"]');
+    const safeMiniBees = container.querySelectorAll('[data-mini-bee-variant="safe"]');
+    const economyMiniBees = container.querySelectorAll('[data-mini-bee-variant="economy"]');
+
+    expect(fastMiniBees.length).toBeGreaterThan(0);
+    expect(safeMiniBees.length).toBeGreaterThan(0);
+    expect(economyMiniBees.length).toBeGreaterThan(0);
+
+    // Rich physical SVG props in Chapter 3 and honeycomb
+    expect(container.querySelector('[data-testid="svg-beehive"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="svg-honeycomb"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="svg-honey-pot"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="svg-honey-spoon"]')).toBeInTheDocument();
+
+    // Hovering/clicking Queen card triggers selection
+    if (fastQueenCard) {
+      fireEvent.click(fastQueenCard);
+      expect(fastQueenCard).toHaveAttribute('aria-pressed', 'true');
+    }
+  });
+
+  it('updates companion mascot state on scroll, supports Jump Back CTA, and enforces strict invariants (Test 19)', () => {
+    // Mock window.scrollTo
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = jest.fn();
+
+    const { container } = render(<HomePage />);
+
+    // Strict Invariant 1: Strictly contains ZERO map or canvas elements across the whole page
+    expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
+
+    // Simulate window scroll into queens chapter
+    Object.defineProperty(window, 'scrollY', { value: 500, writable: true, configurable: true });
+    fireEvent.scroll(window);
+
+    // Scroll companion guide becomes visible
+    const companionGuide = container.querySelector('[data-testid="scroll-companion-guide"]');
+    expect(companionGuide).toBeInTheDocument();
+    expect(companionGuide).toHaveAttribute('data-chapter', 'queens');
+    expect(companionGuide?.querySelector('[aria-live="polite"]')).toBeInTheDocument();
+
+    // Simulate window scroll into providers chapter
+    Object.defineProperty(window, 'scrollY', { value: 1200, writable: true, configurable: true });
+    fireEvent.scroll(window);
+    expect(companionGuide).toHaveAttribute('data-chapter', 'providers');
+
+    // Simulate window scroll into ecosystem chapter
+    Object.defineProperty(window, 'scrollY', { value: 2200, writable: true, configurable: true });
+    fireEvent.scroll(window);
+    expect(companionGuide).toHaveAttribute('data-chapter', 'ecosystem');
+
+    // Click "Ready to Fly? Plan Your Route Now" CTA button
+    const ctaBtn = screen.getByRole('button', { name: /Ready to Fly\? Plan Your Route Now/i });
+    expect(ctaBtn).toBeInTheDocument();
+    fireEvent.click(ctaBtn);
+
+    expect(window.scrollTo).toHaveBeenCalledWith(
+      expect.objectContaining({ top: 0 })
+    );
+
+    window.scrollTo = originalScrollTo;
+  });
+
+  it('asserts named mascots, railway ML telemetry metrics, and zero map/canvas elements (Test 20)', () => {
+    const { container } = render(<HomePage />);
+
+    // Assert that Bumbi, Queen Meli, Queen Vira, and Queen Flora are rendered in the DOM
+    expect(screen.getAllByText(/Bumbi/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Queen Meli/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Queen Vira/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Queen Flora/i).length).toBeGreaterThan(0);
+
+    // Verify Chapter 3 (#tour-ecosystem) displays the railway ML telemetry metrics
+    const ecosystemSection = container.querySelector('#tour-ecosystem');
+    expect(ecosystemSection).toBeInTheDocument();
+    expect(ecosystemSection).toHaveTextContent(/1\.52M/);
+    expect(ecosystemSection).toHaveTextContent(/1\.5ms/);
+    expect(ecosystemSection).toHaveTextContent(/99\.5%/);
+
+    // Strict Invariant 1: Strictly zero map or canvas elements anywhere in container
+    expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
+  });
+
+  it('renders Chapter 1 unified production architecture: Design 4 Top Sanctuaries + Design 6 Beehive Route Preview Map with Open Portal triggers (Test 21)', () => {
+    // Mock scrollIntoView for jsdom
+    const originalScrollIntoView = window.HTMLElement.prototype.scrollIntoView;
+    const mockScrollIntoView = jest.fn();
+    window.HTMLElement.prototype.scrollIntoView = mockScrollIntoView;
+
+    const { container } = render(<HomePage />);
+
+    // 1. Verify Top Chapter 1 Royal Hex-Sanctuaries and "Open Portal" buttons
+    const safePortalBtn = screen.getByTestId('open-portal-safe');
+    const fastPortalBtn = screen.getByTestId('open-portal-fast');
+    const economyPortalBtn = screen.getByTestId('open-portal-economy');
+
+    expect(safePortalBtn).toBeInTheDocument();
+    expect(fastPortalBtn).toBeInTheDocument();
+    expect(economyPortalBtn).toBeInTheDocument();
+
+    // Verify Railway Switch (Macaz) and Signals on top track
+    expect(screen.getByTestId('rail-switch-south')).toBeInTheDocument();
+    expect(screen.getByTestId('rail-switch-central')).toBeInTheDocument();
+    expect(screen.getByTestId('rail-signal-meli')).toBeInTheDocument();
+    expect(screen.getByTestId('rail-signal-vira')).toBeInTheDocument();
+    expect(screen.getByTestId('rail-signal-flora')).toBeInTheDocument();
+
+    // Verify SVG connector beam between sanctuaries and route preview map
+    expect(screen.getByTestId('preview-connector-beam')).toBeInTheDocument();
+
+    // 2. Verify Interactive Route Preview Map (#queen-route-preview)
+    const previewMap = container.querySelector('#queen-route-preview');
+    expect(previewMap).toBeInTheDocument();
+    expect(screen.getByTestId('queen-route-preview')).toBeInTheDocument();
+
+    // 3. Verify exactly 7 Beehive Stations (data-testid="preview-beehive-station")
+    const stations = container.querySelectorAll('[data-testid="preview-beehive-station"]');
+    expect(stations.length).toBe(7);
+
+    // Verify all 7 generic beehive station names are rendered
+    expect(screen.getAllByText(/Point A • Origin Hive/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Meadow Vale Hive/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sunny Creek Hive/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Central Junction Hive/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Amber Ridge Hive/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Orchard Valley Hive/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Point B • Destination Hive/i).length).toBeGreaterThan(0);
+
+    // 4. Verify Express Bee Locomotive replaces train locomotive (Strict Invariant)
+    const beeLocomotive = container.querySelector('[data-testid="route-preview-bee-locomotive"]');
+    expect(beeLocomotive).toBeInTheDocument();
+    // Default safe gear matches Meli's signature color
+    expect(beeLocomotive).toHaveAttribute('data-bee-color', 'safe');
+
+    // 5. Assert Consumer Story 1: Reliability (Safe - Queen Meli)
+    // Story: Always arrive on time, built-in cushion/margin of error accounts for extra time in case another train is delayed
+    expect(screen.getAllByText(/Always Arrive On Time\. Built-In Cushion for Any Delay\./i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Emerald Error-Margin Shield/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\+20 min Built-In Delay Buffer/i).length).toBeGreaterThan(0);
+
+    // Click delay stress test button (+15 min unexpected delay on leg 1)
+    const delayBtn = screen.getByTestId('safe-delay-btn');
+    fireEvent.click(delayBtn);
+    expect(screen.getAllByText(/15 minutes of unexpected delay absorbed/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/100% On Time/i).length).toBeGreaterThan(0);
+
+    // 6. Assert Consumer Story 2: Fast (Queen Vira) via Open Portal button
+    fireEvent.click(fastPortalBtn);
+    expect(mockScrollIntoView).toHaveBeenCalled();
+    expect(beeLocomotive).toHaveAttribute('data-bee-color', 'fast');
+
+    // Story: There is simply no faster route from A to B, maximum speed, zero wasted stops
+    expect(screen.getAllByText(/There Is Simply No Faster Route From A to B\./i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/-55 minutes saved/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Skipped • 0 Wasted Stops/i).length).toBeGreaterThan(0);
+
+    // 7. Assert Consumer Story 3: Economy (Queen Flora) via Open Portal button
+    fireEvent.click(economyPortalBtn);
+    expect(beeLocomotive).toHaveAttribute('data-bee-color', 'economy');
+
+    // Story: Calm, unrushed journey with longer stops when you have no deadline, keep most money in your pocket
+    expect(
+      screen.getAllByText(/Calm, Unrushed Journey with Longer Stops When You Have No Deadline\./i).length
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Save up to 40%/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\+12m Relaxed Stop/i).length).toBeGreaterThan(0);
+
+    // Clicking an intermediate beehive station inspects calm stop & pocket savings
+    const sunnyCreekStation = stations[2];
+    fireEvent.click(sunnyCreekStation);
+    expect(screen.getAllByText(/12 min calm stop/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/stretch your legs, zero rush/i).length).toBeGreaterThan(0);
+
+    // 8. Strict Invariant 1: Strictly zero map or canvas elements anywhere in DOM
+    expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
+
+    window.HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+  });
 });

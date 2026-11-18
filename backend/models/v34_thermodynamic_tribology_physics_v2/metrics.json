@@ -1,0 +1,569 @@
+{
+  "model_version": "v34_thermodynamic_tribology_physics_v2",
+  "description": "2nd-gen thermodynamic tribology interactions (adhesion loss, cryogenic braking, catenary icing, signal visibility)",
+  "n_splits": 10,
+  "folds": [
+    {
+      "fold": 0,
+      "train": {
+        "regressor": {
+          "mae": 8.0012,
+          "rmse": 11.8675,
+          "r2": 0.538
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9915,
+          "brier_score": 0.0268,
+          "accuracy_pct": 96.32,
+          "precision": 0.8366,
+          "recall": 0.9798,
+          "f1": 0.9025
+        },
+        "reliability": {
+          "accuracy_pct": 84.37,
+          "roc_auc": 0.7705,
+          "brier_score": 0.1172,
+          "ece_pct": 0.51
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 7.694,
+          "rmse": 11.2569,
+          "r2": 0.6352
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9893,
+          "brier_score": 0.0284,
+          "accuracy_pct": 96.11,
+          "precision": 0.8247,
+          "recall": 0.9756,
+          "f1": 0.8938
+        },
+        "reliability": {
+          "accuracy_pct": 82.86,
+          "roc_auc": 0.7435,
+          "brier_score": 0.1286,
+          "ece_pct": 1.28
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": -0.3072,
+        "classifier_auc_gap": 0.0022,
+        "reliability_auc_gap": 0.027
+      }
+    },
+    {
+      "fold": 1,
+      "train": {
+        "regressor": {
+          "mae": 7.9158,
+          "rmse": 11.7226,
+          "r2": 0.5603
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9916,
+          "brier_score": 0.0265,
+          "accuracy_pct": 96.37,
+          "precision": 0.8383,
+          "recall": 0.9804,
+          "f1": 0.9038
+        },
+        "reliability": {
+          "accuracy_pct": 84.44,
+          "roc_auc": 0.7748,
+          "brier_score": 0.1166,
+          "ece_pct": 0.55
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 8.4434,
+          "rmse": 12.5011,
+          "r2": 0.4326
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9866,
+          "brier_score": 0.031,
+          "accuracy_pct": 95.87,
+          "precision": 0.8195,
+          "recall": 0.9696,
+          "f1": 0.8883
+        },
+        "reliability": {
+          "accuracy_pct": 82.52,
+          "roc_auc": 0.6988,
+          "brier_score": 0.1346,
+          "ece_pct": 1.44
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": 0.5276,
+        "classifier_auc_gap": 0.005,
+        "reliability_auc_gap": 0.076
+      }
+    },
+    {
+      "fold": 2,
+      "train": {
+        "regressor": {
+          "mae": 7.9751,
+          "rmse": 11.8195,
+          "r2": 0.553
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9914,
+          "brier_score": 0.0268,
+          "accuracy_pct": 96.33,
+          "precision": 0.8363,
+          "recall": 0.9802,
+          "f1": 0.9026
+        },
+        "reliability": {
+          "accuracy_pct": 84.14,
+          "roc_auc": 0.7682,
+          "brier_score": 0.1188,
+          "ece_pct": 0.46
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 7.8884,
+          "rmse": 11.6728,
+          "r2": 0.5101
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9898,
+          "brier_score": 0.0282,
+          "accuracy_pct": 96.12,
+          "precision": 0.8361,
+          "recall": 0.9692,
+          "f1": 0.8977
+        },
+        "reliability": {
+          "accuracy_pct": 85.01,
+          "roc_auc": 0.7507,
+          "brier_score": 0.1153,
+          "ece_pct": 1.24
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": -0.0867,
+        "classifier_auc_gap": 0.0016,
+        "reliability_auc_gap": 0.0175
+      }
+    },
+    {
+      "fold": 3,
+      "train": {
+        "regressor": {
+          "mae": 7.9751,
+          "rmse": 11.8168,
+          "r2": 0.552
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9915,
+          "brier_score": 0.0266,
+          "accuracy_pct": 96.36,
+          "precision": 0.8379,
+          "recall": 0.98,
+          "f1": 0.9034
+        },
+        "reliability": {
+          "accuracy_pct": 84.24,
+          "roc_auc": 0.771,
+          "brier_score": 0.118,
+          "ece_pct": 0.49
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 7.936,
+          "rmse": 11.7209,
+          "r2": 0.52
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9886,
+          "brier_score": 0.0301,
+          "accuracy_pct": 95.84,
+          "precision": 0.8217,
+          "recall": 0.9708,
+          "f1": 0.8901
+        },
+        "reliability": {
+          "accuracy_pct": 84.25,
+          "roc_auc": 0.731,
+          "brier_score": 0.1216,
+          "ece_pct": 1.82
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": -0.0391,
+        "classifier_auc_gap": 0.0029,
+        "reliability_auc_gap": 0.04
+      }
+    },
+    {
+      "fold": 4,
+      "train": {
+        "regressor": {
+          "mae": 7.9746,
+          "rmse": 11.8263,
+          "r2": 0.5414
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9913,
+          "brier_score": 0.0271,
+          "accuracy_pct": 96.28,
+          "precision": 0.8335,
+          "recall": 0.9797,
+          "f1": 0.9007
+        },
+        "reliability": {
+          "accuracy_pct": 84.04,
+          "roc_auc": 0.7671,
+          "brier_score": 0.1196,
+          "ece_pct": 0.53
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 7.917,
+          "rmse": 11.6493,
+          "r2": 0.5997
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9914,
+          "brier_score": 0.0255,
+          "accuracy_pct": 96.56,
+          "precision": 0.8577,
+          "recall": 0.9747,
+          "f1": 0.9125
+        },
+        "reliability": {
+          "accuracy_pct": 86.11,
+          "roc_auc": 0.7697,
+          "brier_score": 0.1071,
+          "ece_pct": 1.2
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": -0.0576,
+        "classifier_auc_gap": -0.0001,
+        "reliability_auc_gap": -0.0026
+      }
+    },
+    {
+      "fold": 5,
+      "train": {
+        "regressor": {
+          "mae": 7.9738,
+          "rmse": 11.8201,
+          "r2": 0.5388
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9914,
+          "brier_score": 0.0269,
+          "accuracy_pct": 96.3,
+          "precision": 0.8352,
+          "recall": 0.9796,
+          "f1": 0.9017
+        },
+        "reliability": {
+          "accuracy_pct": 84.17,
+          "roc_auc": 0.7694,
+          "brier_score": 0.1185,
+          "ece_pct": 0.47
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 7.9085,
+          "rmse": 11.6176,
+          "r2": 0.6283
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9895,
+          "brier_score": 0.0273,
+          "accuracy_pct": 96.4,
+          "precision": 0.8456,
+          "recall": 0.9758,
+          "f1": 0.906
+        },
+        "reliability": {
+          "accuracy_pct": 84.84,
+          "roc_auc": 0.7364,
+          "brier_score": 0.1176,
+          "ece_pct": 1.71
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": -0.0653,
+        "classifier_auc_gap": 0.0019,
+        "reliability_auc_gap": 0.033
+      }
+    },
+    {
+      "fold": 6,
+      "train": {
+        "regressor": {
+          "mae": 7.973,
+          "rmse": 11.8161,
+          "r2": 0.5479
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9914,
+          "brier_score": 0.0269,
+          "accuracy_pct": 96.32,
+          "precision": 0.8358,
+          "recall": 0.9801,
+          "f1": 0.9022
+        },
+        "reliability": {
+          "accuracy_pct": 84.13,
+          "roc_auc": 0.7686,
+          "brier_score": 0.1189,
+          "ece_pct": 0.53
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 7.9439,
+          "rmse": 11.776,
+          "r2": 0.5538
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9899,
+          "brier_score": 0.0278,
+          "accuracy_pct": 96.24,
+          "precision": 0.8358,
+          "recall": 0.9759,
+          "f1": 0.9004
+        },
+        "reliability": {
+          "accuracy_pct": 85.15,
+          "roc_auc": 0.7578,
+          "brier_score": 0.1136,
+          "ece_pct": 1.42
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": -0.0291,
+        "classifier_auc_gap": 0.0015,
+        "reliability_auc_gap": 0.0108
+      }
+    },
+    {
+      "fold": 7,
+      "train": {
+        "regressor": {
+          "mae": 7.9617,
+          "rmse": 11.7904,
+          "r2": 0.5574
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9915,
+          "brier_score": 0.0267,
+          "accuracy_pct": 96.34,
+          "precision": 0.837,
+          "recall": 0.9807,
+          "f1": 0.9031
+        },
+        "reliability": {
+          "accuracy_pct": 84.31,
+          "roc_auc": 0.7713,
+          "brier_score": 0.1175,
+          "ece_pct": 0.51
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 8.0136,
+          "rmse": 11.9467,
+          "r2": 0.4572
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9886,
+          "brier_score": 0.0294,
+          "accuracy_pct": 96.06,
+          "precision": 0.8226,
+          "recall": 0.978,
+          "f1": 0.8936
+        },
+        "reliability": {
+          "accuracy_pct": 83.55,
+          "roc_auc": 0.7318,
+          "brier_score": 0.1259,
+          "ece_pct": 1.56
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": 0.0519,
+        "classifier_auc_gap": 0.0029,
+        "reliability_auc_gap": 0.0395
+      }
+    },
+    {
+      "fold": 8,
+      "train": {
+        "regressor": {
+          "mae": 7.9289,
+          "rmse": 11.7463,
+          "r2": 0.5623
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9919,
+          "brier_score": 0.0264,
+          "accuracy_pct": 96.38,
+          "precision": 0.8388,
+          "recall": 0.9809,
+          "f1": 0.9043
+        },
+        "reliability": {
+          "accuracy_pct": 84.46,
+          "roc_auc": 0.774,
+          "brier_score": 0.1163,
+          "ece_pct": 0.5
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 8.321,
+          "rmse": 12.3148,
+          "r2": 0.3832
+        },
+        "classifier_missed": {
+          "roc_auc": 0.986,
+          "brier_score": 0.032,
+          "accuracy_pct": 95.62,
+          "precision": 0.8093,
+          "recall": 0.9648,
+          "f1": 0.8803
+        },
+        "reliability": {
+          "accuracy_pct": 82.04,
+          "roc_auc": 0.6965,
+          "brier_score": 0.1374,
+          "ece_pct": 1.81
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": 0.3921,
+        "classifier_auc_gap": 0.0059,
+        "reliability_auc_gap": 0.0775
+      }
+    },
+    {
+      "fold": 9,
+      "train": {
+        "regressor": {
+          "mae": 7.9451,
+          "rmse": 11.7789,
+          "r2": 0.5431
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9915,
+          "brier_score": 0.0267,
+          "accuracy_pct": 96.34,
+          "precision": 0.8368,
+          "recall": 0.98,
+          "f1": 0.9027
+        },
+        "reliability": {
+          "accuracy_pct": 84.16,
+          "roc_auc": 0.7699,
+          "brier_score": 0.1186,
+          "ece_pct": 0.52
+        }
+      },
+      "val": {
+        "regressor": {
+          "mae": 8.2232,
+          "rmse": 12.067,
+          "r2": 0.5893
+        },
+        "classifier_missed": {
+          "roc_auc": 0.9893,
+          "brier_score": 0.0293,
+          "accuracy_pct": 96.01,
+          "precision": 0.8305,
+          "recall": 0.9725,
+          "f1": 0.8959
+        },
+        "reliability": {
+          "accuracy_pct": 84.83,
+          "roc_auc": 0.742,
+          "brier_score": 0.1176,
+          "ece_pct": 1.53
+        }
+      },
+      "overfitting_gap": {
+        "mae_gap": 0.2781,
+        "classifier_auc_gap": 0.0022,
+        "reliability_auc_gap": 0.0279
+      }
+    }
+  ],
+  "cv_summary": {
+    "val_mean": {
+      "regressor": {
+        "mae": 8.0289,
+        "rmse": 11.8523,
+        "r2": 0.5309
+      },
+      "classifier_missed": {
+        "roc_auc": 0.9889,
+        "brier_score": 0.0289,
+        "f1": 0.8959
+      },
+      "reliability": {
+        "roc_auc": 0.7358,
+        "brier_score": 0.1219,
+        "ece_pct": 1.501
+      }
+    },
+    "val_std": {
+      "regressor": {
+        "mae": 0.2168,
+        "rmse": 0.3458,
+        "r2": 0.0815
+      },
+      "classifier_missed": {
+        "roc_auc": 0.0015,
+        "brier_score": 0.0018,
+        "f1": 0.0086
+      },
+      "reliability": {
+        "roc_auc": 0.0221,
+        "brier_score": 0.0091,
+        "ece_pct": 0.2152
+      }
+    },
+    "overfitting_gap_mean": {
+      "mae_gap": 0.0665,
+      "classifier_auc_gap": 0.0026,
+      "reliability_auc_gap": 0.0347
+    }
+  },
+  "test_2026_metrics": {
+    "regressor": {
+      "mae": 8.4901,
+      "rmse": 12.6414,
+      "r2": 0.5813
+    },
+    "classifier_missed": {
+      "roc_auc": 0.9879,
+      "brier_score": 0.0298,
+      "accuracy_pct": 96.02,
+      "precision": 0.8312,
+      "recall": 0.9699,
+      "f1": 0.8952
+    },
+    "reliability": {
+      "accuracy_pct": 83.83,
+      "roc_auc": 0.7063,
+      "brier_score": 0.1245,
+      "ece_pct": 0.95
+    }
+  }
+}

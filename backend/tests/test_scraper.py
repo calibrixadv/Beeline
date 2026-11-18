@@ -152,3 +152,38 @@ def test_pipeline_end_to_end_assembly(tmp_path):
     assert json_path.exists()
     json_content = json_path.read_text(encoding="utf-8")
     assert "IR 1634" in json_content
+
+
+@pytest.mark.asyncio
+async def test_async_train_collector_offline_tier_1():
+    collector = TrainApiCollector(offline=True, min_delay=0, max_delay=0)
+    try:
+        from scraper.collectors.train_api import ScrapeTier
+        records = await collector.scrape_tier(tier=ScrapeTier.TIER_1_SMOKE, date_str="2026-11-14")
+        assert len(records) == 5
+        train_nums = [r.train_number for r in records]
+        assert "IR 1572" in train_nums
+        assert "R 7568" in train_nums
+        for r in records:
+            assert r.origin_station_code == "GLT"
+            assert r.destination_station_code == "BCT"
+    finally:
+        await collector.close()
+
+
+@pytest.mark.asyncio
+async def test_train_scrape_record_direct_pipeline_processing():
+    collector = TrainApiCollector(offline=True, min_delay=0, max_delay=0)
+    pipeline = TransitScraperPipeline(weather_timeout=0.1)
+    try:
+        record = await collector.get_train("IR 1572", "2026-11-14")
+        # Direct passing of TrainScrapeRecord into pipeline
+        sample = pipeline.process_sample(
+            raw_train_data=record,
+            departure_dt=datetime(2026, 11, 14, 8, 0, tzinfo=timezone.utc),
+        )
+        assert sample.source_train_api.train_number == "IR 1572"
+        assert sample.target_labels.actual_delay_minutes == record.actual_delay_minutes
+        assert len(sample.to_18_feature_vector()) == 18
+    finally:
+        await collector.close()

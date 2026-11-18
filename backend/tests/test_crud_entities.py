@@ -411,9 +411,11 @@ async def test_user_self_deletion_lifecycle(client: AsyncClient, db_session: Asy
     assert del_res.status_code == 200
     assert "deleted successfully" in del_res.json()["message"]
 
-    # Verify deleted from SQL database
-    db_usr = (await db_session.execute(text("SELECT id FROM users WHERE email = 'user.to.delete@beeline.io'"))).fetchone()
-    assert db_usr is None
+    # Verify frozen pending deletion in SQL database (30-day lifecycle)
+    db_usr = (await db_session.execute(text("SELECT id, account_status, is_active FROM users WHERE email = 'user.to.delete@beeline.io'"))).fetchone()
+    assert db_usr is not None
+    assert db_usr[1] == "FROZEN_PENDING_DELETION"
+    assert not db_usr[2]
 
     # Attempting to access profile with old token should now fail (User not found)
     me_after = await client.get("/api/v1/users/me", headers=headers)

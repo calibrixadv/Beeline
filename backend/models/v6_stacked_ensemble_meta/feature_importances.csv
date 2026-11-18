@@ -1,0 +1,14 @@
+target,input_feature,weight
+delay_regressor,v2_delay,-0.5944028496742249
+delay_regressor,v3_delay,0.2584386467933655
+delay_regressor,v4_delay,0.3966940641403198
+delay_regressor,v5_delay_p50,0.41139835119247437
+delay_regressor,v5_delay_p90,0.2829931378364563
+missed_connection_classifier,v2_missed,0.3328646123409271
+missed_connection_classifier,v3_missed,5.452704429626465
+missed_connection_classifier,v4_missed,0.6674012541770935
+missed_connection_classifier,v5_missed,2.452930212020874
+reliability_classifier,v2_rel,0.8180780410766602
+reliability_classifier,v3_rel,6.10351037979126
+reliability_classifier,v4_rel,0.8306085467338562
+reliability_classifier,v5_rel,1.2387092113494873

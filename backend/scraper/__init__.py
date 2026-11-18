@@ -10,6 +10,7 @@ from .models import (
     InfrastructureFeatures,
     TargetLabels,
     ScrapedTrainingSample,
+    TrainScrapeRecord,
 )
 
 __all__ = [
@@ -19,4 +20,5 @@ __all__ = [
     "InfrastructureFeatures",
     "TargetLabels",
     "ScrapedTrainingSample",
+    "TrainScrapeRecord",
 ]

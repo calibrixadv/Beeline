@@ -1,3 +1,4 @@
+import hashlib
 from typing import Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -79,12 +80,83 @@ class TargetLabels(BaseModel):
     missed_connection: int = Field(default=0, ge=0, le=1, description="Target 2: Binary 1 if connection missed, else 0")
 
 
+class TrainScrapeRecord(BaseModel):
+    """
+    Scraped train record encapsulating both Source 1 (TrainApiFeatures)
+    and Source 5 (TargetLabels) matching freeze_contract.md.
+    """
+    model_config = ConfigDict(populate_by_name=True)
+
+    source_train_api: TrainApiFeatures
+    target_labels: TargetLabels
+    provider: str = Field(default="InfoFerLiveAdapter", description="Source scraper adapter name")
+    scraped_at: Optional[str] = Field(default=None, description="ISO timestamp of scrape execution")
+
+    @property
+    def train_number(self) -> str:
+        return self.source_train_api.train_number
+
+    @property
+    def operator(self) -> str:
+        return self.source_train_api.operator
+
+    @property
+    def train_category(self) -> int:
+        return self.source_train_api.train_category
+
+    @property
+    def origin_station_code(self) -> str:
+        return self.source_train_api.origin_station_code
+
+    @property
+    def destination_station_code(self) -> str:
+        return self.source_train_api.destination_station_code
+
+    @property
+    def scheduled_duration_minutes(self) -> float:
+        return self.source_train_api.scheduled_duration_minutes
+
+    @property
+    def distance_km(self) -> float:
+        return self.source_train_api.distance_km
+
+    @property
+    def stop_count(self) -> int:
+        return self.source_train_api.stop_count
+
+    @property
+    def delay_at_origin_minutes(self) -> int:
+        return self.source_train_api.delay_at_origin_minutes
+
+    @property
+    def traction_type(self) -> int:
+        return self.source_train_api.traction_type
+
+    @property
+    def has_transfer(self) -> int:
+        return self.source_train_api.has_transfer
+
+    @property
+    def transfer_buffer_minutes(self) -> float:
+        return self.source_train_api.transfer_buffer_minutes
+
+    @property
+    def actual_delay_minutes(self) -> float:
+        return self.target_labels.actual_delay_minutes
+
+    @property
+    def missed_connection(self) -> int:
+        return self.target_labels.missed_connection
+
+
+
 class ScrapedTrainingSample(BaseModel):
     """
     Unified training observation containing all 5 feature groups.
     """
     model_config = ConfigDict(populate_by_name=True)
 
+    service_date: Optional[str] = Field(default=None, description="Service date of trip YYYY-MM-DD")
     source_train_api: TrainApiFeatures
     source_weather_api: WeatherApiFeatures
     source_calendar_generator: CalendarFeatures
@@ -94,6 +166,8 @@ class ScrapedTrainingSample(BaseModel):
     def to_flat_dict(self) -> Dict[str, object]:
         """Flattens all feature categories into a flat tabular dictionary for ML training."""
         data: Dict[str, object] = {}
+        if self.service_date is not None:
+            data["service_date"] = self.service_date
         for group in [
             self.source_train_api,
             self.source_weather_api,
@@ -108,6 +182,14 @@ class ScrapedTrainingSample(BaseModel):
         """
         Maps the frozen sample to the 18-element numerical vector accepted by
         the active in-process ONNX model (backend/app/ml_models/risk_model.onnx).
+        """
+        return self.to_onnx_feature_vector()
+
+    def to_onnx_feature_vector(self) -> List[float]:
+        """
+        Maps the sample to the canonical 18-element numerical vector accepted by
+        the active in-process ONNX model (backend/app/ml_models/risk_model.onnx).
+        Conforms strictly to backend/app/services/risk_service.py and risk_model_metadata.json.
         """
         train = self.source_train_api
         infra = self.source_infrastructure_registry
@@ -124,7 +206,10 @@ class ScrapedTrainingSample(BaseModel):
         }
         baseline_punctuality = carrier_punctuality_map.get(train.operator.upper(), 0.85)
 
-        corridor_id_hash = float(abs(hash(infra.corridor_slug)) % 1000)
+        corridor_id_hash = float(int(hashlib.md5(infra.corridor_slug.encode("utf-8")).hexdigest(), 16) % 1000) if infra.corridor_slug else 0.0
+
+        # Transfer buffer minutes: exactly 999.0 whenever has_transfer == 0
+        transfer_buffer = 999.0 if train.has_transfer == 0 else float(train.transfer_buffer_minutes)
 
         # 18-element vector strictly conforming to risk_model_metadata.json
         return [
@@ -138,7 +223,7 @@ class ScrapedTrainingSample(BaseModel):
             float(cal.day_of_week),                          # 7: day_of_week
             float(cal.is_weekend),                           # 8: is_weekend
             float(train.has_transfer),                       # 9: has_transfer
-            float(train.transfer_buffer_minutes),            # 10: transfer_buffer_minutes
+            transfer_buffer,                                 # 10: transfer_buffer_minutes
             0.88,                                            # 11: transfer_station_reliability
             0.30,                                            # 12: transfer_station_congestion
             float(infra.active_speed_restrictions_count),    # 13: active_corridor_disruptions

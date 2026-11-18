@@ -143,11 +143,16 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
               Active Gear Preview
             </div>
             <div className="text-sm font-extrabold text-stone-900 truncate">
-              {currentConfig.title}
+              {currentConfig.characterName} • {currentConfig.title}
             </div>
             <div className="text-xs font-semibold text-amber-700 mt-0.5">
               {currentConfig.gearName}
             </div>
+            {currentConfig.romanianRole && (
+              <div className="text-[11px] font-medium text-stone-500 mt-0.5">
+                {currentConfig.romanianRole}
+              </div>
+            )}
             <div className="text-[11px] text-stone-600 mt-1 italic">
               &quot;{currentConfig.speechDefault}&quot;
             </div>
@@ -189,7 +194,7 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
                         {gear.charAt(0).toUpperCase() + gear.slice(1)}
                       </div>
                       <div className="text-[10px] text-stone-500 truncate">
-                        {gConfig.gearName}
+                        {gConfig.characterName} • {gConfig.gearName}
                       </div>
                     </div>
                   </div>

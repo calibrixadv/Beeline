@@ -1,0 +1,23 @@
+stop_id,stop_name,stop_lat,stop_lon,zone_id
+GLT,Gara Galați,45.4382,28.0561,GLT
+BRL,Gara Brăila,45.2751,27.9554,BRL
+BUZ,Gara Buzău,45.1432,26.8306,BUZ
+PLS,Ploiești Sud,44.9272,26.0354,PLS
+PLV,Ploiești Vest,44.9331,25.9992,PLV
+BCT,București Nord,44.4473,26.0746,BCT
+BSV,Gara Brașov,45.6608,25.6144,BSV
+SNA,Gara Sinaia,45.3533,25.5539,SNA
+PRD,Gara Predeal,45.5050,25.5786,PRD
+CMP,Gara Câmpina,45.1278,25.7333,CMP
+CTA,Gara Constanța,44.1704,28.6302,CTA
+FET,Gara Fetești,44.4167,27.8167,FET
+CJN,Gara Cluj-Napoca,46.7842,23.5872,CJN
+SGH,Gara Sighișoara,46.2217,24.7928,SGH
+MED,Gara Mediaș,46.1656,24.3517,MED
+TEI,Gara Teiuș,46.2000,23.6800,TEI
+TIM,Gara Timișoara Nord,45.7511,21.2084,TIM
+ARD,Gara Arad,46.1883,21.3235,ARD
+IAS,Gara Iași,47.1685,27.5701,IAS
+BAC,Gara Bacău,46.5670,26.9140,BAC
+FOC,Gara Focșani,45.6960,27.1830,FOC
+PAS,Gara Pașcani,47.2500,26.7200,PAS

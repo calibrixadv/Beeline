@@ -1,0 +1,6 @@
+train_number,operator,train_category,origin_station_code,destination_station_code,scheduled_duration_minutes,distance_km,stop_count,delay_at_origin_minutes,traction_type,has_transfer,transfer_buffer_minutes,actual_delay_minutes,missed_connection
+IR 1570,CFR,2,GLT,BCT,190.0,230.0,4,0,1,0,999.0,0.0,0
+IR 1572,CFR,2,GLT,BCT,195.0,230.0,5,3,1,0,999.0,18.0,0
+IR 1574,CFR,2,GLT,BCT,200.0,230.0,4,0,1,0,999.0,5.0,0
+RE 7570,CFR,1,GLT,BCT,225.0,230.0,8,0,1,0,999.0,12.0,0
+R 7568,CFR,0,GLT,BCT,245.0,230.0,12,2,1,0,999.0,25.0,0
