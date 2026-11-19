@@ -479,6 +479,35 @@ async def convert_guest(
             proof = compute_device_proof(sess.id, fingerprint)
             set_auth_cookies(response, new_auth, proof, remember_me=sess.remember_me)
 
+    # Generate 3 emergency recovery codes and dispatch welcome email on guest conversion
+    try:
+        raw_codes, hashed_codes = mfa_service.generate_post_signup_recovery_codes(updated_user.id, count=3)
+        cred_res = await db.execute(
+            select(MFACredential).where(MFACredential.user_id == updated_user.id)
+        )
+        cred = cred_res.scalar_one_or_none()
+        if not cred:
+            cred = MFACredential(
+                user_id=updated_user.id,
+                secret_key=mfa_service.generate_secret(),
+                backup_codes_hash=json.dumps(hashed_codes),
+                backup_codes=json.dumps(hashed_codes),
+                is_confirmed=False
+            )
+            db.add(cred)
+        else:
+            cred.backup_codes_hash = json.dumps(hashed_codes)
+            cred.backup_codes = json.dumps(hashed_codes)
+        await db.commit()
+
+        await email_service.send_welcome_recovery_codes(
+            to_email=updated_user.email,
+            recovery_codes=raw_codes,
+            full_name=updated_user.full_name
+        )
+    except Exception as exc:
+        pass
+
     return UserProfile.model_validate(updated_user)
 
 
@@ -841,7 +870,7 @@ async def confirm_mfa(
     await db.commit()
 
     try:
-        await email_service.send_2fa_enabled_alert(to_email=current_user.email, ip_address=ip)
+        await email_service.send_mfa_status_changed_email(to_email=current_user.email, enabled=True, ip_address=ip)
     except Exception:
         pass
 
@@ -1020,7 +1049,7 @@ async def disable_mfa(
 
     ip = get_client_ip(request) if request else None
     try:
-        await email_service.send_2fa_disabled_alert(to_email=current_user.email, ip_address=ip)
+        await email_service.send_mfa_status_changed_email(to_email=current_user.email, enabled=False, ip_address=ip)
     except Exception:
         pass
 

@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { 
   Compass, 
   MapPin, 
-  Calendar, 
   Train, 
   Briefcase, 
   LogOut, 
@@ -21,7 +20,6 @@ import MascotBee from './MascotBee';
 const NAV_LINKS = [
   { href: '/', label: 'Home', icon: Compass },
   { href: '/trips', label: 'Trips', icon: MapPin },
-  { href: '/schedules', label: 'Schedules', icon: Calendar },
   { href: '/trains', label: 'Trains', icon: Train },
   { href: '/my-trip', label: 'My Trip', icon: Briefcase },
 ];

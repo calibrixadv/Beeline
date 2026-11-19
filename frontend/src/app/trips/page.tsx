@@ -16,12 +16,12 @@ import {
   Train
 } from 'lucide-react';
 import { 
-  generateTripsForCorridor, 
   filterAndSortTrips, 
   convertRoutePlanToTrainJourney,
   fetchDayTripsFromBackend,
   DEFAULT_TRIP_FILTERS,
-  TripFilterState
+  TripFilterState,
+  TripFetchStatus
 } from '../../services/tripBookingService';
 import { TransitRoutePlan, CuratedPillar } from '../../types/routePlan';
 import { StationAutocompleteItem } from '../../types/station';
@@ -32,7 +32,12 @@ import BaseButton from '../../components/BaseButton';
 import StationAutocompleteInput from '../../components/StationAutocompleteInput';
 import BookingTripCard from '../../components/BookingTripCard';
 import TripFilterBar from '../../components/TripFilterBar';
-import MascotBee from '../../components/MascotBee';
+import MascotBee, { MascotGear } from '../../components/MascotBee';
+import TripsGhostSkeleton from '../../components/TripsGhostSkeleton';
+import MascotDebugModal from '../../components/MascotDebugModal';
+
+export const DEFAULT_TRIPS_ORIGIN = 'București Nord';
+export const DEFAULT_TRIPS_DESTINATION = 'Brașov';
 
 const DEPARTURE_PRESETS = ['Now', '08:00 AM', '12:00 PM', '16:00 PM'];
 const POPULAR_CORRIDORS = [
@@ -46,8 +51,10 @@ function TripsContent() {
   const searchParams = useSearchParams();
   const { addTrainToTrip, removeTrainFromTrip, isTrainInTrip, trips: savedTrips } = useTrip();
 
-  const initialOrigin = searchParams.get('origin') || 'Galați';
-  const initialDestination = searchParams.get('destination') || 'București Nord';
+  const urlOrigin = searchParams.get('origin');
+  const urlDestination = searchParams.get('destination');
+  const initialOrigin = urlOrigin || DEFAULT_TRIPS_ORIGIN;
+  const initialDestination = urlDestination || DEFAULT_TRIPS_DESTINATION;
   const initialDateParam = searchParams.get('date');
 
   const initialPillarParam = searchParams.get('pillar')?.toUpperCase() || null;
@@ -80,11 +87,29 @@ function TripsContent() {
 
   const [backendPlans, setBackendPlans] = useState<TransitRoutePlan[]>([]);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [fetchStatus, setFetchStatus] = useState<TripFetchStatus | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDebugModalOpen, setIsDebugModalOpen] = useState<boolean>(false);
+  const [isDebugLoadingForced, setIsDebugLoadingForced] = useState<boolean>(false);
+  const [debugGearOverride, setDebugGearOverride] = useState<MascotGear | null>(null);
+  const activeRequestIdRef = React.useRef<number>(0);
+  const [fetchTrigger, setFetchTrigger] = useState<number>(0);
 
   // Keep active filter tab on ALL by default so all unique routes for day X are visible
   const [filters, setFilters] = useState<TripFilterState>(() => {
     return { ...DEFAULT_TRIP_FILTERS, pillar: 'ALL' };
   });
+
+  const activeMascotGear: MascotGear = useMemo(() => {
+    const currentPillar = filters.pillar !== 'ALL' ? filters.pillar : initialPillarParam;
+    if (currentPillar === 'MOST_RELIABLE') return 'safe';
+    if (currentPillar === 'FASTEST') return 'fast';
+    if (currentPillar === 'BEST_VALUE') return 'economy';
+    return 'default';
+  }, [filters.pillar, initialPillarParam]);
+
+  const effectiveIsLoading = isLoading || isDebugLoadingForced;
+  const effectiveSpinnerGear: MascotGear = debugGearOverride ?? activeMascotGear;
 
   const isPlanHighlighted = (plan: TransitRoutePlan) => {
     if (!initialPillarParam) return false;
@@ -93,53 +118,6 @@ function TripsContent() {
       plan.curatedPillar === initialPillarParam
     );
   };
-
-  const handlePrevDay = () => {
-    const cur = new Date(activeDate);
-    cur.setDate(cur.getDate() - 1);
-    const prevStr = cur.toISOString().slice(0, 10);
-    if (prevStr >= todayStr) {
-      setActiveDate(prevStr);
-    }
-  };
-
-  const handleNextDay = () => {
-    const cur = new Date(activeDate);
-    cur.setDate(cur.getDate() + 1);
-    const nextStr = cur.toISOString().slice(0, 10);
-    if (nextStr <= maxDateStr) {
-      setActiveDate(nextStr);
-    }
-  };
-
-  const isDatePast = activeDate < todayStr;
-  const isDateTooFar = activeDate > maxDateStr;
-  const isOutOfBounds = isDatePast || isDateTooFar;
-
-  useEffect(() => {
-    let isCancelled = false;
-    setFetchError(null);
-
-    const backendPillarPref =
-      filters.pillar !== 'ALL'
-        ? filters.pillar
-        : (initialPillarParam as CuratedPillar) || undefined;
-
-    fetchDayTripsFromBackend(activeOrigin, activeDestination, activeDate, backendPillarPref)
-      .then((res) => {
-        if (isCancelled) return;
-        if (res.error) setFetchError(res.error);
-        setBackendPlans(res.plans || []);
-      })
-      .catch((err) => {
-        if (isCancelled) return;
-        setFetchError(err?.message || 'Error fetching trains');
-      });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [activeOrigin, activeDestination, activeDate, filters.pillar]);
 
   const updateUrlParams = (newOrigin: string, newDestination: string, newDate?: string) => {
     if (typeof window === 'undefined') return;
@@ -152,6 +130,100 @@ function TripsContent() {
     router.replace(`/trips?${params.toString()}`);
   };
 
+  const handlePrevDay = () => {
+    const cur = new Date(activeDate);
+    cur.setDate(cur.getDate() - 1);
+    const prevStr = cur.toISOString().slice(0, 10);
+    if (prevStr >= todayStr) {
+      setActiveDate(prevStr);
+      updateUrlParams(activeOrigin, activeDestination, prevStr);
+      setFetchTrigger((prev) => prev + 1);
+    }
+  };
+
+  const handleNextDay = () => {
+    const cur = new Date(activeDate);
+    cur.setDate(cur.getDate() + 1);
+    const nextStr = cur.toISOString().slice(0, 10);
+    if (nextStr <= maxDateStr) {
+      setActiveDate(nextStr);
+      updateUrlParams(activeOrigin, activeDestination, nextStr);
+      setFetchTrigger((prev) => prev + 1);
+    }
+  };
+
+  const handleResetToDefaultCorridor = () => {
+    setOriginInput(DEFAULT_TRIPS_ORIGIN);
+    setDestinationInput(DEFAULT_TRIPS_DESTINATION);
+    setActiveOrigin(DEFAULT_TRIPS_ORIGIN);
+    setActiveDestination(DEFAULT_TRIPS_DESTINATION);
+    updateUrlParams(DEFAULT_TRIPS_ORIGIN, DEFAULT_TRIPS_DESTINATION);
+    setFetchTrigger((prev) => prev + 1);
+  };
+
+  const isDatePast = activeDate < todayStr;
+  const isDateTooFar = activeDate > maxDateStr;
+  const isOutOfBounds = isDatePast || isDateTooFar;
+  const hasNoTrainsError =
+    !effectiveIsLoading &&
+    (fetchStatus === 'NO_TRAINS' ||
+      fetchStatus === 'INVALID_ROUTE' ||
+      (backendPlans.length === 0 && !isOutOfBounds && fetchStatus !== 'OUT_OF_WINDOW'));
+
+  useEffect(() => {
+    const requestId = ++activeRequestIdRef.current;
+    setIsLoading(true);
+    setFetchError(null);
+    setFetchStatus('OK');
+    setBackendPlans([]);
+
+    const backendPillarPref =
+      filters.pillar !== 'ALL'
+        ? filters.pillar
+        : (initialPillarParam as CuratedPillar) || undefined;
+
+    const startTime = Date.now();
+
+    fetchDayTripsFromBackend(activeOrigin, activeDestination, activeDate, backendPillarPref)
+      .then(async (res) => {
+        if (requestId !== activeRequestIdRef.current) return;
+        if (process.env.NODE_ENV !== 'test') {
+          const elapsed = Date.now() - startTime;
+          if (elapsed < 260) {
+            await new Promise((resolve) => setTimeout(resolve, 260 - elapsed));
+          }
+        }
+        if (requestId !== activeRequestIdRef.current) return;
+        setFetchStatus(res.status || (res.plans && res.plans.length > 0 ? 'OK' : 'NO_TRAINS'));
+        if (res.error) setFetchError(res.error);
+        setBackendPlans(res.plans || []);
+      })
+      .catch(async (err) => {
+        if (requestId !== activeRequestIdRef.current) return;
+        if (process.env.NODE_ENV !== 'test') {
+          const elapsed = Date.now() - startTime;
+          if (elapsed < 260) {
+            await new Promise((resolve) => setTimeout(resolve, 260 - elapsed));
+          }
+        }
+        if (requestId !== activeRequestIdRef.current) return;
+        setFetchStatus('NETWORK_ERROR');
+        setFetchError(err?.message || 'Error fetching trains');
+        setBackendPlans([]);
+      })
+      .finally(() => {
+        if (requestId === activeRequestIdRef.current) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      if (activeRequestIdRef.current === requestId) {
+        activeRequestIdRef.current = requestId + 1;
+      }
+    };
+  }, [activeOrigin, activeDestination, activeDate, filters.pillar, fetchTrigger]);
+
   const handleSwap = () => {
     const newOrigin = destinationInput;
     const newDest = originInput;
@@ -160,6 +232,7 @@ function TripsContent() {
     setActiveOrigin(newOrigin);
     setActiveDestination(newDest);
     updateUrlParams(newOrigin, newDest);
+    setFetchTrigger((prev) => prev + 1);
   };
 
   const handleSearch = (e?: React.FormEvent) => {
@@ -167,25 +240,27 @@ function TripsContent() {
     setActiveOrigin(originInput);
     setActiveDestination(destinationInput);
     updateUrlParams(originInput, destinationInput);
+    setFetchTrigger((prev) => prev + 1);
   };
 
   const handleSelectOrigin = (st: StationAutocompleteItem) => {
     setOriginInput(st.name);
     setActiveOrigin(st.name);
     updateUrlParams(st.name, destinationInput);
+    setFetchTrigger((prev) => prev + 1);
   };
 
   const handleSelectDestination = (st: StationAutocompleteItem) => {
     setDestinationInput(st.name);
     setActiveDestination(st.name);
     updateUrlParams(originInput, st.name);
+    setFetchTrigger((prev) => prev + 1);
   };
 
-  // Generate corridor raw trips
+  // Corridor raw trips loaded from real backend (never synthetic fake trains)
   const rawTrips = useMemo(() => {
-    if (backendPlans.length > 0) return backendPlans;
-    return generateTripsForCorridor(activeOrigin, activeDestination, `${activeDate}T08:00:00+02:00`);
-  }, [backendPlans, activeOrigin, activeDestination, activeDate]);
+    return backendPlans;
+  }, [backendPlans]);
 
   // Filter and sort trips
   const displayedTrips = useMemo(() => {
@@ -248,7 +323,11 @@ function TripsContent() {
               min={todayStr}
               max={maxDateStr}
               value={activeDate}
-              onChange={(e) => setActiveDate(e.target.value)}
+              onChange={(e) => {
+                setActiveDate(e.target.value);
+                updateUrlParams(activeOrigin, activeDestination, e.target.value);
+                setFetchTrigger((prev) => prev + 1);
+              }}
               className="text-xs font-bold text-stone-800 bg-transparent focus:outline-none cursor-pointer"
             />
           </div>
@@ -279,25 +358,26 @@ function TripsContent() {
       </div>
 
       {/* Provider Booking Window Out-of-Bounds Alert */}
-      {(isOutOfBounds || fetchError) && (
+      {(isOutOfBounds || fetchStatus === 'OUT_OF_WINDOW') && (
         <div
           data-testid="booking-window-alert"
           className="p-3.5 mb-5 bg-red-50 border border-red-200 rounded-xl text-xs font-semibold text-red-800 flex items-center gap-2 shadow-xs"
         >
           <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
           <span>
-            {fetchError ||
-              (isDatePast
-                ? 'Cannot plan or book a trip in the past. Please choose a date from today onward.'
-                : `Travel date '${activeDate}' is outside the booking window (${todayStr} to ${maxDateStr}). Please choose a date within 90 days.`)}
+            {isDatePast
+              ? 'Cannot plan or book a trip in the past. Please choose a date from today onward.'
+              : isDateTooFar
+              ? `Travel date '${activeDate}' is outside the booking window (${todayStr} to ${maxDateStr}). Please choose a date within 90 days.`
+              : fetchError || 'Selected travel date is outside the booking window.'}
           </span>
         </div>
       )}
 
       {/* Location Selector Bar */}
-      <BaseCard variant="elevated" className="p-5 md:p-6 mb-6 border border-amber-200/90 bg-white">
+      <BaseCard variant="elevated" className="p-5 md:p-6 mb-6 border border-amber-200/90 bg-white overflow-visible">
         <form onSubmit={handleSearch} className="space-y-4">
-          <div className="flex flex-col md:flex-row items-center gap-3">
+          <div className="relative z-30 flex flex-col md:flex-row items-center gap-3">
             <div className="w-full">
               <StationAutocompleteInput
                 id="trips-origin-input"
@@ -340,7 +420,9 @@ function TripsContent() {
                 type="submit"
                 variant="primary"
                 size="md"
-                className="w-full md:w-auto font-bold bg-amber-500 hover:bg-amber-400 text-stone-950 px-6 py-2.5"
+                disabled={isLoading}
+                aria-busy={isLoading}
+                className="w-full md:w-auto font-bold bg-amber-500 hover:bg-amber-400 text-stone-950 px-6 py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
                 leftIcon={<Search className="w-4 h-4" />}
               >
                 Find
@@ -349,7 +431,7 @@ function TripsContent() {
           </div>
 
           {/* Quick Corridors & Departure Presets */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-stone-100 text-xs">
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-stone-100 text-xs">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-stone-400 font-medium">Quick Picks:</span>
               {POPULAR_CORRIDORS.map((c) => (
@@ -362,6 +444,7 @@ function TripsContent() {
                     setActiveOrigin(c.origin);
                     setActiveDestination(c.destination);
                     updateUrlParams(c.origin, c.destination);
+                    setFetchTrigger((prev) => prev + 1);
                   }}
                   className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-colors font-medium"
                 >
@@ -394,112 +477,228 @@ function TripsContent() {
         </form>
       </BaseCard>
 
-      {/* Summary Matrix Ribbon */}
-      {summaryStats && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-500 text-stone-950 font-bold">
-              <Coins className="w-4 h-4" />
+      {/* Invalid Corridor / No Real Trains Available Error State */}
+      {hasNoTrainsError && (
+        <div
+          data-testid="no-trains-error-state"
+          role="alert"
+          className="p-6 mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50/90 text-stone-900 shadow-md"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-200 text-amber-900 shrink-0">
+              <AlertTriangle className="w-5 h-5 text-amber-800" />
             </div>
-            <div>
-              <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wide block">Best Price</span>
-              <span className="text-lg font-black text-amber-700">{summaryStats.lowestFare.toFixed(2)} LEI</span>
-            </div>
-          </div>
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-base font-bold text-stone-900">
+                  No trains available for {activeOrigin} → {activeDestination} on {activeDate}
+                </h3>
+                <p className="text-xs text-stone-600 mt-1">
+                  {fetchError ||
+                    'One of the entered stations may not be served by available rail routes, or no scheduled train services operate on this corridor for the selected date.'}
+                </p>
+              </div>
 
-          <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-xl flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500 text-white font-bold">
-              <Zap className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wide block">Fastest Transit</span>
-              <span className="text-lg font-black text-blue-700">
-                {Math.floor(summaryStats.fastestDuration / 60)}h {summaryStats.fastestDuration % 60}m
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-600 text-white font-bold">
-              <ShieldCheck className="w-4 h-4" />
-            </div>
-            <div>
-              <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wide block">Transfer Shield</span>
-              <span className="text-lg font-black text-emerald-700">{summaryStats.highestShield}% Reliable</span>
+              <div className="flex items-center gap-2 pt-1 flex-wrap">
+                <button
+                  type="button"
+                  disabled={activeDate >= maxDateStr}
+                  onClick={handleNextDay}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-stone-950 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-xs"
+                >
+                  Try Next Day (+1 day)
+                </button>
+                <button
+                  type="button"
+                  data-testid="reset-default-corridor-btn"
+                  onClick={handleResetToDefaultCorridor}
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-stone-100 text-stone-800 border border-stone-300 transition-all shadow-xs"
+                >
+                  Load București Nord → Brașov
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Trip Filter Bar */}
-      <TripFilterBar
-        filters={filters}
-        onChange={setFilters}
-        onReset={() => setFilters(DEFAULT_TRIP_FILTERS)}
-        activeCount={activeFilterCount}
-      />
+      {!hasNoTrainsError && (
+        <TripFilterBar
+          filters={filters}
+          onChange={setFilters}
+          onReset={() => setFilters(DEFAULT_TRIP_FILTERS)}
+          activeCount={activeFilterCount}
+        />
+      )}
 
-      {/* Trips Header with Total Count & Zero Duplicates Guarantee */}
-      <div
-        data-testid="trips-count-header"
-        className="flex items-center justify-between pb-2 mb-2 px-1 flex-wrap gap-2 text-xs font-semibold text-stone-700"
-      >
-        <span className="flex items-center gap-1.5">
-          <Train className="w-4 h-4 text-amber-600" />
-          <span>
-            Showing <strong className="text-stone-900 font-black">{displayedTrips.length}</strong> unique train{displayedTrips.length === 1 ? '' : 's'} operating on <strong className="text-stone-900 font-black">{activeDate}</strong> • Zero duplicates
-          </span>
-        </span>
-        {initialPillarParam && filters.pillar === 'ALL' && (
-          <span
-            data-testid="active-pillar-promoted-pill"
-            className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-300"
-          >
-            ★ Highlighted: {initialPillarParam === 'MOST_RELIABLE' ? 'Safe Route' : initialPillarParam === 'FASTEST' ? 'Fast Route' : 'Economy Route'}
-          </span>
-        )}
-      </div>
+      {/* Main Content Slot: Shimmering Glass Ghost Skeleton vs Real Trips */}
+      {effectiveIsLoading ? (
+        <div className="w-full my-4">
+          <TripsGhostSkeleton />
+        </div>
+      ) : hasNoTrainsError ? null : (
+        <div className="space-y-6 animate-fade-in">
+          {/* Summary Matrix Ribbon */}
+          {summaryStats && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-500 text-stone-950 font-bold">
+                  <Coins className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wide block">Best Price</span>
+                  <span className="text-lg font-black text-amber-700">{summaryStats.lowestFare.toFixed(2)} LEI</span>
+                </div>
+              </div>
 
-      {/* Trips Results List */}
-      <div className="space-y-4">
-        {displayedTrips.length === 0 ? (
-          <BaseCard variant="outlined" className="p-8 text-center bg-white border-amber-200">
-            <MascotBee name="honey" size="lg" />
-            <h3 className="text-lg font-bold text-stone-800 mt-3">No trips matching criteria</h3>
-            <p className="text-xs text-stone-500 max-w-sm mx-auto mt-1">
-              Try adjusting your price filter or enabling more transport modes and operators.
-            </p>
-            <div className="mt-4">
-              <BaseButton variant="outline" size="sm" onClick={() => setFilters(DEFAULT_TRIP_FILTERS)}>
-                Reset Filters
-              </BaseButton>
+              <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-xl flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-500 text-white font-bold">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wide block">Fastest Transit</span>
+                  <span className="text-lg font-black text-blue-700">
+                    {Math.floor(summaryStats.fastestDuration / 60)}h {summaryStats.fastestDuration % 60}m
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-600 text-white font-bold">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wide block">Transfer Shield</span>
+                  <span className="text-lg font-black text-emerald-700">{summaryStats.highestShield}% Reliable</span>
+                </div>
+              </div>
             </div>
-          </BaseCard>
-        ) : (
-          displayedTrips.map((plan) => {
-            const isBooked = isTrainInTrip(plan.id);
-            const isHighlighted = initialPillarParam ? isPlanHighlighted(plan) : false;
-            return (
-              <BookingTripCard
-                key={plan.id}
-                plan={plan}
-                isBooked={isBooked}
-                isHighlighted={isHighlighted}
-                highlightLabel="★ Selected from Home"
-                onBookTrip={handleBookTrip}
-                onRemoveTrip={handleRemoveTrip}
-              />
-            );
-          })
+          )}
+
+          {/* Trips Header with Total Count & Zero Duplicates Guarantee */}
+          <div
+            data-testid="trips-count-header"
+            className="flex items-center justify-between pb-2 mb-2 px-1 flex-wrap gap-2 text-xs font-semibold text-stone-700"
+          >
+            <span className="flex items-center gap-1.5">
+              <Train className="w-4 h-4 text-amber-600" />
+              <span>
+                Showing <strong className="text-stone-900 font-black">{displayedTrips.length}</strong> unique train{displayedTrips.length === 1 ? '' : 's'} operating on <strong className="text-stone-900 font-black">{activeDate}</strong> • Zero duplicates
+              </span>
+            </span>
+            {initialPillarParam && filters.pillar === 'ALL' && (
+              <span
+                data-testid="active-pillar-promoted-pill"
+                className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-300"
+              >
+                ★ Highlighted: {initialPillarParam === 'MOST_RELIABLE' ? 'Safe Route' : initialPillarParam === 'FASTEST' ? 'Fast Route' : 'Economy Route'}
+              </span>
+            )}
+          </div>
+
+          {/* Trips Results List */}
+          <div className="space-y-4">
+            {displayedTrips.length === 0 ? (
+              <BaseCard variant="outlined" className="p-8 text-center bg-white border-amber-200">
+                <MascotBee name="honey" size="lg" />
+                <h3 className="text-lg font-bold text-stone-800 mt-3">No trips matching criteria</h3>
+                <p className="text-xs text-stone-500 max-w-sm mx-auto mt-1">
+                  Try adjusting your price filter or enabling more transport modes and operators.
+                </p>
+                <div className="mt-4">
+                  <BaseButton variant="outline" size="sm" onClick={() => setFilters(DEFAULT_TRIP_FILTERS)}>
+                    Reset Filters
+                  </BaseButton>
+                </div>
+              </BaseCard>
+            ) : (
+              displayedTrips.map((plan) => {
+                const isBooked = isTrainInTrip(plan.id);
+                const isHighlighted = initialPillarParam ? isPlanHighlighted(plan) : false;
+                return (
+                  <BookingTripCard
+                    key={plan.id}
+                    plan={plan}
+                    isBooked={isBooked}
+                    isHighlighted={isHighlighted}
+                    highlightLabel="★ Selected from Home"
+                    onBookTrip={handleBookTrip}
+                    onRemoveTrip={handleRemoveTrip}
+                  />
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Mascot Debug Trigger */}
+      <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-40 flex flex-col items-end gap-1.5">
+        {isDebugLoadingForced && (
+          <button
+            type="button"
+            onClick={() => setIsDebugLoadingForced(false)}
+            className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-md border border-amber-600 transition-all cursor-pointer flex items-center gap-1"
+            title="Click to stop forced loading"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-stone-950 animate-ping" />
+            <span>Loading Forced (Stop)</span>
+          </button>
         )}
+        <button
+          type="button"
+          onClick={() => setIsDebugModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-stone-900/85 hover:bg-stone-950 text-stone-200 border border-stone-700/60 shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500/50 cursor-pointer"
+          title="Open Mascot Testing / Debug Tools"
+          aria-label="Open Debug Tools"
+          aria-haspopup="dialog"
+          aria-expanded={isDebugModalOpen}
+        >
+          <span className="text-amber-400">🛠️</span>
+          <span>Debug Tools</span>
+          {(debugGearOverride !== null || isDebugLoadingForced) && (
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"
+              title="Manual override active"
+            />
+          )}
+        </button>
       </div>
+
+      {/* Testing / Debug Modal */}
+      <MascotDebugModal
+        isOpen={isDebugModalOpen}
+        onClose={() => setIsDebugModalOpen(false)}
+        currentGear={effectiveSpinnerGear}
+        onSelectGear={(gear) => setDebugGearOverride(gear)}
+        isManualOverride={debugGearOverride !== null || isDebugLoadingForced}
+        isLoadingForced={isDebugLoadingForced}
+        onToggleForceLoading={() => {
+          setIsDebugLoadingForced((prev) => !prev);
+          setIsDebugModalOpen(false);
+        }}
+        onResetAuto={() => {
+          setDebugGearOverride(null);
+          setIsDebugLoadingForced(false);
+        }}
+        onResetLoading={() => {
+          setIsDebugLoadingForced(false);
+        }}
+      />
     </div>
   );
 }
 
 export default function TripsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-stone-500 font-medium">Loading Trips Explorer...</div>}>
+    <Suspense
+      fallback={
+        <div className="py-6 md:py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+          <TripsGhostSkeleton fullPage />
+        </div>
+      }
+    >
       <TripsContent />
     </Suspense>
   );

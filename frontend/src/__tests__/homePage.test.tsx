@@ -2,6 +2,7 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent } from '@testing-library/react';
 import HomePage, { MAX_BEE_DISPLACEMENT_PX } from '../app/page';
+import HomePageGhostSkeleton from '../components/HomePageGhostSkeleton';
 
 const mockPush = jest.fn();
 
@@ -62,44 +63,65 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.getByPlaceholderText(/e\.g\. Brașov/i)).toBeInTheDocument();
   });
 
-  it('searches corridors and dynamically changes mascot gear to route gears', () => {
+  it('allows selecting route preference and dynamically changes mascot gear to route gears', () => {
     const { container } = render(<HomePage />);
     const bgContainer = container.querySelector('[data-testid="background-flying-mascot"]');
     
-    const searchBtn = screen.getByRole('button', { name: /Find Synchronized Routes/i });
-    fireEvent.click(searchBtn);
+    // Initial gear is default
+    expect(bgContainer).toHaveAttribute('data-gear', 'default');
 
-    // After search, route trifecta cards appear
-    expect(screen.getByText(/Synchronized Corridors Found/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/SAFE ROUTE/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/FAST ROUTE/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/ECONOMY/i).length).toBeGreaterThan(0);
-
-    // Defaults to SAFE route gear upon search with dynamic entrance and shine
+    // Click Protected preference
+    const prefProtected = screen.getByTestId('pref-protected');
+    fireEvent.click(prefProtected);
     expect(bgContainer).toHaveAttribute('data-gear', 'safe');
     expect(bgContainer?.querySelector('[data-gear-status="entering"]')).toBeInTheDocument();
     expect(bgContainer?.querySelector('[data-testid="mascot-gear-shine"]')).toBeInTheDocument();
 
-    // Click Fast Route triggers dynamic gear change
-    const fastCard = screen.getAllByText(/FAST ROUTE/i)[0].closest('div');
-    if (fastCard) fireEvent.click(fastCard);
+    // Click Fast preference triggers dynamic gear change
+    const prefFast = screen.getByTestId('pref-fast');
+    fireEvent.click(prefFast);
     expect(bgContainer).toHaveAttribute('data-gear', 'fast');
     expect(bgContainer?.querySelector('[data-gear-status="exiting"]')).toHaveClass('animate-gear-radial-exit');
     expect(bgContainer?.querySelector('[data-gear-status="entering"]')).toHaveClass('animate-gear-enter-top');
     expect(bgContainer?.querySelector('[data-testid="mascot-gear-shine"]')).toBeInTheDocument();
 
-    // Click Economy Route
-    const economyCard = screen.getAllByText(/ECONOMY/i)[0].closest('div');
-    if (economyCard) fireEvent.click(economyCard);
+    // Click Eco preference
+    const prefEco = screen.getByTestId('pref-eco');
+    fireEvent.click(prefEco);
     expect(bgContainer).toHaveAttribute('data-gear', 'economy');
 
-    // Click Modify to reset back to default
-    const modifyBtn = screen.getByRole('button', { name: /Modify/i });
-    fireEvent.click(modifyBtn);
+    // Card never mutates into "SYNCHRONIZED CORRIDORS FOUND" or "Modify"
+    expect(screen.queryByText(/SYNCHRONIZED CORRIDORS FOUND/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Modify$/i })).not.toBeInTheDocument();
+  });
 
-    // Returned to default explorer mascot gear
-    expect(bgContainer).toHaveAttribute('data-gear', 'default');
-    expect(screen.getByRole('button', { name: /Find Synchronized Routes/i })).toBeInTheDocument();
+  it('increments/decrements travel date via compact − / + stepper arrows within bounds and excludes unwanted copy', () => {
+    render(<HomePage />);
+
+    const prevBtn = screen.getByTestId('date-step-prev');
+    const nextBtn = screen.getByTestId('date-step-next');
+    const dateInput = screen.getByTestId('travel-date-picker') as HTMLInputElement;
+
+    const initialDate = dateInput.value;
+    expect(initialDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+
+    // prev button is disabled on today's date
+    expect(prevBtn).toBeDisabled();
+
+    // Click next day (+)
+    fireEvent.click(nextBtn);
+    expect(dateInput.value).not.toBe(initialDate);
+    expect(prevBtn).not.toBeDisabled();
+
+    // Click prev day (−)
+    fireEvent.click(prevBtn);
+    expect(dateInput.value).toBe(initialDate);
+    expect(prevBtn).toBeDisabled();
+
+    // Unwanted strings must NOT exist in the DOM
+    expect(screen.queryByText(/This Weekend/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\+1 Month/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CFR SA \/ IRIS Verified/i)).not.toBeInTheDocument();
   });
 
   it('does not allow gear selection in regular UI but allows manual override in Debug Tools popup', () => {
@@ -151,6 +173,45 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     fireEvent.click(closeBtn);
     expect(screen.queryByText(/Mascot Gear Override Panel/i)).not.toBeInTheDocument();
     expect(debugTrigger).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('toggles glassmorphic ghost layout via Debug Tools modal and restores hero form upon stopping', () => {
+    const { container } = render(<HomePage />);
+
+    // Open Debug Tools
+    const debugTrigger = screen.getByRole('button', { name: /Open Debug Tools/i });
+    fireEvent.click(debugTrigger);
+
+    // Check modal opened with Test Loading State button
+    const testLoadingBtn = screen.getByTestId('debug-toggle-loading-state');
+    expect(testLoadingBtn).toHaveTextContent(/Test Loading State/i);
+
+    // Click "Test Loading State"
+    fireEvent.click(testLoadingBtn);
+
+    // Ghost layout is rendered
+    expect(screen.getByTestId('homepage-ghost-skeleton')).toBeInTheDocument();
+    expect(screen.getByTestId('ghost-hero-search-card')).toBeInTheDocument();
+    const queenGhostCards = screen.getAllByTestId('ghost-queen-card');
+    expect(queenGhostCards.length).toBe(3);
+    expect(container.querySelectorAll('.glass-shimmer-overlay').length).toBeGreaterThanOrEqual(4);
+
+    // Main hero form is hidden while loading
+    expect(screen.queryByPlaceholderText(/e\.g\. Galați/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: /^Beeline$/i })).not.toBeInTheDocument();
+
+    // Open Debug Tools again and stop loading state
+    const debugTrigger2 = screen.getByRole('button', { name: /Open Debug Tools/i });
+    fireEvent.click(debugTrigger2);
+
+    const stopLoadingBtn = screen.getByTestId('debug-toggle-loading-state');
+    expect(stopLoadingBtn).toHaveTextContent(/Stop Loading State/i);
+    fireEvent.click(stopLoadingBtn);
+
+    // Ghost skeleton is removed and main hero is restored
+    expect(screen.queryByTestId('homepage-ghost-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e\.g\. Galați/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /^Beeline$/i })).toBeInTheDocument();
   });
 
   it('renders the scaled-up background flying bee mascot in a non-intrusive container', () => {
@@ -388,18 +449,23 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.getByText(/Origin and destination cannot be identical/i)).toBeInTheDocument();
   });
 
-  it('navigates to /trips when booking button is pressed', () => {
+  it('navigates directly to /trips when Find Synchronized Routes is clicked', () => {
     render(<HomePage />);
     
-    // Search first
-    fireEvent.click(screen.getByRole('button', { name: /Find Synchronized Routes/i }));
+    // Select Fast preference
+    fireEvent.click(screen.getByTestId('pref-fast'));
 
-    const bookBtn = screen.getByRole('button', { name: /Book SAFE Route in Trip Planner/i });
-    fireEvent.click(bookBtn);
+    // Submit corridor search
+    const searchBtn = screen.getByRole('button', { name: /Find Synchronized Routes/i });
+    fireEvent.click(searchBtn);
 
     expect(mockPush).toHaveBeenCalledWith(
-      expect.stringContaining('/trips?origin=Gala%C8%9Bi&destination=Bucure%C8%99ti+Nord&pillar=MOST_RELIABLE')
+      expect.stringContaining('/trips?origin=Gala%C8%9Bi&destination=Bucure%C8%99ti+Nord&date=')
     );
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringContaining('pillar=FASTEST')
+    );
+    expect(screen.queryByText(/SYNCHRONIZED CORRIDORS FOUND/i)).not.toBeInTheDocument();
   });
 
   it('ensures foreground interactive elements remain fully accessible and responsive', () => {
@@ -424,7 +490,7 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     // Search button submits cleanly
     const searchBtn = screen.getByRole('button', { name: /Find Synchronized Routes/i });
     fireEvent.click(searchBtn);
-    expect(screen.getByText(/Synchronized Corridors Found/i)).toBeInTheDocument();
+    expect(mockPush).toHaveBeenCalled();
   });
 
   it('renders all rail & urban transit providers in the scrollytelling honeycomb (Test 17)', () => {
@@ -567,11 +633,15 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(safeMiniBees.length).toBeGreaterThan(0);
     expect(economyMiniBees.length).toBeGreaterThan(0);
 
-    // Rich physical SVG props in Chapter 3 and honeycomb
-    expect(container.querySelector('[data-testid="svg-beehive"]')).toBeInTheDocument();
+    // Rich physical SVG props in Chapter 2
     expect(container.querySelector('[data-testid="svg-honeycomb"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-testid="svg-honey-pot"]')).toBeInTheDocument();
-    expect(container.querySelector('[data-testid="svg-honey-spoon"]')).toBeInTheDocument();
+
+    // Explicit negative assertions verifying Chapter 3 props and section are completely removed
+    expect(container.querySelector('#tour-ecosystem')).toBeNull();
+    expect(screen.queryByText(/Inside The Cozy Hive/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('svg-beehive')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('svg-honey-pot')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('svg-honey-spoon')).not.toBeInTheDocument();
 
     // Hovering/clicking Queen card triggers selection
     if (fastQueenCard) {
@@ -605,13 +675,8 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     fireEvent.scroll(window);
     expect(companionGuide).toHaveAttribute('data-chapter', 'providers');
 
-    // Simulate window scroll into ecosystem chapter
-    Object.defineProperty(window, 'scrollY', { value: 2200, writable: true, configurable: true });
-    fireEvent.scroll(window);
-    expect(companionGuide).toHaveAttribute('data-chapter', 'ecosystem');
-
-    // Click "Ready to Fly? Plan Your Route Now" CTA button
-    const ctaBtn = screen.getByRole('button', { name: /Ready to Fly\? Plan Your Route Now/i });
+    // Click "Plan Your Route Now" CTA button and verify focus on origin input
+    const ctaBtn = screen.getByRole('button', { name: /Plan Your Route Now/i });
     expect(ctaBtn).toBeInTheDocument();
     fireEvent.click(ctaBtn);
 
@@ -622,8 +687,16 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     window.scrollTo = originalScrollTo;
   });
 
-  it('asserts named mascots, railway ML telemetry metrics, and zero map/canvas elements (Test 20)', () => {
+  it('asserts named mascots, complete Chapter 3 removal, and zero map/canvas elements (Test 20)', () => {
+    // Mock window.scrollTo
+    const originalScrollTo = window.scrollTo;
+    window.scrollTo = jest.fn();
+
     const { container } = render(<HomePage />);
+
+    // Scroll into providers chapter so scroll companion guide renders Bumbi alongside Chapter 1 Queens
+    Object.defineProperty(window, 'scrollY', { value: 1200, writable: true, configurable: true });
+    fireEvent.scroll(window);
 
     // Assert that Bumbi, Queen Meli, Queen Vira, and Queen Flora are rendered in the DOM
     expect(screen.getAllByText(/Bumbi/i).length).toBeGreaterThan(0);
@@ -631,15 +704,20 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.getAllByText(/Queen Vira/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Queen Flora/i).length).toBeGreaterThan(0);
 
-    // Verify Chapter 3 (#tour-ecosystem) displays the railway ML telemetry metrics
-    const ecosystemSection = container.querySelector('#tour-ecosystem');
-    expect(ecosystemSection).toBeInTheDocument();
-    expect(ecosystemSection).toHaveTextContent(/1\.52M/);
-    expect(ecosystemSection).toHaveTextContent(/1\.5ms/);
-    expect(ecosystemSection).toHaveTextContent(/99\.5%/);
+    // Verify Chapter 3 (#tour-ecosystem) is completely removed
+    expect(container.querySelector('#tour-ecosystem')).toBeNull();
+    expect(screen.queryByText(/Inside The Cozy Hive/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('svg-beehive')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('svg-honey-pot')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('svg-honey-spoon')).not.toBeInTheDocument();
+    expect(screen.queryByText(/1\.52M/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1\.5ms/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/99\.5%/i)).not.toBeInTheDocument();
 
     // Strict Invariant 1: Strictly zero map or canvas elements anywhere in container
     expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
+
+    window.scrollTo = originalScrollTo;
   });
 
   it('renders Chapter 1 unified production architecture: Design 4 Top Sanctuaries + Design 6 Beehive Route Preview Map with Open Portal triggers (Test 21)', () => {
@@ -723,5 +801,25 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
 
     window.HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+  });
+
+  it('renders HomePageGhostSkeleton directly with accessibility semantics and zero map/canvas elements', () => {
+    const { container } = render(<HomePageGhostSkeleton />);
+
+    const skeleton = screen.getByTestId('homepage-ghost-skeleton');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveAttribute('role', 'status');
+    expect(skeleton).toHaveAttribute('aria-live', 'polite');
+    expect(skeleton).toHaveAttribute('aria-busy', 'true');
+    expect(skeleton).toHaveAttribute('aria-label', 'Loading Beeline home page');
+
+    expect(screen.getByTestId('ghost-hero-search-card')).toBeInTheDocument();
+    expect(screen.getAllByTestId('ghost-queen-card').length).toBe(3);
+    expect(container.querySelectorAll('.glass-shimmer-overlay').length).toBeGreaterThanOrEqual(4);
+
+    // Strict Invariants: strictly 0 canvas, 0 leaflet-container, 0 map elements
+    expect(container.querySelectorAll('canvas').length).toBe(0);
+    expect(container.querySelectorAll('.leaflet-container').length).toBe(0);
+    expect(container.querySelectorAll('map').length).toBe(0);
   });
 });

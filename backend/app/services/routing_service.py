@@ -38,6 +38,7 @@ from scraper.collectors.train_api import (
     STATION_DICTIONARY,
     canonical_station_code,
     clean_romanian_station_name,
+    resolve_known_station,
 )
 
 
@@ -1255,11 +1256,18 @@ class RoutingService:
         if is_explicit_urban and ("micro 19" in orig or "micro19" in orig or "gala" in orig_city) and ("uniri" in dest or "bucur" in dest_city):
             return [cls.generate_micro19_to_unirii_plan(query)]
 
+        orig_q = query.origin.name or query.origin.city or ""
+        dest_q = query.destination.name or query.destination.city or ""
+
+        # Strict station validation guard: both origin and destination MUST resolve to real operating rail stations
+        orig_match = resolve_known_station(orig_q)
+        dest_match = resolve_known_station(dest_q)
+        if orig_match is None or dest_match is None:
+            return []
+
         travel_date = query.departureTime[:10] if query.departureTime else datetime.now(BUCHAREST_TZ).strftime("%Y-%m-%d")
 
         xml_adapter = DataGovXMLAdapter.get_shared_instance()
-        orig_q = query.origin.name or query.origin.city or ""
-        dest_q = query.destination.name or query.destination.city or ""
 
         raw_candidates: List[TransitRoutePlan] = []
 
@@ -1338,9 +1346,9 @@ class RoutingService:
 
         raw_candidates.extend(transfer_plans)
 
-        # 3. Fallback to generic plan if no route could be found
+        # 3. Fallback: if no route could be found, return empty list (ZERO fabrication)
         if not raw_candidates:
-            raw_candidates = [cls.generate_generic_plan(query)]
+            return []
 
         # 4. Strict physical deduplication using canonical leg signature
         seen_signatures = set()

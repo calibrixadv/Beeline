@@ -10,13 +10,22 @@ import {
   Clock, 
   Coins, 
   ArrowRight, 
-  Train 
+  Train,
+  Bell,
+  Mail,
+  CheckCircle,
 } from 'lucide-react';
 import { useTrip } from '../../context/TripContext';
+import { useAuth } from '../../context/AuthContext';
 import { formatTimeOnly } from '../../utils/trainFilters';
 import BaseCard from '../../components/BaseCard';
 import BaseButton from '../../components/BaseButton';
 import MascotBee from '../../components/MascotBee';
+import { 
+  getNotificationStatus, 
+  sendTestDepartureAlert, 
+  updatePreferences 
+} from '../../services/apiClient';
 
 export default function MyTripPage() {
   const { 
@@ -27,6 +36,56 @@ export default function MyTripPage() {
     totalDurationMinutes, 
     totalCo2SavedKg 
   } = useTrip();
+  const { user } = useAuth();
+  const isRegisteredUser = Boolean(user && !user.is_guest && !(user as any).isGuest);
+
+  const [emailAlertsEnabled, setEmailAlertsEnabled] = React.useState<boolean>(true);
+  const [isSavingPref, setIsSavingPref] = React.useState<boolean>(false);
+  const [isSendingTest, setIsSendingTest] = React.useState<boolean>(false);
+  const [testFeedback, setTestFeedback] = React.useState<string | null>(null);
+  const [testError, setTestError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isRegisteredUser) {
+      getNotificationStatus()
+        .then((res) => {
+          if (res && typeof res.emailNotificationsEnabled === 'boolean') {
+            setEmailAlertsEnabled(res.emailNotificationsEnabled);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isRegisteredUser]);
+
+  const handleToggleEmailAlerts = async () => {
+    if (!isRegisteredUser) return;
+    const nextVal = !emailAlertsEnabled;
+    setIsSavingPref(true);
+    setTestError(null);
+    try {
+      await updatePreferences({ email_notifications: nextVal });
+      setEmailAlertsEnabled(nextVal);
+    } catch (err: any) {
+      setTestError(err.message || 'Failed to update preferences');
+    } finally {
+      setIsSavingPref(false);
+    }
+  };
+
+  const handleSendTestAlert = async () => {
+    if (!isRegisteredUser) return;
+    setIsSendingTest(true);
+    setTestFeedback(null);
+    setTestError(null);
+    try {
+      const res = await sendTestDepartureAlert();
+      setTestFeedback(`Test departure email sent to ${res.recipientEmail || user?.email}`);
+    } catch (err: any) {
+      setTestError(err.message || 'Failed to send test alert');
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   const hours = Math.floor(totalDurationMinutes / 60);
   const mins = totalDurationMinutes % 60;
@@ -82,6 +141,75 @@ export default function MyTripPage() {
           </div>
         )}
       </div>
+
+      {/* Logged-In User Email Departure Alert Control Strip */}
+      {isRegisteredUser && (
+        <div
+          data-testid="email-departure-alerts-card"
+          className="mb-6 p-4 rounded-xl bg-amber-50/80 border border-amber-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/20 text-amber-900 shrink-0">
+              <Bell className="w-5 h-5 text-amber-700" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-stone-900">Email Departure Alerts</span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    emailAlertsEnabled
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-stone-100 text-stone-600 border border-stone-300'
+                  }`}
+                >
+                  {emailAlertsEnabled ? 'Active' : 'Disabled'}
+                </span>
+              </div>
+              <p className="text-xs text-stone-600 mt-0.5">
+                Automatic Cozy Hive reminders 60 min before departure & live delay alerts to{' '}
+                <strong>{user?.email}</strong>.
+              </p>
+              {testFeedback && (
+                <p className="text-xs text-emerald-700 font-semibold mt-1.5 flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" /> {testFeedback}
+                </p>
+              )}
+              {testError && (
+                <p className="text-xs text-red-600 font-semibold mt-1.5 flex items-center gap-1">
+                  {testError}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+            <button
+              type="button"
+              data-testid="email-alerts-toggle-btn"
+              disabled={isSavingPref}
+              onClick={handleToggleEmailAlerts}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
+                emailAlertsEnabled
+                  ? 'bg-white text-stone-700 border-amber-300 hover:bg-amber-100/50'
+                  : 'bg-amber-500 text-stone-950 border-amber-500 hover:bg-amber-400'
+              }`}
+            >
+              {emailAlertsEnabled ? 'Turn Off' : 'Turn On'}
+            </button>
+
+            <BaseButton
+              variant="outline"
+              size="sm"
+              data-testid="send-test-departure-email-btn"
+              disabled={isSendingTest}
+              onClick={handleSendTestAlert}
+              leftIcon={<Mail className="w-3.5 h-3.5 text-amber-600" />}
+            >
+              {isSendingTest ? 'Sending...' : 'Send Test Alert Email'}
+            </BaseButton>
+          </div>
+        </div>
+      )}
 
       {trips.length === 0 ? (
         <BaseCard variant="outlined" className="p-12 text-center bg-white border-amber-200">

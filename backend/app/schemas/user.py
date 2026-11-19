@@ -10,6 +10,8 @@ class UserPreferencesSchema(BaseModel):
     preferred_operators: List[str] = Field(default_factory=list)
     email_security_alerts: bool = True
     email_delay_alerts: bool = True
+    email_notifications: bool = True
+    departure_reminder_minutes: int = Field(default=60, ge=10, le=240)
     theme: Literal["cozy_hive", "high_contrast"] = "cozy_hive"
 
     model_config = ConfigDict(extra="ignore")
@@ -22,6 +24,8 @@ class UserPreferencesUpdate(BaseModel):
     preferred_operators: Optional[List[str]] = None
     email_security_alerts: Optional[bool] = None
     email_delay_alerts: Optional[bool] = None
+    email_notifications: Optional[bool] = None
+    departure_reminder_minutes: Optional[int] = Field(default=None, ge=10, le=240)
     theme: Optional[Literal["cozy_hive", "high_contrast"]] = None
 
     model_config = ConfigDict(extra="ignore")

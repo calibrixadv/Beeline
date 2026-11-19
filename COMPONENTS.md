@@ -457,17 +457,17 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 ### 17. `RouteFinderCard`
 - **File**: [`frontend/src/components/RouteFinderCard.tsx`](frontend/src/components/RouteFinderCard.tsx)
 - **Lineage**: Extends `BaseCard`, composes `BaseInput`, `BaseBadge`, `BaseButton`, `IconButton`, `MascotBee`, `LocationSelectDropdown`
-- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with dynamic Current City selection (with GPS "Detect Near Me" and quick Romanian city chips: București, Galați, Cluj-Napoca, Timișoara, Brașov, Constanța, etc.), searchable featured location dropdowns with type badges (Train Station 🚆, Metro 🚇, Bus/Tram 🚌, Airport ✈️, Current Location 📍), smart auto-suggestion heuristics (inner-city priority when Metro/Bus selected; auto-pairing origin to Current Location or current city train station when destination in another city is picked), recent searches history, transport mode filters ("Trains", "Metro", "Busses"), station swap action, diacritic-insensitive duplicate validation, stylized **Waggle flight dashed connector trail** (`[Origin] ── 🐝 ~ ~ ── [Destination]`) flanking the swap button (`testID="route-waggle-connector"`), warm honey palette styling (`surfaceWarm` `#FFFBEB` in light, `#1C1917` in dark; `honeyBorder` `#FDE68A` in light, `#3E3204` in dark), prepared submission feedback showcasing the **Curated Trifecta** paired with their companion mascots (⚡ Fastest: Barnaby, 💰 Best Value: Honey, 🛡️ Most Reliable: Bumble), and a direct shortcut button to view live departures on `/schedules`.
+- **Description**: HomePage Role 1 shorthand route finder facilitating quick 2-point journeys (Origin and Destination points) with dynamic Current City selection (with GPS "Detect Near Me" and quick Romanian city chips: București, Galați, Cluj-Napoca, Timișoara, Brașov, Constanța, etc.), searchable featured location dropdowns with type badges (Train Station 🚆, Metro 🚇, Bus/Tram 🚌, Airport ✈️, Current Location 📍), smart auto-suggestion heuristics (inner-city priority when Metro/Bus selected; auto-pairing origin to Current Location or current city train station when destination in another city is picked), recent searches history, transport mode filters ("Trains", "Metro", "Busses"), station swap action, diacritic-insensitive duplicate validation, stylized **Waggle flight dashed connector trail** (`[Origin] ── 🐝 ~ ~ ── [Destination]`) flanking the swap button (`testID="route-waggle-connector"`), warm honey palette styling (`surfaceWarm` `#FFFBEB` in light, `#1C1917` in dark; `honeyBorder` `#FDE68A` in light, `#3E3204` in dark), and prepared submission feedback showcasing the **Curated Trifecta** paired with their companion mascots (⚡ Fastest: Barnaby, 💰 Best Value: Honey, 🛡️ Most Reliable: Bumble).
 - **States & Handlers**:
   - `currentCity`: Active city context defaulting to `'București'` (or detected city); dynamically populates dropdowns.
-  - `handleDetectLocation`: Triggers GPS geolocation via `transitScheduleService.detectNearestCity` or fast test fallback, setting origin to `📍 My Current Location (${city})`.
+  - `handleDetectLocation`: Triggers GPS geolocation or fast test fallback, setting origin to `📍 My Current Location (${city})`.
   - `origin` & `destination`: Controlled text inputs with searchable dropdown overlays and clearable actions extending `BaseInput`.
   - `activeDropdown`: Manages visibility of origin or destination dropdown popovers.
   - `recentChoices`: Remembers recently submitted/selected stations at the top of the dropdown.
   - `swap`: Swaps origin and destination stations using `IconButton` (`swap-vertical`).
   - `modes`: Interactive multi-select filter chips (`Trains`, `Metro`, `Busses`).
   - `onSubmitRoute`: Validates inputs and prepares template query `{ origin, destination, modes }`.
-  - **Invariant**: Strictly does NOT execute accidental router redirection on submit (template preview mode). Direct navigation button provided for `/schedules`.
+  - **Invariant**: Strictly does NOT execute accidental router redirection on submit (template preview mode). Navigation provided to `/trips`.
 - **Props**:
   - `initialOrigin`?: string (default `'București Nord'`)
   - `initialDestination`?: string (default `'Brașov'`)
@@ -553,20 +553,7 @@ To ensure brand cohesion, maintainability, and zero code duplication across Voya
 
 ---
 
-### 22. `TransitScheduleCard`
-- **File**: [`frontend/src/components/TransitScheduleCard.tsx`](frontend/src/components/TransitScheduleCard.tsx)
-- **Lineage**: Composed Schedule Item Component (built with `BaseCard`, `BaseBadge`, `Ionicons`)
-- **Description**: Visualizes real-time Romanian transit departures across Urban Transit (Tram, Bus, Metro) and Intercity Rail. Renders mode icons (Sky Blue for Metro, Emerald for Tram, Amber for Bus, Red for Train), line code badges, provider tag (Metrorex, Transurb Galați, STB, CFR Călători, etc.), origin/destination route arrow, live countdown pills (`in 3m`, `in 9m`), live tracking pulse dot, fare in LEI, status badge, and an expandable key stopover accordion.
-- **Props**:
-  - `schedule`: `TransitLineSchedule`
-  - `onPress`?: `(schedule: TransitLineSchedule) => void`
-  - `style`?: `StyleProp<ViewStyle>`
-  - `testID`?: string
-- **When to Use**: Schedule screen listings in `app/schedules.tsx`.
-
----
-
-### 23. `LocationSelectDropdown`
+### 22. `LocationSelectDropdown`
 - **File**: [`frontend/src/components/LocationSelectDropdown.tsx`](frontend/src/components/LocationSelectDropdown.tsx)
 - **Lineage**: Composed Interactive Dropdown Overlay (built with `Pressable`, `ScrollView`, `Ionicons`)
 - **Description**: Dropdown overlay menu presenting curated transit locations for a selected Romanian city. Organizes options into:
@@ -697,7 +684,6 @@ When asked to create a new component `NewWidget`:
 
 ### Standard Route Contract Facilitation
 - **Route Planning**: `POST /api/v1/routes/plan` delivering the complete [`TransitRoutePlan`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/backend/app/schemas/route_plan.py) contract with GeoJSON `LineString` geometries, multi-modal legs (e.g. *Galați Micro 19 ➔ București Piața Unirii*), and the **Romanian Transfer Shield** risk scoring engine.
-- **Schedules**: `GET /api/v1/schedules` serving Metrorex, Transurb Galați, STB, CFR Călători, Astra Trans Carpatic, and TFC.
 - **Trip Wallet**: `POST /api/v1/routes/saved`, `GET /api/v1/routes/saved`, `DELETE /api/v1/routes/saved/{id}`.
 
 ### Frontend Integration Layer
@@ -758,7 +744,6 @@ The frontend application has been upgraded to **Next.js (App Router)** with **Ty
 - [`frontend/src/app/providers.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/providers.tsx): Client provider wrapper for `ThemeProvider`, `AuthProvider`, and `TripProvider`.
 - [`frontend/src/app/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/page.tsx): Home route (`/`) featuring 2-point `RouteFinderCard` and `MarketingShowcase` (Zero map invariant strictly preserved).
 - [`frontend/src/app/trips/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/trips/page.tsx): Multi-modal booking trip explorer (`/trips`) with dual currency formatting (LEI & EUR), Trifecta badges, Transfer Shield indicator, and live matrix summary ribbon.
-- [`frontend/src/app/schedules/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/schedules/page.tsx): Romanian transit schedules directory (`/schedules`).
 - [`frontend/src/app/trains/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/trains/page.tsx): Rail timetable (`/trains`) with real-time status tracking, fare tiers, and intermediate stops modal.
 - [`frontend/src/app/my-trip/page.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/app/my-trip/page.tsx): Active trip itinerary wallet (`/my-trip`) with total pricing, travel duration, carbon reduction benchmarks, and JSON export.
 
@@ -772,7 +757,9 @@ The frontend application has been upgraded to **Next.js (App Router)** with **Ty
 - [`frontend/src/components/BaseInput.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BaseInput.tsx): Input field with icon and 1-tap clear action.
 - [`frontend/src/components/BookingTripCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/BookingTripCard.tsx): Booking-inspired trip card with dual pricing, Transfer Shield indicator, leg accordion, and `TripContext` integration.
 - [`frontend/src/components/TripFilterBar.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TripFilterBar.tsx): Filter bar for pillars, transit modes, Romanian operators, price tiers, and sorting.
-- [`frontend/src/components/TransitScheduleCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TransitScheduleCard.tsx): Transit timetable card with departures list and intermediate stops expander.
+- [`frontend/src/components/TripsGhostSkeleton.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TripsGhostSkeleton.tsx): Shimmering glass ghost skeleton for route exploration on `/trips`.
+- [`frontend/src/components/AuthGhostSkeleton.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/AuthGhostSkeleton.tsx): Centered glassy ghost skeleton for sign in & create account on `/login`.
+- [`frontend/src/components/TrainsGhostSkeleton.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainsGhostSkeleton.tsx): Glass ghost cards and filter bar skeleton for rail timetables on `/trains`.
 - [`frontend/src/components/TrainCard.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainCard.tsx): Rail timetable card with amenities, seat availability, delay badges, and "+ Plan" action.
 - [`frontend/src/components/TrainDetailModal.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/TrainDetailModal.tsx): Modal for intermediate stops, fare breakdown, and onboard amenities.
 - [`frontend/src/components/MascotDebugModal.tsx`](file:///Users/iordacheandrei/Desktop/PROIECT%20BD2/frontend/src/components/MascotDebugModal.tsx): Developer testing & debug modal for manually forcing and previewing mascot gear states (`default`, `fast`, `safe`, `economy`) with focus trap and ARIA dialog semantics.

@@ -11,6 +11,7 @@ import time
 import unicodedata
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import date, datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from enum import Enum
@@ -171,6 +172,129 @@ def _strip_station_suffixes(norm_str: str) -> str:
     s = _RE_PREFIXES.sub("", s)
     s = _RE_SUFFIXES.sub("", s)
     return s.strip()
+
+
+@dataclass
+class StationMatch:
+    code: str
+    name: str
+    city: str = ""
+    is_major_hub: bool = False
+
+
+@functools.lru_cache(maxsize=4096)
+def resolve_known_station(raw_query: str) -> Optional[StationMatch]:
+    """Strictly resolves raw station queries to real known Romanian railway stations.
+
+    Accepts ONLY:
+    1. Exact normalized station name match (diacritic-insensitive, e.g. 'galati' -> 'Galați',
+       'bucuresti nord' -> 'București Nord', 'intorsura buzaului' -> 'Întorsura Buzăului', 'brasov' -> 'Brașov').
+    2. Exact canonical code match ONLY if the code exists in the real known station registry
+       (e.g. 'GLT', 'BCT', 'BSV', 'IBZ').
+    3. Exact official city/station alias match (e.g. 'bucuresti' -> 'București Nord',
+       'timisoara' -> 'Timișoara Nord', 'ploiesti' -> 'Ploiești Sud').
+
+    NEVER accepts gibberish strings containing a known word inside a mangled string
+    (e.g. 'da Nordgalaaa' MUST return None).
+    NEVER generates a synthetic 3-letter fallback code for an unknown station during route/train lookup.
+    """
+    if not raw_query or not isinstance(raw_query, str):
+        return None
+    raw_clean = raw_query.strip()
+    if not raw_clean:
+        return None
+
+    norm = normalize_text(raw_clean)
+    if not norm:
+        return None
+
+    raw_upper = raw_clean.upper()
+
+    # 1. Exact canonical 3-letter code in STATION_DICTIONARY
+    if raw_upper in STATION_DICTIONARY:
+        meta = STATION_DICTIONARY[raw_upper]
+        return StationMatch(
+            code=raw_upper,
+            name=meta["name"],
+            city=meta.get("city", ""),
+            is_major_hub=meta.get("is_major_hub", False),
+        )
+
+    # 2. Exact match in _EXACT_ALIAS_MAP
+    if norm in _EXACT_ALIAS_MAP:
+        code = _EXACT_ALIAS_MAP[norm]
+        if code in STATION_DICTIONARY:
+            meta = STATION_DICTIONARY[code]
+            return StationMatch(
+                code=code,
+                name=meta["name"],
+                city=meta.get("city", ""),
+                is_major_hub=meta.get("is_major_hub", False),
+            )
+
+    # 3. Exact official city fallback (e.g. "bucuresti" -> "BCT", "timisoara" -> "TIM", "ploiesti" -> "PLS")
+    for city_keyword, code in _CITY_FALLBACKS:
+        if norm == city_keyword:
+            if code in STATION_DICTIONARY:
+                meta = STATION_DICTIONARY[code]
+                return StationMatch(
+                    code=code,
+                    name=meta["name"],
+                    city=meta.get("city", ""),
+                    is_major_hub=meta.get("is_major_hub", False),
+                )
+
+    # 4. Check active StationCatalogService catalog (all commercial stops from XML timetables)
+    try:
+        from app.services.station_catalog_service import station_catalog_service
+        # Check by code in catalog
+        cat_st = station_catalog_service.get_station_by_code(raw_upper)
+        if cat_st and cat_st.code.upper() == raw_upper:
+            return StationMatch(
+                code=cat_st.code,
+                name=cat_st.name,
+                city=cat_st.city,
+                is_major_hub=cat_st.isMajorHub,
+            )
+
+        # Check by exact normalized name
+        for s in station_catalog_service._stations:
+            s_norm = normalize_text(s.name)
+            if norm == s_norm:
+                return StationMatch(
+                    code=s.code,
+                    name=s.name,
+                    city=s.city,
+                    is_major_hub=s.isMajorHub,
+                )
+
+        # Check by stripped suffixes (e.g. "Daneș Hm.", "Barboși hc.", "Gârbău h.")
+        stripped = _strip_station_suffixes(norm)
+        if stripped and stripped != norm:
+            if stripped in _EXACT_ALIAS_MAP:
+                code = _EXACT_ALIAS_MAP[stripped]
+                if code in STATION_DICTIONARY:
+                    meta = STATION_DICTIONARY[code]
+                    return StationMatch(
+                        code=code,
+                        name=meta["name"],
+                        city=meta.get("city", ""),
+                        is_major_hub=meta.get("is_major_hub", False),
+                    )
+            for s in station_catalog_service._stations:
+                s_norm = normalize_text(s.name)
+                s_stripped = _strip_station_suffixes(s_norm)
+                if stripped == s_norm or stripped == s_stripped:
+                    return StationMatch(
+                        code=s.code,
+                        name=s.name,
+                        city=s.city,
+                        is_major_hub=s.isMajorHub,
+                    )
+    except Exception as exc:
+        logger.debug(f"station_catalog_service lookup fallback in resolve_known_station: {exc}")
+
+    return None
 
 
 @functools.lru_cache(maxsize=16384)
@@ -1356,6 +1480,9 @@ class DataGovXMLAdapter(BaseTrainAdapter):
             clean_name = normalize_text(name)
             if clean_name and clean_name != code:
                 keys_to_index.append(clean_name)
+                stripped = _strip_station_suffixes(clean_name)
+                if stripped and stripped != clean_name and stripped != code:
+                    keys_to_index.append(stripped)
         for k in keys_to_index:
             t_list = st_index.setdefault(k, [])
             if not t_list or t_list[-1] != train_num:
@@ -1713,36 +1840,57 @@ class DataGovXMLAdapter(BaseTrainAdapter):
         if hasattr(self, "_itinerary_cache") and cache_key in self._itinerary_cache:
             return [r.model_copy(deep=True) for r in self._itinerary_cache[cache_key]]
 
+        # Strict station validation guard: zero fake itineraries for unknown stations
+        orig_match_info = resolve_known_station(origin)
+        dest_match_info = resolve_known_station(destination)
+        if orig_match_info is None or dest_match_info is None:
+            return []
+
         store = self._get_store_for_date(date_str)
         station_index = store["station_index"]
         train_routes = store["train_routes"]
-        orig_code = canonical_station_code(origin)
-        dest_code = canonical_station_code(destination)
+        orig_code = orig_match_info.code
+        dest_code = dest_match_info.code
         if orig_code == dest_code:
             return []
 
         orig_clean = normalize_text(origin)
         dest_clean = normalize_text(destination)
+        orig_match_name_clean = normalize_text(orig_match_info.name)
+        dest_match_name_clean = normalize_text(dest_match_info.name)
 
-        orig_trains = set(station_index.get(orig_code, []))
+        orig_codes = {orig_code, canonical_station_code(orig_match_info.name), canonical_station_code(origin)}
+        dest_codes = {dest_code, canonical_station_code(dest_match_info.name), canonical_station_code(destination)}
+
+        orig_trains = set()
+        for oc in orig_codes:
+            orig_trains.update(station_index.get(oc, []))
         if orig_clean and orig_clean in station_index:
             orig_trains.update(station_index[orig_clean])
+        if orig_match_name_clean and orig_match_name_clean in station_index:
+            orig_trains.update(station_index[orig_match_name_clean])
 
-        dest_trains = set(station_index.get(dest_code, []))
+        dest_trains = set()
+        for dc in dest_codes:
+            dest_trains.update(station_index.get(dc, []))
         if dest_clean and dest_clean in station_index:
             dest_trains.update(station_index[dest_clean])
+        if dest_match_name_clean and dest_match_name_clean in station_index:
+            dest_trains.update(station_index[dest_match_name_clean])
 
-        orig_stripped = _strip_station_suffixes(orig_clean)
-        dest_stripped = _strip_station_suffixes(dest_clean)
+        orig_cleans = {orig_clean, orig_match_name_clean}
+        dest_cleans = {dest_clean, dest_match_name_clean}
+        orig_stripped = {_strip_station_suffixes(c) for c in orig_cleans if _strip_station_suffixes(c)}
+        dest_stripped = {_strip_station_suffixes(c) for c in dest_cleans if _strip_station_suffixes(c)}
 
-        def _station_matches(target_code: str, target_clean: str, target_stripped: str, st_code: str, st_name: str) -> bool:
-            if st_code == target_code:
+        def _station_matches(target_codes: Set[str], target_cleans: Set[str], target_stripped: Set[str], st_code: str, st_name: str) -> bool:
+            if st_code in target_codes:
                 return True
             s_clean = normalize_text(st_name)
-            if target_clean and (
-                s_clean == target_clean
-                or (target_stripped and _strip_station_suffixes(s_clean) == target_stripped)
-            ):
+            if s_clean in target_cleans:
+                return True
+            s_strip = _strip_station_suffixes(s_clean)
+            if s_strip and s_strip in target_stripped:
                 return True
             return False
 
@@ -1751,8 +1899,8 @@ class DataGovXMLAdapter(BaseTrainAdapter):
             # Fallback scan across train_routes only if station alias was unindexed
             candidate_trains = [
                 t_num for t_num, rinfo in train_routes.items()
-                if any(_station_matches(orig_code, orig_clean, orig_stripped, s["code"], s["name"]) for s in rinfo["stops"])
-                and any(_station_matches(dest_code, dest_clean, dest_stripped, s["code"], s["name"]) for s in rinfo["stops"])
+                if any(_station_matches(orig_codes, orig_cleans, orig_stripped, s["code"], s["name"]) for s in rinfo["stops"])
+                and any(_station_matches(dest_codes, dest_cleans, dest_stripped, s["code"], s["name"]) for s in rinfo["stops"])
             ]
 
         results: List[TrainScrapeRecord] = []
@@ -1767,10 +1915,10 @@ class DataGovXMLAdapter(BaseTrainAdapter):
 
             for idx, stop in enumerate(stops):
                 if orig_match is None:
-                    if _station_matches(orig_code, orig_clean, orig_stripped, stop["code"], stop["name"]):
+                    if _station_matches(orig_codes, orig_cleans, orig_stripped, stop["code"], stop["name"]):
                         orig_match = (idx, stop)
                 if orig_match is not None and dest_match is None and idx > orig_match[0]:
-                    if _station_matches(dest_code, dest_clean, dest_stripped, stop["code"], stop["name"]):
+                    if _station_matches(dest_codes, dest_cleans, dest_stripped, stop["code"], stop["name"]):
                         dest_match = (idx, stop)
                         break
 

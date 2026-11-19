@@ -73,6 +73,39 @@
   }
 }
 
+/* Glassmorphic shimmering ghost skeleton animation & styles */
+@keyframes glassShimmerSweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.glass-ghost-card {
+  background: rgba(255, 253, 249, 0.62);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  box-shadow: 0 8px 28px -8px rgba(217, 119, 6, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-shimmer-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 15%, rgba(255, 255, 255, 0.72) 42%, rgba(254, 243, 199, 0.62) 52%, transparent 82%);
+  animation: glassShimmerSweep 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+
+.glass-ghost-bar {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.13) 0%, rgba(251, 191, 36, 0.22) 50%, rgba(245, 158, 11, 0.13) 100%);
+}
+
 @keyframes wingFlutterLeft {
   0%, 100% {
     transform: rotate(-24deg) scaleY(1);
@@ -547,6 +580,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-mascot-float,
+  .glass-shimmer-overlay,
   .animate-bee-dynamic-flight,
   .animate-wing-left,
   .animate-wing-right,

@@ -31,12 +31,6 @@ const CHAPTER_SPEECHES: Record<HiveTourChapter, Record<string, string>> = {
     safe: '🛡️ Queen Meli: "Every rail operator synchronized with algorithmic junction transfer buffers!"',
     economy: '🍯 Queen Flora: "Comparing CFR Călători with private rail operators for the lowest LEI per kilometer!"',
   },
-  ecosystem: {
-    default: '🏺 Bumbi: "The Cozy Hive: Live ML rail telemetry rerouting train delays in real time!"',
-    economy: '🍯 Queen Flora: "Golden honey pots tracking train delays and finding budget-friendly rail connections!"',
-    safe: '🛡️ Queen Meli: "Real-time junction shields navigating single-track bottlenecks and delay cascades!"',
-    fast: '⚡ Queen Vira: "Zero timetable clutter: 1-click smooth booking for priority rail corridors!"',
-  },
 };
 
 export const ScrollCompanionMascot: React.FC<ScrollCompanionMascotProps> = ({

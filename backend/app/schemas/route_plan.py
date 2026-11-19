@@ -659,7 +659,7 @@ class TrainItineraryResponse(BaseModel):
 
 class RoutePlanResponse(BaseModel):
     plans: List[TransitRoutePlan]
-    recommendedPlanId: str
+    recommendedPlanId: Optional[str] = None
     query: TransitRouteQuery
     generatedAt: str
     bookingWindow: Optional[BookingWindowInfo] = None

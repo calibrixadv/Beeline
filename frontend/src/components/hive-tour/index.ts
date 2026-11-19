@@ -4,5 +4,4 @@ export * from './MiniWorkerBee';
 export * from './HiveSvgProps';
 export * from './QueenBeesSection';
 export * from './TransitHoneycombSection';
-export * from './CozyHiveSection';
 export * from './ScrollCompanionMascot';

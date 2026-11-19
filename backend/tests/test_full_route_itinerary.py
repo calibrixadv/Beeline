@@ -410,3 +410,75 @@ async def test_route_plan_galati_to_brasov_no_impossible_trains(client: AsyncCli
                 dist = leg.get("distanceKm", 0.0)
                 assert dist >= 100.0, f"Physically impossible leg distance {dist}km for {orig_name} -> {dest_name}"
 
+
+@pytest.mark.asyncio
+async def test_invalid_and_gibberish_stations_return_zero_trains(client: AsyncClient):
+    """
+    Regression test for surgical hotfix:
+    Verifies that querying gibberish or invalid stations never returns false trains:
+    1. 'da Nordgalaaa' -> 'Brașov' MUST return plans=[] and totalDayRoutes=0 (never 5 trains).
+    2. 'București Nord' -> 'Atlantis XYZ' MUST return plans=[] and totalDayRoutes=0 (never generic plan).
+    3. Valid stations ('Brăila' -> 'București Nord', 'Galați' -> 'Brașov') still return real operating trains.
+    """
+    # 1. 'da Nordgalaaa' -> 'Brașov'
+    res1 = await client.post(
+        "/api/v1/routes/plan",
+        json={
+            "origin": {"name": "da Nordgalaaa", "city": "da Nordgalaaa"},
+            "destination": {"name": "Brașov", "city": "Brașov"},
+            "departureTime": "2026-11-20T08:00:00+02:00",
+            "allowedModes": ["TRAIN"],
+            "optimizationPreference": "FASTEST",
+        },
+    )
+    assert res1.status_code == 200
+    data1 = res1.json()
+    assert len(data1.get("plans", [])) == 0, f"Expected 0 plans for gibberish station, got {len(data1['plans'])}"
+    assert data1.get("totalDayRoutes") == 0, f"Expected totalDayRoutes=0, got {data1.get('totalDayRoutes')}"
+
+    # 2. 'București Nord' -> 'Atlantis XYZ'
+    res2 = await client.post(
+        "/api/v1/routes/plan",
+        json={
+            "origin": {"name": "București Nord", "city": "București"},
+            "destination": {"name": "Atlantis XYZ", "city": "Atlantis XYZ"},
+            "departureTime": "2026-11-20T08:00:00+02:00",
+            "allowedModes": ["TRAIN"],
+            "optimizationPreference": "FASTEST",
+        },
+    )
+    assert res2.status_code == 200
+    data2 = res2.json()
+    assert len(data2.get("plans", [])) == 0, f"Expected 0 plans for non-existent station, got {len(data2['plans'])}"
+    assert data2.get("totalDayRoutes") == 0
+
+    # 3. Valid stations return real operating trains
+    res3 = await client.post(
+        "/api/v1/routes/plan",
+        json={
+            "origin": {"name": "Brăila", "city": "Brăila"},
+            "destination": {"name": "București Nord", "city": "București"},
+            "departureTime": "2026-11-20T08:00:00+02:00",
+            "allowedModes": ["TRAIN"],
+            "optimizationPreference": "FASTEST",
+        },
+    )
+    assert res3.status_code == 200
+    data3 = res3.json()
+    assert len(data3.get("plans", [])) >= 1, "Expected real trains for Brăila -> București Nord"
+
+    res4 = await client.post(
+        "/api/v1/routes/plan",
+        json={
+            "origin": {"name": "Galați", "city": "Galați"},
+            "destination": {"name": "Brașov", "city": "Brașov"},
+            "departureTime": "2026-11-20T08:00:00+02:00",
+            "allowedModes": ["TRAIN"],
+            "optimizationPreference": "MOST_RELIABLE",
+        },
+    )
+    assert res4.status_code == 200
+    data4 = res4.json()
+    assert len(data4.get("plans", [])) >= 1, "Expected real trains for Galați -> Brașov"
+
+

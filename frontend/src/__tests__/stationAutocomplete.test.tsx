@@ -6,6 +6,7 @@ import HomePage from '../app/page';
 import TripsPage from '../app/trips/page';
 import { TripProvider } from '../context/TripContext';
 import { stationAutocompleteService } from '../services/stationAutocompleteService';
+import * as tripBookingService from '../services/tripBookingService';
 
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
@@ -25,6 +26,11 @@ describe('Station Autocomplete Component & Page Wiring Suite', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockSearchParams = new URLSearchParams();
+    jest.spyOn(tripBookingService, 'fetchDayTripsFromBackend').mockResolvedValue({
+      plans: [],
+      allDayDepartures: [],
+      status: 'OK',
+    });
   });
 
   describe('StationAutocompleteInput standalone behavior', () => {
@@ -68,11 +74,61 @@ describe('Station Autocomplete Component & Page Wiring Suite', () => {
 
       const dropdown = await screen.findByTestId('station-autocomplete-dropdown');
       expect(dropdown).toBeInTheDocument();
+      expect(dropdown).toHaveClass('absolute', 'left-0', 'right-0', 'z-50');
+      expect(dropdown.style.position).toBe('absolute');
+      expect(dropdown.style.top).toBe('calc(100% + 6px)');
 
       const option = await screen.findByRole('option', { name: /Galați/i });
       expect(option).toBeInTheDocument();
       expect(screen.getByText('GLT')).toBeInTheDocument();
-      expect(screen.getByText(/Updated weekly • \d+ Romanian rail stations/i)).toBeInTheDocument();
+    });
+
+    it('keeps input visible, editable, and listbox positioned directly underneath without layout shift', async () => {
+      const handleSubmit = jest.fn();
+      render(
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+          <ControlledTestInput initialValue="" />
+        </form>
+      );
+
+      const input = screen.getByRole('combobox') as HTMLInputElement;
+      expect(input).toBeVisible();
+
+      // Freely type into the input
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: 'Bucur' } });
+      expect(input.value).toBe('Bucur');
+
+      const dropdown = await screen.findByTestId('station-autocomplete-dropdown');
+      expect(dropdown).toBeInTheDocument();
+      expect(dropdown.className).toContain('absolute');
+      expect(dropdown.className).toContain('z-50');
+
+      // The listbox is directly underneath and does not cover the input
+      const listbox = screen.getByRole('listbox');
+      expect(listbox).toBeInTheDocument();
+
+      // C.2 DOM geometry assertions:
+      // 1. listbox.parentElement is station-autocomplete-input-anchor
+      const anchor = screen.getByTestId('station-autocomplete-input-anchor');
+      expect(listbox.parentElement).toBe(anchor);
+      // anchor contains <input> and does NOT contain <label>
+      expect(anchor.contains(input)).toBe(true);
+      expect(anchor.querySelector('label')).toBeNull();
+
+      // 2. <input> precedes listbox in DOM order
+      expect(input.compareDocumentPosition(listbox) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+      // 3. listbox styles
+      expect(listbox.style.position).toBe('absolute');
+      expect(listbox.style.top).toBe('calc(100% + 6px)');
+      expect(listbox.style.zIndex).toBe('100');
+
+      // Pressing Enter when no item is highlighted does not prevent default, allowing form submission
+      const notPrevented = fireEvent.keyDown(input, { key: 'Enter', cancelable: true });
+      expect(notPrevented).toBe(true);
+      fireEvent.submit(input.closest('form')!);
+      expect(handleSubmit).toHaveBeenCalled();
     });
 
     it('matches "intorsura" -> "Întorsura Buzăului" with canonical code IBZ', async () => {
@@ -183,12 +239,14 @@ describe('Station Autocomplete Component & Page Wiring Suite', () => {
 
       // Wait for backend plans to load cleanly
       await waitFor(() => {
+        expect(screen.queryByTestId('trips-ghost-skeleton')).not.toBeInTheDocument();
         expect(screen.queryByText(/Error fetching trains/i)).not.toBeInTheDocument();
       });
 
       // Swap button on /trips updates inputs and router query
       const swapBtn = screen.getByTitle('Swap Stations');
       fireEvent.click(swapBtn);
+      await waitFor(() => expect(screen.queryByTestId('trips-ghost-skeleton')).not.toBeInTheDocument());
 
       expect(originInput.value).toBe('București Nord');
       expect(destInput.value).toBe('Galați');
@@ -202,6 +260,7 @@ describe('Station Autocomplete Component & Page Wiring Suite', () => {
 
       const iasiOption = await screen.findByRole('option', { name: /Iași/i });
       fireEvent.click(iasiOption);
+      await waitFor(() => expect(screen.queryByTestId('trips-ghost-skeleton')).not.toBeInTheDocument());
 
       expect(destInput.value).toBe('Iași');
       expect(mockReplace).toHaveBeenCalledWith(

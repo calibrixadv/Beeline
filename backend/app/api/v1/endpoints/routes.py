@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import logging
 import math
 from typing import Any, List, Optional, Union
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -23,11 +24,15 @@ from app.schemas.route_plan import (
     TransitRouteQuery,
 )
 from app.services.corridor_service import corridor_service
+from app.services.email_service import email_service
 from app.services.idempotency_service import IdempotencyService
 from app.services.routing_service import routing_service
 from app.services.timetable_sync_service import timetable_sync_service
 from app.services.train_service import _scrape_record_to_train_journey
+from app.services.trip_notification_service import user_allows_email_notifications
 from scraper.collectors.train_api import DataGovXMLAdapter
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -102,13 +107,16 @@ async def plan_route(
         query.departureTime = f"{min_date}T08:00:00+02:00"
 
     plans = await routing_service.plan_routes(query)
-    recommended_id = plans[0].id if plans else ""
+    recommended_id = plans[0].id if plans else None
 
     orig_q = query.origin.name or query.origin.city or ""
     dest_q = query.destination.name or query.destination.city or ""
     date_str = query.departureTime[:10] if query.departureTime else min_date
-    direct_recs = DataGovXMLAdapter.get_shared_instance().fetch_itinerary_sync(orig_q, dest_q, date_str=date_str)
-    all_day_deps = [_scrape_record_to_train_journey(r, date_str) for r in direct_recs] if direct_recs else None
+    if plans:
+        direct_recs = DataGovXMLAdapter.get_shared_instance().fetch_itinerary_sync(orig_q, dest_q, date_str=date_str)
+        all_day_deps = [_scrape_record_to_train_journey(r, date_str) for r in direct_recs] if direct_recs else None
+    else:
+        all_day_deps = None
 
     return RoutePlanResponse(
         plans=plans,
@@ -167,6 +175,18 @@ async def save_route(
                 response_code=201,
                 response_data=resp.model_dump()
             )
+
+        if user_allows_email_notifications(current_user):
+            try:
+                await email_service.send_saved_trip_confirmation_email(
+                    to_email=current_user.email,
+                    origin=saved.origin_name,
+                    destination=saved.destination_name,
+                    departure_time=str(data.plan.departureTime),
+                    train_summary=data.plan.summary
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to dispatch saved trip confirmation email: {exc}")
 
         return resp
     except Exception:

@@ -16,6 +16,8 @@ from app.services.timetable_sync_service import timetable_sync_service
 from scraper.collectors.train_api import (
     STATION_DICTIONARY,
     _EXACT_ALIAS_MAP,
+    StationMatch,
+    resolve_known_station,
 )
 
 logger = logging.getLogger(__name__)
@@ -663,3 +665,11 @@ class StationCatalogService:
 
 
 station_catalog_service = StationCatalogService()
+StationCatalogService.resolve_known_station = staticmethod(resolve_known_station)
+
+__all__ = [
+    "StationCatalogService",
+    "station_catalog_service",
+    "StationMatch",
+    "resolve_known_station",
+]

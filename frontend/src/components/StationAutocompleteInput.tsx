@@ -52,13 +52,10 @@ export const StationAutocompleteInput: React.FC<StationAutocompleteInputProps> =
   const [suggestions, setSuggestions] = useState<StationAutocompleteItem[]>([]);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const [isLoading, setIsLoading] = useState(false);
-  const [totalStations, setTotalStations] = useState<number>(() => {
-    return stationAutocompleteService.getWeeklySyncMeta()?.totalStations || 1669;
-  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const listboxRef = useRef<HTMLUListElement>(null);
+  const listboxRef = useRef<HTMLDivElement>(null);
 
   // Update suggestions when value or isOpen changes
   useEffect(() => {
@@ -76,11 +73,7 @@ export const StationAutocompleteInput: React.FC<StationAutocompleteInputProps> =
         .then((items) => {
           if (isCancelled) return;
           setSuggestions(items);
-          setHighlightedIndex(items.length > 0 ? 0 : -1);
-          const meta = stationAutocompleteService.getWeeklySyncMeta();
-          if (meta && meta.totalStations) {
-            setTotalStations(meta.totalStations);
-          }
+          setHighlightedIndex(-1);
           setIsLoading(false);
         })
         .catch(() => {
@@ -169,14 +162,18 @@ export const StationAutocompleteInput: React.FC<StationAutocompleteInputProps> =
   };
 
   return (
-    <div ref={containerRef} className="relative w-full flex flex-col gap-1.5 text-left">
+    <div ref={containerRef} className="w-full flex flex-col gap-1.5 text-left">
       {label && (
         <label htmlFor={inputId} className="text-xs font-semibold text-stone-700 tracking-wide">
           {label}
         </label>
       )}
 
-      <div className="relative flex items-center">
+      <div
+        data-testid="station-autocomplete-input-anchor"
+        className="relative w-full flex items-center"
+        style={{ position: 'relative' }}
+      >
         {leftIcon && (
           <div className="absolute left-3.5 flex items-center pointer-events-none text-stone-400 z-10">
             {leftIcon}
@@ -226,22 +223,17 @@ export const StationAutocompleteInput: React.FC<StationAutocompleteInputProps> =
             <X className="w-4 h-4" />
           </button>
         )}
-      </div>
 
-      {error && <span className="text-xs text-red-500 font-medium">{error}</span>}
-
-      {/* Floating elevated autocomplete dropdown card */}
-      {isOpen && (
-        <div
-          data-testid="station-autocomplete-dropdown"
-          className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-white border border-amber-200/90 rounded-2xl shadow-xl overflow-hidden text-stone-900 animate-in fade-in zoom-in-95 duration-100"
-        >
-          <ul
+        {/* Floating elevated autocomplete dropdown card */}
+        {isOpen && (
+          <div
             ref={listboxRef}
             id={listboxId}
             role="listbox"
             aria-label="Station suggestions"
-            className="max-h-64 overflow-y-auto divide-y divide-amber-50/80 focus:outline-none py-1"
+            data-testid="station-autocomplete-dropdown"
+            className="absolute left-0 right-0 z-50 bg-white border border-amber-200 rounded-2xl shadow-xl overflow-hidden text-stone-900 animate-in fade-in zoom-in-95 duration-100 max-h-64 overflow-y-auto divide-y divide-amber-50/80 focus:outline-none py-1"
+            style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 100 }}
           >
             {suggestions.length > 0 ? (
               suggestions.map((st, idx) => {
@@ -249,7 +241,7 @@ export const StationAutocompleteInput: React.FC<StationAutocompleteInputProps> =
                 const isHighlighted = idx === highlightedIndex;
 
                 return (
-                  <li
+                  <div
                     key={`${st.code}-${idx}`}
                     id={`${listboxId}-option-${idx}`}
                     role="option"
@@ -291,23 +283,19 @@ export const StationAutocompleteInput: React.FC<StationAutocompleteInputProps> =
                       )}
                       {isSelected && <Check className="w-4 h-4 text-amber-600 shrink-0" />}
                     </div>
-                  </li>
+                  </div>
                 );
               })
             ) : (
-              <li className="px-4 py-3 text-xs text-stone-500 text-center">
+              <div className="px-4 py-3 text-xs text-stone-500 text-center">
                 {isLoading ? 'Loading Romanian stations...' : 'No railway stations found.'}
-              </li>
+              </div>
             )}
-          </ul>
-
-          {/* Dropdown Footer */}
-          <div className="px-3.5 py-1.5 bg-amber-50/60 border-t border-amber-100 flex items-center justify-between text-[11px] text-amber-800 font-medium">
-            <span>Updated weekly • {totalStations} Romanian rail stations</span>
-            <span className="text-amber-600 font-bold">CFR SA / Data.gov.ro</span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {error && <span className="text-xs text-red-500 font-medium">{error}</span>}
     </div>
   );
 };
