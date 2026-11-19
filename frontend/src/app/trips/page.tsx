@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   ArrowLeftRight, 
   MapPin, 
@@ -24,10 +24,12 @@ import {
   TripFilterState
 } from '../../services/tripBookingService';
 import { TransitRoutePlan, CuratedPillar } from '../../types/routePlan';
+import { StationAutocompleteItem } from '../../types/station';
 import { useTrip } from '../../context/TripContext';
 import BaseCard from '../../components/BaseCard';
 import BaseInput from '../../components/BaseInput';
 import BaseButton from '../../components/BaseButton';
+import StationAutocompleteInput from '../../components/StationAutocompleteInput';
 import BookingTripCard from '../../components/BookingTripCard';
 import TripFilterBar from '../../components/TripFilterBar';
 import MascotBee from '../../components/MascotBee';
@@ -40,6 +42,7 @@ const POPULAR_CORRIDORS = [
 ];
 
 function TripsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { addTrainToTrip, removeTrainFromTrip, isTrainInTrip, trips: savedTrips } = useTrip();
 
@@ -138,17 +141,44 @@ function TripsContent() {
     };
   }, [activeOrigin, activeDestination, activeDate, filters.pillar]);
 
+  const updateUrlParams = (newOrigin: string, newDestination: string, newDate?: string) => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    params.set('origin', newOrigin);
+    params.set('destination', newDestination);
+    if (newDate || activeDate) {
+      params.set('date', newDate || activeDate);
+    }
+    router.replace(`/trips?${params.toString()}`);
+  };
+
   const handleSwap = () => {
-    setOriginInput(destinationInput);
-    setDestinationInput(originInput);
-    setActiveOrigin(destinationInput);
-    setActiveDestination(originInput);
+    const newOrigin = destinationInput;
+    const newDest = originInput;
+    setOriginInput(newOrigin);
+    setDestinationInput(newDest);
+    setActiveOrigin(newOrigin);
+    setActiveDestination(newDest);
+    updateUrlParams(newOrigin, newDest);
   };
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setActiveOrigin(originInput);
     setActiveDestination(destinationInput);
+    updateUrlParams(originInput, destinationInput);
+  };
+
+  const handleSelectOrigin = (st: StationAutocompleteItem) => {
+    setOriginInput(st.name);
+    setActiveOrigin(st.name);
+    updateUrlParams(st.name, destinationInput);
+  };
+
+  const handleSelectDestination = (st: StationAutocompleteItem) => {
+    setDestinationInput(st.name);
+    setActiveDestination(st.name);
+    updateUrlParams(originInput, st.name);
   };
 
   // Generate corridor raw trips
@@ -269,12 +299,15 @@ function TripsContent() {
         <form onSubmit={handleSearch} className="space-y-4">
           <div className="flex flex-col md:flex-row items-center gap-3">
             <div className="w-full">
-              <BaseInput
+              <StationAutocompleteInput
+                id="trips-origin-input"
                 label="ORIGIN"
                 placeholder="Departure station or city..."
                 value={originInput}
                 onChange={(e) => setOriginInput(e.target.value)}
+                onSelectStation={handleSelectOrigin}
                 onClear={() => setOriginInput('')}
+                excludeStationName={destinationInput}
                 leftIcon={<MapPin className="w-4 h-4 text-amber-500" />}
               />
             </div>
@@ -289,12 +322,15 @@ function TripsContent() {
             </button>
 
             <div className="w-full">
-              <BaseInput
+              <StationAutocompleteInput
+                id="trips-destination-input"
                 label="DESTINATION"
                 placeholder="Arrival station or city..."
                 value={destinationInput}
                 onChange={(e) => setDestinationInput(e.target.value)}
+                onSelectStation={handleSelectDestination}
                 onClear={() => setDestinationInput('')}
+                excludeStationName={originInput}
                 leftIcon={<MapPin className="w-4 h-4 text-amber-600" />}
               />
             </div>
@@ -325,6 +361,7 @@ function TripsContent() {
                     setDestinationInput(c.destination);
                     setActiveOrigin(c.origin);
                     setActiveDestination(c.destination);
+                    updateUrlParams(c.origin, c.destination);
                   }}
                   className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-colors font-medium"
                 >

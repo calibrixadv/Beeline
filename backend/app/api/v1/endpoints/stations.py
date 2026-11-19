@@ -6,12 +6,15 @@ from app.core.database import get_db
 from app.schemas.auth import MessageResponse
 from app.schemas.route_plan import TransitMode
 from app.schemas.station import (
+    StationAutocompleteCatalogResponse,
     StationBoardResponse,
     StationCreate,
     StationSearchResponse,
     StationSearchResult,
     StationUpdate,
+    WeeklyStationSyncMeta,
 )
+from app.services.station_catalog_service import station_catalog_service
 from app.services.station_service import station_service
 
 router = APIRouter()
@@ -29,13 +32,31 @@ async def list_stations(
 
 @router.get("/search", response_model=StationSearchResponse)
 async def search_stations(
-    query: str = Query(..., description="Search term for station name or code (min 2 chars)"),
+    query: str = Query("", description="Search term for station name or code"),
     limit: int = Query(10, ge=1, le=50, description="Max stations to return"),
-    city: Optional[str] = Query(None, description="Optional city filter")
+    city: Optional[str] = Query(None, description="Optional city filter"),
+    min_length: int = Query(2, description="Minimum length required when query is provided"),
 ) -> Any:
-    """Autocomplete station search across Romanian transit nodes."""
-    stations = station_service.search_stations(query=query, limit=limit, city=city)
-    return StationSearchResponse(stations=stations)
+    """Autocomplete station search across Romanian transit nodes with diacritic-insensitive ranking."""
+    stations = station_service.search_stations(
+        query=query, limit=limit, city=city, min_length=min_length
+    )
+    _, meta = station_catalog_service.get_catalog_and_meta()
+    return StationSearchResponse(stations=stations, weeklySync=meta)
+
+
+@router.get("/autocomplete-catalog", response_model=StationAutocompleteCatalogResponse)
+async def get_autocomplete_catalog() -> Any:
+    """Full deduplicated commercial rail station catalog + weekly sync metadata."""
+    stations, meta = station_catalog_service.get_catalog_and_meta()
+    return StationAutocompleteCatalogResponse(stations=stations, weeklySync=meta)
+
+
+@router.post("/sync-weekly", response_model=WeeklyStationSyncMeta)
+async def sync_weekly() -> Any:
+    """Trigger on-demand weekly station synchronization."""
+    meta = await station_catalog_service.sync_weekly_stations(force=True)
+    return meta
 
 
 @router.get("/{station_code}", response_model=StationSearchResult)

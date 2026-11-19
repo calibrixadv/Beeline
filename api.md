@@ -1269,6 +1269,18 @@ GET /api/v1/stations/{stationCode}/board?type=DEPARTURES&windowHours=2
 ```
 Returns live arrivals or departures for station monitors with real-time delay minutes and track/platform numbers.
 
+### 9.8 Station Autocomplete Catalog
+```http
+GET /api/v1/stations/autocomplete-catalog
+```
+Returns the full deduplicated Romanian commercial rail station catalog with weekly sync metadata (`isoWeek`, `lastSyncedAt`, `nextWeeklySyncAt`, `totalStations`, `schedule`).
+
+### 9.9 Weekly Sync Trigger
+```http
+POST /api/v1/stations/sync-weekly
+```
+Triggers an immediate on-demand refresh of the full rail station catalog from active timetables and updates weekly sync metadata.
+
 ---
 
 ## 10. Trip Bookings & Wallet Checkout
@@ -1483,6 +1495,8 @@ Archives or removes a resolved transit disruption incident.
 | **Stations** | `/stations/{code}` | `PATCH` | ✅ Implemented | Station metadata / coordinates update |
 | **Stations** | `/stations/{code}` | `DELETE` | ✅ Implemented | Station decommissioning (FK protected) |
 | **Stations** | `/stations/search` | `GET` | ✅ Implemented | Autocomplete in inputs |
+| **Stations** | `/stations/autocomplete-catalog` | `GET` | ✅ Implemented | Full deduplicated station catalog + weekly sync meta |
+| **Stations** | `/stations/sync-weekly` | `POST` | ✅ Implemented | Trigger/verify weekly station sync |
 | **Stations** | `/stations/{code}/board`| `GET` | ✅ Implemented | Live Station Departure view |
 | **Bookings** | `/bookings` | `POST` | ✅ Implemented | `MyTripPage` checkout |
 | **Bookings** | `/bookings` | `GET` | ✅ Implemented | User travel history |

@@ -678,14 +678,25 @@ class FeatureStoreService:
 feature_store_service = FeatureStoreService()
 
 
+_corridor_sync_stop_event: Optional[asyncio.Event] = None
+
+
+def stop_corridor_feature_sync_worker() -> None:
+    global _corridor_sync_stop_event
+    if _corridor_sync_stop_event is not None:
+        _corridor_sync_stop_event.set()
+
+
 async def corridor_feature_sync_worker() -> None:
     """
     Background asynchronous worker running during FastAPI lifespan.
     Periodically synchronizes live transit corridor, station, and carrier features into Redis
     without blocking SQL connections.
     """
+    global _corridor_sync_stop_event
+    _corridor_sync_stop_event = asyncio.Event()
     logger.info("Starting corridor_feature_sync_worker background task.")
-    while True:
+    while not _corridor_sync_stop_event.is_set():
         try:
             await FeatureStoreService.sync_all_features()
         except asyncio.CancelledError:
@@ -694,8 +705,17 @@ async def corridor_feature_sync_worker() -> None:
         except Exception as exc:
             logger.warning(f"Error in corridor_feature_sync_worker cycle: {exc}")
 
+        if _corridor_sync_stop_event.is_set():
+            break
+
         try:
-            await asyncio.sleep(settings.FEATURE_SYNC_INTERVAL_SECONDS)
+            await asyncio.wait_for(
+                _corridor_sync_stop_event.wait(),
+                timeout=float(settings.FEATURE_SYNC_INTERVAL_SECONDS),
+            )
+            break
+        except asyncio.TimeoutError:
+            pass
         except asyncio.CancelledError:
             logger.info("corridor_feature_sync_worker cancelled during sleep, exiting.")
             break

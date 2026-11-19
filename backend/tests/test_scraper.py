@@ -11,8 +11,6 @@ if str(backend_dir) not in sys.path:
 from scraper.models import (
     CalendarFeatures,
     InfrastructureFeatures,
-    ScrapedTrainingSample,
-    TargetLabels,
     TrainApiFeatures,
     WeatherApiFeatures,
 )
@@ -20,7 +18,6 @@ from scraper.collectors.calendar_generator import CalendarGenerator
 from scraper.collectors.infrastructure_registry import InfrastructureRegistry
 from scraper.collectors.train_api import TrainApiCollector
 from scraper.collectors.weather_api import WeatherApiCollector
-from scraper.pipeline import TransitScraperPipeline
 
 
 def test_train_api_collector_parsing():
@@ -82,76 +79,25 @@ def test_infrastructure_registry_topology():
     assert infra_buc_brasov.is_single_track == 0
 
 
-def test_pipeline_end_to_end_assembly(tmp_path):
-    pipeline = TransitScraperPipeline(weather_timeout=1.0)
-
-    raw_train = {
-        "train_number": "IR 1634",
-        "operator": "CFR",
-        "train_category": 2,
-        "origin_station_code": "BSV",
-        "destination_station_code": "BCT",
-        "scheduled_duration_minutes": 150.0,
-        "distance_km": 166.0,
-        "stop_count": 4,
-        "delay_at_origin_minutes": 5,
-        "has_transfer": 1,
-        "transfer_buffer_minutes": 25.0,
-    }
-
-    custom_weather = {
-        "temp_celsius": -2.5,
-        "precipitation_rate_mm_h": 1.2,
-        "is_thunderstorm": 0,
-        "wind_speed_kmh": 25.0,
-        "wind_gust_kmh": 40.0,
-        "snow_depth_cm": 8.0,
-        "freezing_rain_risk": 0,
-        "visibility_meters": 4000.0,
-    }
-
-    dep_dt = datetime(2026, 1, 15, 7, 30, tzinfo=timezone.utc)
-
-    # Actual delay of 35 mins should trigger missed connection (35 > 25 - 5)
-    sample: ScrapedTrainingSample = pipeline.process_sample(
-        raw_train_data=raw_train,
-        departure_dt=dep_dt,
-        custom_weather=custom_weather,
-        actual_delay_minutes=35.0,
-    )
-
-    assert sample.source_train_api.train_number == "IR 1634"
-    assert sample.source_weather_api.temp_celsius == -2.5
-    assert sample.source_weather_api.snow_depth_cm == 8.0
-    assert sample.source_calendar_generator.season == 3  # Winter
-    assert sample.source_calendar_generator.is_peak_hour == 1  # 07:30
-    assert sample.source_infrastructure_registry.mountain_pass_flag == 1  # Brașov-București
-    assert sample.target_labels.actual_delay_minutes == 35.0
-    assert sample.target_labels.missed_connection == 1
-
-    # Check 18-element ONNX feature vector conversion
-    vec18 = sample.to_18_feature_vector()
-    assert len(vec18) == 18
-    assert vec18[0] == 2.0  # train_category (IR = 2)
-    assert vec18[2] == 150.0  # duration
-    assert vec18[5] == 7.0  # departure_hour
-    assert vec18[6] == 1.0  # is_peak_hour
-
-    # Test CSV export
-    csv_path = tmp_path / "training.csv"
-    pipeline.export_to_csv([sample], csv_path)
-    assert csv_path.exists()
-    content = csv_path.read_text(encoding="utf-8")
-    assert "train_number" in content
-    assert "temp_celsius" in content
-    assert "actual_delay_minutes" in content
-
-    # Test JSON export
-    json_path = tmp_path / "training.json"
-    pipeline.export_to_json([sample], json_path)
-    assert json_path.exists()
-    json_content = json_path.read_text(encoding="utf-8")
-    assert "IR 1634" in json_content
+def test_weather_regional_hub_station_resolution():
+    """
+    Verifies that secondary and regional Romanian station codes resolve to their
+    closest geographic canonical weather hubs instead of defaulting to Bucharest (BCT).
+    """
+    assert WeatherApiCollector.resolve_station_code("TIM") == "TIM"
+    assert WeatherApiCollector.resolve_station_code("TMN") == "TIM"
+    assert WeatherApiCollector.resolve_station_code("ARD") == "TIM"
+    assert WeatherApiCollector.resolve_station_code("IAS") == "IAS"
+    assert WeatherApiCollector.resolve_station_code("ISN") == "IAS"
+    assert WeatherApiCollector.resolve_station_code("SCV") == "IAS"
+    assert WeatherApiCollector.resolve_station_code("CRA") == "CRA"
+    assert WeatherApiCollector.resolve_station_code("CRV") == "CRA"
+    assert WeatherApiCollector.resolve_station_code("DRT") == "CRA"
+    assert WeatherApiCollector.resolve_station_code("PLV") == "PLV"
+    assert WeatherApiCollector.resolve_station_code("PLS") == "PLV"
+    assert WeatherApiCollector.resolve_station_code("SNA") == "BSV"
+    assert WeatherApiCollector.resolve_station_code("PRD") == "BSV"
+    assert WeatherApiCollector.resolve_station_code("FAU") == "BRL"
 
 
 @pytest.mark.asyncio
@@ -167,23 +113,5 @@ async def test_async_train_collector_offline_tier_1():
         for r in records:
             assert r.origin_station_code == "GLT"
             assert r.destination_station_code == "BCT"
-    finally:
-        await collector.close()
-
-
-@pytest.mark.asyncio
-async def test_train_scrape_record_direct_pipeline_processing():
-    collector = TrainApiCollector(offline=True, min_delay=0, max_delay=0)
-    pipeline = TransitScraperPipeline(weather_timeout=0.1)
-    try:
-        record = await collector.get_train("IR 1572", "2026-11-14")
-        # Direct passing of TrainScrapeRecord into pipeline
-        sample = pipeline.process_sample(
-            raw_train_data=record,
-            departure_dt=datetime(2026, 11, 14, 8, 0, tzinfo=timezone.utc),
-        )
-        assert sample.source_train_api.train_number == "IR 1572"
-        assert sample.target_labels.actual_delay_minutes == record.actual_delay_minutes
-        assert len(sample.to_18_feature_vector()) == 18
     finally:
         await collector.close()

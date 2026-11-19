@@ -20,6 +20,7 @@ import BaseCard from './BaseCard';
 import BaseInput from './BaseInput';
 import BaseButton from './BaseButton';
 import MascotBee from './MascotBee';
+import StationAutocompleteInput from './StationAutocompleteInput';
 import { TransitRoutePlan } from '../types/routePlan';
 
 export const POPULAR_CORRIDORS = [
@@ -97,12 +98,13 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
         {/* Origin & Destination Inputs with Swap Button */}
         <div className="relative flex flex-col md:flex-row items-center gap-3">
           <div className="w-full">
-            <BaseInput
+            <StationAutocompleteInput
               label="ORIGIN"
               placeholder="e.g. Galați, București Nord..."
               value={origin}
               onChange={(e) => setOrigin(e.target.value)}
               onClear={() => setOrigin('')}
+              excludeStationName={destination}
               leftIcon={<MapPin className="w-4 h-4 text-amber-500" />}
             />
           </div>
@@ -118,12 +120,13 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
           </button>
 
           <div className="w-full">
-            <BaseInput
+            <StationAutocompleteInput
               label="DESTINATION"
               placeholder="e.g. Brașov, Cluj-Napoca..."
               value={destination}
               onChange={(e) => setDestination(e.target.value)}
               onClear={() => setDestination('')}
+              excludeStationName={origin}
               leftIcon={<MapPin className="w-4 h-4 text-amber-600" />}
             />
           </div>
