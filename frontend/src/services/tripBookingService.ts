@@ -1584,23 +1584,29 @@ export function convertTrainJourneyToRoutePlan(
   };
 }
 
+export type TripFetchStatus = 'OK' | 'NO_TRAINS' | 'INVALID_ROUTE' | 'OUT_OF_WINDOW' | 'NETWORK_ERROR';
+
+export interface DayTripsBackendResult {
+  plans: TransitRoutePlan[];
+  allDayDepartures: TrainJourney[];
+  bookingWindow?: BookingWindow;
+  error?: string;
+  status?: TripFetchStatus;
+}
+
 /**
  * Fetches real day-X train trips and route plans directly from the FastAPI backend.
  * Calls POST /api/v1/routes/plan and GET /api/v1/trains?origin=...&destination=...&travel_date=YYYY-MM-DD.
  * Converts backend RoutePlanResponse and TrainJourneys into curated TransitRoutePlans.
  * 100% train-only routing: never returns bus or tram legs when searching rail trips.
+ * Honest invalid corridor error handling: never fabricates fake fallback trains in browser runtime.
  */
 export async function fetchDayTripsFromBackend(
   origin: string,
   destination: string,
   date?: string,
   pillarPreference?: 'ALL' | CuratedPillar
-): Promise<{
-  plans: TransitRoutePlan[];
-  allDayDepartures: TrainJourney[];
-  bookingWindow?: BookingWindow;
-  error?: string;
-}> {
+): Promise<DayTripsBackendResult> {
   const travelDate =
     date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toISOString().slice(0, 10);
 
@@ -1623,16 +1629,53 @@ export async function fetchDayTripsFromBackend(
       }),
     ]);
 
-    // Handle 422 booking window rejection
+    // Handle 422 booking window rejection or invalid route
     if (planRes.status === 'rejected') {
       const err = planRes.reason;
-      if (err?.status === 422 || (err?.message && err.message.includes('booking window'))) {
+      if (err?.status === 422 && err?.message && err.message.includes('booking window')) {
         return {
           plans: [],
           allDayDepartures: [],
           error: err.message,
+          status: 'OUT_OF_WINDOW',
         };
       }
+      if (
+        err?.status === 404 ||
+        err?.status === 422 ||
+        (err?.message && (err.message.toLowerCase().includes('not found') || err.message.toLowerCase().includes('unknown station') || err.message.toLowerCase().includes('unserved')))
+      ) {
+        return {
+          plans: [],
+          allDayDepartures: [],
+          error: err.message,
+          status: 'INVALID_ROUTE',
+        };
+      }
+    }
+
+    if (trainsRes.status === 'rejected') {
+      const err = trainsRes.reason;
+      if (err?.status === 422 && err?.message && err.message.includes('booking window')) {
+        return {
+          plans: [],
+          allDayDepartures: [],
+          error: err.message,
+          status: 'OUT_OF_WINDOW',
+        };
+      }
+    }
+
+    // If both rejected
+    if (planRes.status === 'rejected' && trainsRes.status === 'rejected') {
+      const err = planRes.reason || trainsRes.reason;
+      const isInvalid = err?.status === 404 || err?.status === 422;
+      return {
+        plans: [],
+        allDayDepartures: [],
+        error: err?.message || 'Failed to fetch trips for selected date.',
+        status: isInvalid ? 'INVALID_ROUTE' : 'NETWORK_ERROR',
+      };
     }
 
     let plans: TransitRoutePlan[] = [];
@@ -1647,6 +1690,17 @@ export async function fetchDayTripsFromBackend(
       if (planRes.value.allDayDepartures) {
         allDayDepartures = planRes.value.allDayDepartures;
       }
+    }
+
+    // Zero-fabrication guard: When route planning yields 0 plans, immediately return NO_TRAINS
+    if (plans.length === 0) {
+      return {
+        plans: [],
+        allDayDepartures: [],
+        bookingWindow,
+        status: 'NO_TRAINS',
+        error: `No trains available for ${origin} → ${destination} on ${travelDate}`,
+      };
     }
 
     if (trainsRes.status === 'fulfilled') {
@@ -1717,41 +1771,15 @@ export async function fetchDayTripsFromBackend(
       }
     }
 
-    // If plans is empty but we have allDayDepartures, convert the best journeys into curated plans
-    if (plans.length === 0 && allDayDepartures.length > 0) {
-      const sortedByDuration = [...allDayDepartures].sort(
-        (a, b) => a.durationMinutes - b.durationMinutes
-      );
-      const sortedByPrice = [...allDayDepartures].sort((a, b) => {
-        const pa = a.fares?.find((f) => f.classType === 'STANDARD')?.price || 999;
-        const pb = b.fares?.find((f) => f.classType === 'STANDARD')?.price || 999;
-        return pa - pb;
-      });
-
-      const fastJourney = sortedByDuration[0];
-      const cheapJourney = sortedByPrice[0];
-      const relJourney = sortedByDuration[sortedByDuration.length > 1 ? 1 : 0];
-
-      plans = [
-        convertTrainJourneyToRoutePlan(fastJourney, travelDate, 'FASTEST'),
-        convertTrainJourneyToRoutePlan(cheapJourney, travelDate, 'BEST_VALUE'),
-        convertTrainJourneyToRoutePlan(relJourney, travelDate, 'MOST_RELIABLE'),
-      ];
-    }
-
-    // Offline / fallback if both API calls failed
+    // Zero fake trains: if no real trains are found, return NO_TRAINS status honestly
     if (plans.length === 0 && allDayDepartures.length === 0) {
-      const fallback = generateTripsForCorridor(origin, destination, `${travelDate}T08:00:00+02:00`);
-      plans = fallback.map((p) => ({
-        ...p,
-        date: travelDate,
-        curatedPillars: Array.isArray(p.curatedPillars)
-          ? p.curatedPillars
-          : p.curatedPillar
-          ? [p.curatedPillar]
-          : [],
-        legs: p.legs.map((l) => ({ ...l, transportType: 'TRAIN' as TransitMode })),
-      }));
+      return {
+        plans: [],
+        allDayDepartures: [],
+        bookingWindow,
+        status: 'NO_TRAINS',
+        error: `No trains available for ${origin} → ${destination} on ${travelDate}`,
+      };
     }
 
     // Strict client-side deduplication guard
@@ -1766,12 +1794,14 @@ export async function fetchDayTripsFromBackend(
     }
     plans = deduplicatedPlans;
 
-    return { plans, allDayDepartures, bookingWindow };
+    return { plans, allDayDepartures, bookingWindow, status: 'OK' };
   } catch (err: any) {
+    const isOutOfWindow = err?.message && err.message.includes('booking window');
     return {
       plans: [],
       allDayDepartures: [],
       error: err?.message || 'Failed to fetch trips for selected date.',
+      status: isOutOfWindow ? 'OUT_OF_WINDOW' : 'NETWORK_ERROR',
     };
   }
 }

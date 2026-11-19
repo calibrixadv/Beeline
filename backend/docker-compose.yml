@@ -37,12 +37,14 @@ services:
   mailpit:
     image: axllent/mailpit:latest
     container_name: beeline_mailpit
-    restart: always
+    restart: unless-stopped
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "1025:1025"   # SMTP server
+      - "8025:8025"   # Mailpit Web UI (http://localhost:8025)
     environment:
-      MP_MAX_MESSAGES: 5000
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
   api:
     container_name: beeline_api
@@ -55,6 +57,11 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-beeline}:${POSTGRES_PASSWORD:-beeline}@db:5432/${POSTGRES_DB:-beeline_db}
       REDIS_URL: redis://redis:6379/0
+      EMAIL_MODE: ${EMAIL_MODE:-smtp}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-noreply@beeline.local}
+      TRIP_REMINDER_WINDOW_MINUTES: ${TRIP_REMINDER_WINDOW_MINUTES:-60}
     volumes:
       - ./app:/app/app
       - ./scripts:/app/scripts
@@ -64,6 +71,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s

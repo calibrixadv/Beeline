@@ -17,18 +17,17 @@
 5. [Authentication & Session Routes (`/auth`, `/users`)](#5-authentication--session-routes)
 6. [Transit Route Planning & Saved Itineraries (`/routes`)](#6-transit-route-planning--saved-itineraries)
 7. [Rail Timetables, Fares & Live Departures (`/trains`)](#7-rail-timetables-fares--live-departures)
-8. [Transit Schedules & Line Timetables (`/schedules`)](#8-transit-schedules--line-timetables)
-9. [Station Search & Live Station Boards (`/stations`)](#9-station-search--live-station-boards)
-10. [Trip Bookings & Wallet Checkout (`/bookings`)](#10-trip-bookings--wallet-checkout)
-11. [Real-Time Transit Disruptions (`/disruptions`)](#11-real-time-transit-disruptions)
-12. [Backend Implementation Status Matrix](#12-backend-implementation-status-matrix)
+8. [Station Search & Live Station Boards (`/stations`)](#8-station-search--live-station-boards)
+9. [Trip Bookings & Wallet Checkout (`/bookings`)](#9-trip-bookings--wallet-checkout)
+10. [Real-Time Transit Disruptions (`/disruptions`)](#10-real-time-transit-disruptions)
+11. [Backend Implementation Status Matrix](#11-backend-implementation-status-matrix)
 
 ---
 
 ## 1. Architecture & Design Principles
 
 ### 1.1 Contract-First & Predictable Naming
-- **Resource-Oriented REST:** Endpoints use plural nouns without verbs (`/trains`, `/routes/plan`, `/schedules`, `/bookings`).
+- **Resource-Oriented REST:** Endpoints use plural nouns without verbs (`/trains`, `/routes/plan`, `/stations`, `/bookings`).
 - **One-Version Rule:** All endpoints reside under the `/api/v1` namespace. Fields are strictly additive and backward-compatible.
 - **Naming Conventions:**
   - JSON response & request fields: `camelCase` (e.g., `totalDurationMinutes`, `departureTime`).
@@ -79,7 +78,7 @@ interface APIErrorResponse {
 
 ## 3. Pagination & Filtering Standard
 
-All list endpoints (`GET /trains`, `GET /schedules`, `GET /routes/saved`, `GET /bookings`) return a standardized paginated envelope:
+All list endpoints (`GET /trains`, `GET /routes/saved`, `GET /bookings`) return a standardized paginated envelope:
 
 ```typescript
 interface PaginatedResponse<T> {
@@ -1098,108 +1097,18 @@ Deletes a train service from the schedule registry.
 
 ---
 
-## 8. Transit Schedules & Line Timetables
-
-Base path: `/api/v1/schedules`
-
-Powers the `/schedules` page for city-wide transit lookup (Metrorex, STB, Transurb, CTP).
-
-### 8.1 List Transit Schedules
-```http
-GET /api/v1/schedules?section=URBAN&city=Gala%C8%9Bi&mode=BUS&search=102&page=1&pageSize=20
-```
-
-- **Query Parameters:**
-  - `section`: `URBAN` | `TRAIN`
-  - `city`: e.g. `Galați`, `București`, `Cluj-Napoca`, `Brașov`
-  - `mode`: `METRO` | `TRAIN` | `TRAM` | `BUS`
-  - `search`: Filter by line number, name, or terminal stop
-  - `page`: default `1`
-  - `pageSize`: default `20`
-
-- **Response `200 OK`:**
-```json
-{
-  "data": [
-    {
-      "id": "transurb-bus-102",
-      "lineCode": "102",
-      "lineName": "Linia 102 (Micro 19 ⇄ Parc CFR)",
-      "mode": "BUS",
-      "operator": "Transurb Galați",
-      "city": "Galați",
-      "section": "URBAN",
-      "frequencyMinutes": 8,
-      "operatingHours": "05:00 - 23:15",
-      "totalStopsCount": 24,
-      "firstDeparture": "05:00",
-      "lastDeparture": "23:15",
-      "isRealtimeAvailable": true,
-      "primaryColorHex": "#F59E0B",
-      "stopsPreview": ["Micro 19", "Cinema Dacia", "Spitalul Județean", "Piața Centrală", "Gara CFR"]
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "pageSize": 20,
-    "totalItems": 1,
-    "totalPages": 1,
-    "hasNext": false,
-    "hasPrev": false
-  }
-}
-```
-
-### 8.2 Get Schedule Stop Details
-```http
-GET /api/v1/schedules/{scheduleId}
-```
-Returns the complete list of stops with GPS coordinates and scheduled timetable departure matrices.
-
-### 8.3 Supported Cities
-```http
-GET /api/v1/schedules/cities
-```
-Returns supported cities and coverage flags.
-
-### 8.4 Create Transit Line Schedule
-```http
-POST /api/v1/schedules
-```
-Creates a new urban or regional line transit timetable schedule.
-- **Response `201 Created`:** Returns created `TransitLineSchedule`.
-- **Response `409 Conflict`:** Schedule ID already exists.
-
-### 8.5 Update Transit Line Schedule
-```http
-PATCH /api/v1/schedules/{scheduleId}
-```
-Updates departures, platform, fare, or route stops.
-- **Response `200 OK`:** Returns updated `TransitLineSchedule`.
-- **Response `404 Not Found`:** Schedule ID not found.
-
-### 8.6 Delete Transit Line Schedule
-```http
-DELETE /api/v1/schedules/{scheduleId}
-```
-Removes a transit line schedule from service.
-- **Response `200 OK`:** `{ "message": "Schedule '{scheduleId}' deleted successfully" }`.
-- **Response `404 Not Found`:** Schedule ID not found.
-
----
-
-## 9. Station Search & Live Station Boards
+## 8. Station Search & Live Station Boards
 
 Base path: `/api/v1/stations`
 
-### 9.1 List All Stations
+### 8.1 List All Stations
 ```http
 GET /api/v1/stations?city=București&limit=20
 ```
 Returns a list of all transit stations and multimodal nodes matching query filters.
 - **Response `200 OK`:** Returns `List[StationSearchResult]`.
 
-### 9.2 Autocomplete Station Search
+### 8.2 Autocomplete Station Search
 ```http
 GET /api/v1/stations/search?query=Bucur&limit=10
 ```
@@ -1230,7 +1139,7 @@ GET /api/v1/stations/search?query=Bucur&limit=10
 }
 ```
 
-### 9.3 Get Station Details
+### 8.3 Get Station Details
 ```http
 GET /api/v1/stations/{stationCode}
 ```
@@ -1238,7 +1147,7 @@ Returns station details, city, supported modes, and GPS coordinates.
 - **Response `200 OK`:** Returns `StationSearchResult`.
 - **Response `404 Not Found`:** Station code does not exist.
 
-### 9.4 Create Station
+### 8.4 Create Station
 ```http
 POST /api/v1/stations
 ```
@@ -1246,7 +1155,7 @@ Registers a new station node.
 - **Response `201 Created`:** Returns `StationSearchResult`.
 - **Response `409 Conflict`:** Station code already exists.
 
-### 9.5 Update Station
+### 8.5 Update Station
 ```http
 PATCH /api/v1/stations/{stationCode}
 ```
@@ -1254,7 +1163,7 @@ Updates station name, city, supported modes, or GPS coordinates.
 - **Response `200 OK`:** Returns updated `StationSearchResult`.
 - **Response `404 Not Found`:** Station code not found.
 
-### 9.6 Delete Station
+### 8.6 Delete Station
 ```http
 DELETE /api/v1/stations/{stationCode}
 ```
@@ -1263,19 +1172,19 @@ Deletes a station node. Enforces relational integrity: rejects deletion with `40
 - **Response `404 Not Found`:** Station code not found.
 - **Response `409 Conflict`:** Station is referenced by active train journey (Foreign Key constraint).
 
-### 9.7 Live Station Departure / Arrival Board
+### 8.7 Live Station Departure / Arrival Board
 ```http
 GET /api/v1/stations/{stationCode}/board?type=DEPARTURES&windowHours=2
 ```
 Returns live arrivals or departures for station monitors with real-time delay minutes and track/platform numbers.
 
-### 9.8 Station Autocomplete Catalog
+### 8.8 Station Autocomplete Catalog
 ```http
 GET /api/v1/stations/autocomplete-catalog
 ```
 Returns the full deduplicated Romanian commercial rail station catalog with weekly sync metadata (`isoWeek`, `lastSyncedAt`, `nextWeeklySyncAt`, `totalStations`, `schedule`).
 
-### 9.9 Weekly Sync Trigger
+### 8.9 Weekly Sync Trigger
 ```http
 POST /api/v1/stations/sync-weekly
 ```
@@ -1283,13 +1192,13 @@ Triggers an immediate on-demand refresh of the full rail station catalog from ac
 
 ---
 
-## 10. Trip Bookings & Wallet Checkout
+## 9. Trip Bookings & Wallet Checkout
 
 Base path: `/api/v1/bookings`
 
 Powers the `/my-trip` itinerary page, ticket reservation, and wallet synchronization.
 
-### 10.1 Create Booking / Reserve Itinerary
+### 9.1 Create Booking / Reserve Itinerary
 ```http
 POST /api/v1/bookings
 Headers:
@@ -1350,13 +1259,13 @@ Headers:
 }
 ```
 
-### 10.2 List Traveler Bookings
+### 9.2 List Traveler Bookings
 ```http
 GET /api/v1/bookings?page=1&pageSize=10
 ```
 **Auth:** Bearer Token. Returns paginated list of active and archived traveler bookings.
 
-### 10.3 Get Single Booking Details
+### 9.3 Get Single Booking Details
 ```http
 GET /api/v1/bookings/{bookingId}
 ```
@@ -1364,7 +1273,7 @@ GET /api/v1/bookings/{bookingId}
 - **Response `200 OK`:** Returns `BookingResponse`.
 - **Response `404 Not Found`:** Booking ID not found.
 
-### 10.4 Update Booking
+### 9.4 Update Booking
 ```http
 PATCH /api/v1/bookings/{bookingId}
 ```
@@ -1372,7 +1281,7 @@ PATCH /api/v1/bookings/{bookingId}
 - **Response `200 OK`:** Returns updated `BookingResponse`.
 - **Response `404 Not Found`:** Booking ID not found.
 
-### 10.5 Cancel Booking
+### 9.5 Cancel Booking
 ```http
 DELETE /api/v1/bookings/{bookingId}
 ```
@@ -1380,11 +1289,11 @@ DELETE /api/v1/bookings/{bookingId}
 
 ---
 
-## 11. Real-Time Transit Disruptions
+## 10. Real-Time Transit Disruptions
 
 Base path: `/api/v1/disruptions`
 
-### 11.1 Fetch Active Network Disruptions
+### 10.1 Fetch Active Network Disruptions
 ```http
 GET /api/v1/disruptions?severity=WARNING
 ```
@@ -1408,7 +1317,7 @@ GET /api/v1/disruptions?severity=WARNING
 }
 ```
 
-### 11.2 Get Disruption Details
+### 10.2 Get Disruption Details
 ```http
 GET /api/v1/disruptions/{disruptionId}
 ```
@@ -1416,7 +1325,7 @@ Returns detailed description, severity, and affected corridor lines for a specif
 - **Response `200 OK`:** Returns `DisruptionItem`.
 - **Response `404 Not Found`:** Disruption ID not found.
 
-### 11.3 Report Disruption Incident
+### 10.3 Report Disruption Incident
 ```http
 POST /api/v1/disruptions
 ```
@@ -1424,7 +1333,7 @@ Reports a new transit delay, catenary failure, or infrastructure maintenance inc
 - **Response `201 Created`:** Returns created `DisruptionItem`.
 - **Response `409 Conflict`:** Disruption ID already exists.
 
-### 11.4 Update Disruption Incident
+### 10.4 Update Disruption Incident
 ```http
 PATCH /api/v1/disruptions/{disruptionId}
 ```
@@ -1432,7 +1341,7 @@ Updates delay minutes, severity (`INFO`, `WARNING`, `CRITICAL`), or affected tra
 - **Response `200 OK`:** Returns updated `DisruptionItem`.
 - **Response `404 Not Found`:** Disruption ID not found.
 
-### 11.5 Delete/Archive Disruption
+### 10.5 Delete/Archive Disruption
 ```http
 DELETE /api/v1/disruptions/{disruptionId}
 ```
@@ -1442,7 +1351,7 @@ Archives or removes a resolved transit disruption incident.
 
 ---
 
-## 12. Backend Implementation Status Matrix
+## 11. Backend Implementation Status Matrix
 
 | Module | Route | HTTP Method | Status | Frontend Consumer |
 |---|---|:---:|:---:|---|
@@ -1483,12 +1392,6 @@ Archives or removes a resolved transit disruption incident.
 | **Trains** | `/trains/{id}` | `PATCH` | ✅ Implemented | Train live status / delay dispatch |
 | **Trains** | `/trains/{id}` | `DELETE` | ✅ Implemented | Train cancellation / registry |
 | **Trains** | `/trains/operators` | `GET` | ✅ Implemented | `TrainsPage` operator filter |
-| **Schedules** | `/schedules` | `GET` | ✅ Implemented | `SchedulesPage` (`/schedules`) |
-| **Schedules** | `/schedules` | `POST` | ✅ Implemented | Line schedule registration |
-| **Schedules** | `/schedules/{id}` | `GET` | ✅ Implemented | Schedule detail modal |
-| **Schedules** | `/schedules/{id}` | `PATCH` | ✅ Implemented | Timetable / frequency update |
-| **Schedules** | `/schedules/{id}` | `DELETE` | ✅ Implemented | Schedule decommissioning |
-| **Schedules** | `/schedules/cities` | `GET` | ✅ Implemented | Schedule city dropdown |
 | **Stations** | `/stations` | `GET` | ✅ Implemented | Station catalog / directory |
 | **Stations** | `/stations` | `POST` | ✅ Implemented | Station node creation |
 | **Stations** | `/stations/{code}` | `GET` | ✅ Implemented | Station details / GPS |
@@ -1508,6 +1411,9 @@ Archives or removes a resolved transit disruption incident.
 | **Disruptions**| `/disruptions/{id}` | `GET` | ✅ Implemented | Disruption incident detail |
 | **Disruptions**| `/disruptions/{id}` | `PATCH` | ✅ Implemented | Incident update / Delay escalation |
 | **Disruptions**| `/disruptions/{id}` | `DELETE` | ✅ Implemented | Incident archival / Resolution |
+| **Notifications**| `/notifications/status` | `GET` | ✅ Implemented | Notification preferences & delivery status |
+| **Notifications**| `/notifications/test-departure-alert` | `POST` | ✅ Implemented | Test email dispatch to logged-in user |
+| **Notifications**| `/notifications/dispatch-due` | `POST` | ✅ Implemented | Scheduled departure check trigger |
 | **ML Engine** | In-Process ONNX Inference | `Internal` | ✅ Implemented | Batched inference in `RiskService` (< 1.5ms) |
 | **Feature Store** | Redis 7 Online Store | `Internal` | ✅ Implemented | `FeatureStoreService` (Corridor, Station, Carrier) |
 | **Concurrency** | Distributed Idempotency Lock | `Internal` | ✅ Implemented | Redis `SET NX EX` with automatic SQL fallback |

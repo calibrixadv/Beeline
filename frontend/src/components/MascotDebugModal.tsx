@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { X, Wrench, RotateCcw, Check } from 'lucide-react';
 import MascotBee, { MascotGear, GEAR_CONFIG } from './MascotBee';
+import TripsGhostSkeleton from './TripsGhostSkeleton';
 import BaseButton from './BaseButton';
 
 export interface MascotDebugModalProps {
@@ -12,6 +13,9 @@ export interface MascotDebugModalProps {
   onSelectGear: (gear: MascotGear) => void;
   onResetAuto: () => void;
   isManualOverride: boolean;
+  isLoadingForced?: boolean;
+  onToggleForceLoading?: () => void;
+  onResetLoading?: () => void;
 }
 
 export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
@@ -21,15 +25,32 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
   onSelectGear,
   onResetAuto,
   isManualOverride,
+  isLoadingForced = false,
+  onToggleForceLoading,
+  onResetLoading,
 }) => {
-  const modalRef = React.useRef<HTMLDivElement>(null);
-  const closeButtonRef = React.useRef<HTMLButtonElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [showInlineLoading, setShowInlineLoading] = useState<boolean>(false);
+
+  const isPageLevelMode = typeof onToggleForceLoading === 'function';
+
+  const handleClose = useCallback(() => {
+    setShowInlineLoading(false);
+    onClose();
+  }, [onClose]);
+
+  const handleReset = useCallback(() => {
+    onResetAuto();
+    onResetLoading?.();
+    setShowInlineLoading(false);
+  }, [onResetAuto, onResetLoading]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        handleClose();
         return;
       }
 
@@ -54,7 +75,7 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
         }
       }
     },
-    [onClose]
+    [handleClose]
   );
 
   useEffect(() => {
@@ -65,6 +86,8 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
       setTimeout(() => {
         closeButtonRef.current?.focus();
       }, 50);
+    } else {
+      setShowInlineLoading(false);
     }
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
@@ -83,7 +106,7 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="debug-modal-title"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         ref={modalRef}
@@ -120,7 +143,7 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
           <button
             ref={closeButtonRef}
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close Debug Tools"
             className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors cursor-pointer"
           >
@@ -129,34 +152,87 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
         </div>
 
         {/* Live Preview Section */}
-        <div className="my-4 p-4 rounded-2xl bg-amber-50/60 border border-amber-100 flex flex-col sm:flex-row items-center gap-4">
-          <div className="flex-shrink-0">
-            <MascotBee
-              gear={currentGear}
-              size="xl"
-              animated={true}
-              showBadge={true}
-            />
-          </div>
-          <div className="text-left flex-1 min-w-0">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-              Active Gear Preview
-            </div>
-            <div className="text-sm font-extrabold text-stone-900 truncate">
-              {currentConfig.characterName} • {currentConfig.title}
-            </div>
-            <div className="text-xs font-semibold text-amber-700 mt-0.5">
-              {currentConfig.gearName}
-            </div>
-            {currentConfig.romanianRole && (
-              <div className="text-[11px] font-medium text-stone-500 mt-0.5">
-                {currentConfig.romanianRole}
+        <div className="my-4 p-4 rounded-2xl bg-amber-50/60 border border-amber-100 flex flex-col items-center justify-center min-h-[120px]">
+          {showInlineLoading ? (
+            <div className="w-full flex flex-col items-center justify-center py-1">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-amber-800 mb-2">
+                Live Ghost Skeleton Preview
               </div>
-            )}
-            <div className="text-[11px] text-stone-600 mt-1 italic">
-              &quot;{currentConfig.speechDefault}&quot;
+              <div className="w-full">
+                <TripsGhostSkeleton compact cardCount={1} />
+              </div>
             </div>
+          ) : (
+            <div className="w-full flex flex-col sm:flex-row items-center gap-4">
+              <div className="flex-shrink-0">
+                <MascotBee
+                  gear={currentGear}
+                  size="xl"
+                  animated={true}
+                  showBadge={true}
+                />
+              </div>
+              <div className="text-left flex-1 min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                  Active Gear Preview
+                </div>
+                <div className="text-sm font-extrabold text-stone-900 truncate">
+                  {currentConfig.characterName} • {currentConfig.title}
+                </div>
+                <div className="text-xs font-semibold text-amber-700 mt-0.5">
+                  {currentConfig.gearName}
+                </div>
+                {currentConfig.romanianRole && (
+                  <div className="text-[11px] font-medium text-stone-500 mt-0.5">
+                    {currentConfig.romanianRole}
+                  </div>
+                )}
+                <div className="text-[11px] text-stone-600 mt-1 italic">
+                  &quot;{currentConfig.speechDefault}&quot;
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Loading State Test Section */}
+        <div className="my-3 p-3.5 rounded-2xl bg-stone-50 border border-stone-200 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-stone-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span>Loading State Test</span>
+              {(isPageLevelMode ? isLoadingForced : showInlineLoading) && (
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              )}
+            </div>
+            <p className="text-[11px] text-stone-500 mt-0.5">
+              {isPageLevelMode
+                ? 'Toggle full page loading state to verify glassy ghost cards.'
+                : 'Preview the glassmorphic ghost layout inside modal.'}
+            </p>
           </div>
+
+          <button
+            type="button"
+            data-testid="debug-toggle-loading-state"
+            onClick={
+              isPageLevelMode
+                ? onToggleForceLoading
+                : () => setShowInlineLoading((prev) => !prev)
+            }
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              (isPageLevelMode ? isLoadingForced : showInlineLoading)
+                ? 'bg-amber-500 hover:bg-amber-400 text-stone-950 border border-amber-600 shadow-xs'
+                : 'bg-stone-200 hover:bg-stone-300 text-stone-800 border border-stone-300'
+            }`}
+          >
+            {isPageLevelMode
+              ? isLoadingForced
+                ? 'Stop Loading State'
+                : 'Test Loading State'
+              : showInlineLoading
+              ? 'Hide Loading Preview'
+              : 'Test Loading State'}
+          </button>
         </div>
 
         {/* Gear Selection Chips / Buttons */}
@@ -216,7 +292,7 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
         <div className="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between gap-2 flex-wrap">
           <button
             type="button"
-            onClick={onResetAuto}
+            onClick={handleReset}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5 text-stone-500" />
@@ -227,7 +303,7 @@ export const MascotDebugModal: React.FC<MascotDebugModalProps> = ({
             type="button"
             variant="primary"
             size="sm"
-            onClick={onClose}
+            onClick={handleClose}
             className="bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold px-4 py-1.5"
           >
             Done

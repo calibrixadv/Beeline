@@ -2,12 +2,15 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import email.message
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formatdate, make_msgid
 import html
 import json
 import logging
 import smtplib
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import uuid
 
 from app.core.config import settings
@@ -878,6 +881,551 @@ The Beeline VoyageRail Security Team
 """
         return subject, html_body, text_body
 
+    @staticmethod
+    def render_booking_confirmation(
+        email_addr: str,
+        booking_reference: str,
+        train_number: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        arrival_time: str,
+        total_amount_lei: float,
+        tickets_count: int,
+        passenger_name: Optional[str] = None
+    ) -> Tuple[str, str, str]:
+        subject = f"Beeline Booking Confirmed: {booking_reference} ({origin} → {destination})"
+        name_greeting = f"Hello {html.escape(passenger_name)}," if passenger_name else "Hello Traveler,"
+        total_str = f"{total_amount_lei:.2f} LEI"
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #E2E8F0;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 25px 30px; text-align: left;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+                🐝 Beeline VoyageRail
+              </h1>
+              <p style="margin: 4px 0 0 0; color: #FEF3C7; font-size: 14px; font-weight: 500;">
+                The Cozy Hive • Booking Confirmation
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 35px 30px;">
+              <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #0F172A;">{name_greeting}</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+                Your journey has been successfully booked! Your booking reference is <strong>{html.escape(booking_reference)}</strong>.
+              </p>
+              
+              <div style="background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                <table width="100%" cellspacing="0" cellpadding="4" style="font-size: 14px; color: #1E293B;">
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E; width: 140px;">Booking Ref:</td>
+                    <td style="font-weight: 700; color: #B45309; font-family: monospace; font-size: 16px;">{html.escape(booking_reference)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Train:</td>
+                    <td style="font-weight: 700;">{html.escape(train_number)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Route:</td>
+                    <td><strong>{html.escape(origin)}</strong> ➔ <strong>{html.escape(destination)}</strong></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Departure:</td>
+                    <td>{html.escape(departure_time)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Arrival:</td>
+                    <td>{html.escape(arrival_time)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Tickets / Passengers:</td>
+                    <td>{tickets_count} ticket(s)</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Total Paid:</td>
+                    <td style="font-weight: 800; color: #047857; font-size: 16px;">{html.escape(total_str)}</td>
+                  </tr>
+                </table>
+              </div>
+
+              <div style="background-color: #F8FAFC; border-left: 4px solid #F59E0B; padding: 14px 18px; border-radius: 4px; margin: 25px 0; font-size: 13px; color: #475569;">
+                🚉 <strong>Travel Tip:</strong> Please arrive at the station at least 15 minutes before departure. Have your QR code or ticket number ready on your device.
+              </div>
+
+              <p style="font-size: 14px; line-height: 1.6; color: #64748B; margin: 25px 0 0 0;">
+                Safe travels,<br>
+                <strong>The Beeline VoyageRail Team</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        text_body = f"""Beeline VoyageRail — Booking Confirmed
+========================================
+{name_greeting}
+
+Your journey has been confirmed!
+
+Booking Reference: {booking_reference}
+Train: {train_number}
+Route: {origin} -> {destination}
+Departure: {departure_time}
+Arrival: {arrival_time}
+Tickets: {tickets_count}
+Total Paid: {total_str}
+
+Please arrive at the station at least 15 minutes before scheduled departure.
+Safe travels,
+The Beeline VoyageRail Team
+"""
+        return subject, html_body, text_body
+
+    @staticmethod
+    def render_booking_cancellation(
+        email_addr: str,
+        booking_reference: str,
+        origin: Optional[str] = None,
+        destination: Optional[str] = None
+    ) -> Tuple[str, str, str]:
+        subject = f"Beeline Booking Cancelled: {booking_reference}"
+        route_text = f" ({origin} → {destination})" if origin and destination else ""
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #E2E8F0;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #64748B 0%, #475569 100%); padding: 25px 30px; text-align: left;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+                🐝 Beeline VoyageRail
+              </h1>
+              <p style="margin: 4px 0 0 0; color: #E2E8F0; font-size: 14px; font-weight: 500;">
+                The Cozy Hive • Booking Cancellation
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 35px 30px;">
+              <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #0F172A;">Reservation Cancelled</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+                Your booking with reference <strong>{html.escape(booking_reference)}</strong>{html.escape(route_text)} has been successfully cancelled.
+              </p>
+              
+              <div style="background-color: #F1F5F9; border-left: 4px solid #64748B; padding: 14px 18px; border-radius: 4px; margin: 25px 0; font-size: 13px; color: #475569;">
+                ℹ️ <strong>Refund & Credits:</strong> If your ticket was eligible for refund or travel credit, our ticketing support system will process it according to railway operator fare terms.
+              </div>
+
+              <p style="font-size: 14px; line-height: 1.6; color: #64748B; margin: 25px 0 0 0;">
+                Best regards,<br>
+                <strong>The Beeline VoyageRail Team</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        text_body = f"""Beeline VoyageRail — Booking Cancelled
+========================================
+Your booking with reference {booking_reference}{route_text} has been successfully cancelled.
+
+If your ticket was eligible for a refund, it will be processed according to railway operator terms.
+
+Best regards,
+The Beeline VoyageRail Team
+"""
+        return subject, html_body, text_body
+
+    @staticmethod
+    def render_saved_trip_confirmation(
+        email_addr: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        train_summary: Optional[str] = None
+    ) -> Tuple[str, str, str]:
+        subject = f"Beeline Saved Trip: {origin} → {destination}"
+        summary_display = html.escape(train_summary) if train_summary else f"{html.escape(origin)} to {html.escape(destination)}"
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #E2E8F0;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 25px 30px; text-align: left;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+                🐝 Beeline VoyageRail
+              </h1>
+              <p style="margin: 4px 0 0 0; color: #FEF3C7; font-size: 14px; font-weight: 500;">
+                The Cozy Hive • Saved Journey
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 35px 30px;">
+              <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #0F172A;">Itinerary Saved to Your Wallet</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+                You've saved <strong>{html.escape(origin)} → {html.escape(destination)}</strong> to your Beeline trip wallet.
+              </p>
+              
+              <div style="background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 18px; margin: 25px 0;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: #92400E;">
+                  Route Details:
+                </p>
+                <div style="font-size: 14px; color: #1E293B; line-height: 1.5;">
+                  <strong>Summary:</strong> {summary_display}<br>
+                  <strong>Scheduled Departure:</strong> {html.escape(departure_time)}
+                </div>
+              </div>
+
+              <div style="background-color: #ECFDF5; border-left: 4px solid #10B981; padding: 14px 18px; border-radius: 4px; margin: 25px 0; font-size: 13px; color: #065F46;">
+                🔔 <strong>Departure Reminders Active:</strong> You will automatically receive a departure alert and live delay notifications before this train departs.
+              </div>
+
+              <p style="font-size: 14px; line-height: 1.6; color: #64748B; margin: 25px 0 0 0;">
+                Safe travels,<br>
+                <strong>The Beeline VoyageRail Team</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        text_body = f"""Beeline VoyageRail — Saved Trip
+========================================
+You've saved {origin} -> {destination} to your Beeline wallet.
+
+Summary: {train_summary or (origin + ' -> ' + destination)}
+Scheduled Departure: {departure_time}
+
+Departure reminders are active for your account. You will receive an alert before the train departs.
+
+Safe travels,
+The Beeline VoyageRail Team
+"""
+        return subject, html_body, text_body
+
+    @staticmethod
+    def render_train_departure_reminder(
+        email_addr: str,
+        train_number: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        minutes_until_departure: int,
+        platform: Optional[str] = None,
+        delay_minutes: int = 0,
+        transfer_note: Optional[str] = None,
+        user_name: Optional[str] = None
+    ) -> Tuple[str, str, str]:
+        if delay_minutes >= 10:
+            subject = f"⚠️ Beeline Delay Alert (+{delay_minutes}m): Train {train_number} ({origin} → {destination}) departs in {minutes_until_departure} min"
+        else:
+            subject = f"Beeline: Train {train_number} ({origin} → {destination}) departs in {minutes_until_departure} min"
+
+        greeting = f"Hello {html.escape(user_name)}," if user_name else "Hello Traveler,"
+        platform_str = html.escape(platform) if platform else "Check Station Display"
+        delay_badge = f'<span style="background: #FEE2E2; color: #991B1B; font-weight: 700; padding: 3px 8px; border-radius: 4px; font-size: 12px;">+{delay_minutes} min delay</span>' if delay_minutes > 0 else '<span style="background: #D1FAE5; color: #065F46; font-weight: 700; padding: 3px 8px; border-radius: 4px; font-size: 12px;">On Time</span>'
+        delay_text = f"+{delay_minutes} min delay" if delay_minutes > 0 else "On Time"
+
+        transfer_html = f"""
+              <div style="background-color: #EFF6FF; border-left: 4px solid #3B82F6; padding: 12px 16px; border-radius: 4px; margin: 15px 0; font-size: 13px; color: #1E40AF;">
+                🛡️ <strong>Transfer Shield:</strong> {html.escape(transfer_note)}
+              </div>""" if transfer_note else ""
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #E2E8F0;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 25px 30px; text-align: left;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+                🐝 Beeline VoyageRail
+              </h1>
+              <p style="margin: 4px 0 0 0; color: #FEF3C7; font-size: 14px; font-weight: 500;">
+                The Cozy Hive • Train Departure Reminder
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 35px 30px;">
+              <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #0F172A;">{greeting}</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+                Your train <strong>{html.escape(train_number)}</strong> from <strong>{html.escape(origin)}</strong> to <strong>{html.escape(destination)}</strong> departs in <strong>{minutes_until_departure} minutes</strong>!
+              </p>
+              
+              <div style="background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <table width="100%" cellspacing="0" cellpadding="4" style="font-size: 14px; color: #1E293B;">
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E; width: 140px;">Train:</td>
+                    <td style="font-weight: 700; font-size: 16px;">{html.escape(train_number)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Route:</td>
+                    <td><strong>{html.escape(origin)}</strong> ➔ <strong>{html.escape(destination)}</strong></td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Departure Time:</td>
+                    <td>{html.escape(departure_time)}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Status:</td>
+                    <td>{delay_badge}</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 600; color: #92400E;">Platform:</td>
+                    <td><strong>{platform_str}</strong></td>
+                  </tr>
+                </table>
+              </div>{transfer_html}
+
+              <div style="background-color: #F8FAFC; border-left: 4px solid #F59E0B; padding: 14px 18px; border-radius: 4px; margin: 20px 0; font-size: 13px; color: #475569;">
+                🚶 <strong>Departure Checklist:</strong> Head towards your departure platform now. Have your booking reference or ticket ready for inspection.
+              </div>
+
+              <p style="font-size: 14px; line-height: 1.6; color: #64748B; margin: 25px 0 0 0;">
+                Have a pleasant trip,<br>
+                <strong>The Beeline VoyageRail Team</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        text_body = f"""Beeline VoyageRail — Train Departure Reminder
+===============================================
+{greeting}
+
+Train {train_number} ({origin} -> {destination}) departs in {minutes_until_departure} minutes!
+
+Departure Time: {departure_time}
+Live Status: {delay_text}
+Platform: {platform or 'Check Station Display'}
+{f'Transfer Shield: {transfer_note}' if transfer_note else ''}
+
+Please proceed to your platform and have your ticket ready.
+Have a pleasant trip,
+The Beeline VoyageRail Team
+"""
+        return subject, html_body, text_body
+
+    @staticmethod
+    def render_train_delay_alert(
+        email_addr: str,
+        train_number: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        delay_minutes: int,
+        user_name: Optional[str] = None
+    ) -> Tuple[str, str, str]:
+        subject = f"⚠️ Beeline Delay Alert: Train {train_number} is delayed by {delay_minutes} min"
+        greeting = f"Hello {html.escape(user_name)}," if user_name else "Hello Traveler,"
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #E2E8F0;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%); padding: 25px 30px; text-align: left;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+                🐝 Beeline Live Alert
+              </h1>
+              <p style="margin: 4px 0 0 0; color: #FEE2E2; font-size: 14px; font-weight: 500;">
+                The Cozy Hive • Train Delay Notice
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 35px 30px;">
+              <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #0F172A;">{greeting}</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+                Live CFR Călători telematics indicate that train <strong>{html.escape(train_number)}</strong> ({html.escape(origin)} ➔ {html.escape(destination)}) is currently running with a delay of <strong>+{delay_minutes} minutes</strong>.
+              </p>
+              
+              <div style="background-color: #FEF2F2; border-left: 4px solid #EF4444; padding: 16px 20px; border-radius: 4px; margin: 25px 0;">
+                <p style="margin: 0 0 8px 0; font-weight: 700; color: #991B1B; font-size: 14px;">
+                  Updated Departure Information:
+                </p>
+                <div style="font-size: 14px; color: #7F1D1D; line-height: 1.6;">
+                  <strong>Scheduled Departure:</strong> {html.escape(departure_time)}<br>
+                  <strong>Reported Delay:</strong> +{delay_minutes} minutes<br>
+                  <strong>Route:</strong> {html.escape(origin)} ➔ {html.escape(destination)}
+                </div>
+              </div>
+
+              <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; padding: 14px 18px; border-radius: 6px; margin: 20px 0; font-size: 13px; color: #475569;">
+                ℹ️ We are continuously tracking the live train status. You will receive further updates if the expected arrival changes significantly.
+              </div>
+
+              <p style="font-size: 14px; line-height: 1.6; color: #64748B; margin: 25px 0 0 0;">
+                Safe travels,<br>
+                <strong>The Beeline VoyageRail Team</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        text_body = f"""Beeline Live Alert: Train Delay Notice
+=======================================
+{greeting}
+
+Train {train_number} ({origin} -> {destination}) is currently delayed by +{delay_minutes} minutes.
+
+Scheduled Departure: {departure_time}
+Current Delay: +{delay_minutes} min
+
+We are continuously monitoring this train and will provide updates as needed.
+
+Safe travels,
+The Beeline VoyageRail Team
+"""
+        return subject, html_body, text_body
+
+    @staticmethod
+    def render_mfa_status_changed(
+        email_addr: str,
+        enabled: bool,
+        ip_address: Optional[str] = None,
+        timestamp: Optional[str] = None
+    ) -> Tuple[str, str, str]:
+        if enabled:
+            return EmailRenderer.render_2fa_enabled(email_addr, ip_address, timestamp)
+        else:
+            return EmailRenderer.render_2fa_disabled(email_addr, ip_address, timestamp)
+
+    @staticmethod
+    def render_account_status(
+        email_addr: str,
+        action: str,
+        details: str
+    ) -> Tuple[str, str, str]:
+        subject = f"Beeline Account Update: {action}"
+        action_escaped = html.escape(action)
+        details_escaped = html.escape(details)
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #E2E8F0;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); padding: 25px 30px; text-align: left;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+                🐝 Beeline Security Notice
+              </h1>
+              <p style="margin: 4px 0 0 0; color: #FEF3C7; font-size: 14px; font-weight: 500;">
+                The Cozy Hive • Account Status Update
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 35px 30px;">
+              <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #0F172A;">{action_escaped}</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+                Your account ({html.escape(email_addr)}) status has been updated: <strong>{action_escaped}</strong>.
+              </p>
+              
+              <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; padding: 16px 20px; border-radius: 4px; margin: 25px 0; font-size: 14px; color: #92400E; line-height: 1.6;">
+                {details_escaped}
+              </div>
+
+              <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; padding: 12px 16px; border-radius: 6px; font-size: 13px; color: #475569;">
+                🕒 <strong>Timestamp:</strong> {now_str}
+              </div>
+
+              <p style="font-size: 14px; line-height: 1.6; color: #64748B; margin: 25px 0 0 0;">
+                Sincerely,<br>
+                <strong>The Beeline VoyageRail Security Team</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        text_body = f"""Beeline Account Update: {action}
+========================================
+Your account ({email_addr}) status has been updated: {action}.
+
+Details: {details}
+Timestamp: {now_str}
+
+Sincerely,
+The Beeline VoyageRail Security Team
+"""
+        return subject, html_body, text_body
+
 
 class EmailService:
     """
@@ -986,6 +1534,8 @@ class EmailService:
             await asyncio.to_thread(self._dispatch_smtp_sync, record)
             await self.circuit_breaker.record_success()
             record.status = "sent"
+            async with self._lock:
+                self._outbox.append(record)
         except Exception as exc:
             await self.circuit_breaker.record_failure()
             record.status = "fallback_dev_sink"
@@ -996,22 +1546,37 @@ class EmailService:
 
         return record
 
+    def _build_mime_message(self, record: EmailMessageRecord) -> MIMEMultipart:
+        """
+        Builds a compliant RFC 5322 MIME message with UTF-8 encoding for both text and HTML parts,
+        and proper headers (Subject, From, To, Date, Message-ID).
+        """
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = record.subject
+        from_email = getattr(settings, "SMTP_FROM_EMAIL", "noreply@beeline.voyagerail.com")
+        msg["From"] = from_email
+        msg["To"] = record.to_email
+        msg["Date"] = formatdate(localtime=True)
+        msg["Message-ID"] = make_msgid(domain="beeline.local")
+
+        part_text = MIMEText(record.text_body, "plain", "utf-8")
+        part_html = MIMEText(record.html_body, "html", "utf-8")
+        msg.attach(part_text)
+        msg.attach(part_html)
+        return msg
+
     def _dispatch_smtp_sync(self, record: EmailMessageRecord) -> None:
         """Synchronous SMTP helper executed in threadpool worker."""
-        msg = email.message.EmailMessage()
-        msg["Subject"] = record.subject
-        msg["From"] = getattr(settings, "SMTP_FROM_EMAIL", "noreply@beeline.voyagerail.com")
-        msg["To"] = record.to_email
-        msg.set_content(record.text_body)
-        msg.add_alternative(record.html_body, subtype="html")
+        msg = self._build_mime_message(record)
 
         host = getattr(settings, "SMTP_HOST", "localhost")
         port = int(getattr(settings, "SMTP_PORT", 1025))
         user = getattr(settings, "SMTP_USER", "")
         password = getattr(settings, "SMTP_PASSWORD", "")
 
-        with smtplib.SMTP(host, port, timeout=5) as server:
+        with smtplib.SMTP(host, port, timeout=10) as server:
             if user and password:
+                server.starttls()
                 server.login(user, password)
             server.send_message(msg)
 
@@ -1299,6 +1864,218 @@ class EmailService:
             text_body=text_body,
             template_name="account_permanently_deleted_0d",
             context={"timestamp": now_str}
+        )
+
+    async def send_booking_confirmation_email(
+        self,
+        to_email: str,
+        booking_reference: str,
+        train_number: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        arrival_time: str,
+        total_amount_lei: float,
+        tickets_count: int,
+        passenger_name: Optional[str] = None
+    ) -> EmailMessageRecord:
+        subject, html_body, text_body = self._renderer.render_booking_confirmation(
+            email_addr=to_email,
+            booking_reference=booking_reference,
+            train_number=train_number,
+            origin=origin,
+            destination=destination,
+            departure_time=departure_time,
+            arrival_time=arrival_time,
+            total_amount_lei=total_amount_lei,
+            tickets_count=tickets_count,
+            passenger_name=passenger_name
+        )
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            template_name="booking_confirmation",
+            context={
+                "booking_reference": booking_reference,
+                "train_number": train_number,
+                "origin": origin,
+                "destination": destination,
+                "departure_time": departure_time,
+                "arrival_time": arrival_time,
+                "total_amount_lei": total_amount_lei,
+                "tickets_count": tickets_count,
+                "passenger_name": passenger_name
+            }
+        )
+
+    async def send_booking_cancellation_email(
+        self,
+        to_email: str,
+        booking_reference: str,
+        origin: Optional[str] = None,
+        destination: Optional[str] = None
+    ) -> EmailMessageRecord:
+        subject, html_body, text_body = self._renderer.render_booking_cancellation(
+            email_addr=to_email,
+            booking_reference=booking_reference,
+            origin=origin,
+            destination=destination
+        )
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            template_name="booking_cancellation",
+            context={
+                "booking_reference": booking_reference,
+                "origin": origin,
+                "destination": destination
+            }
+        )
+
+    async def send_saved_trip_confirmation_email(
+        self,
+        to_email: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        train_summary: Optional[str] = None
+    ) -> EmailMessageRecord:
+        subject, html_body, text_body = self._renderer.render_saved_trip_confirmation(
+            email_addr=to_email,
+            origin=origin,
+            destination=destination,
+            departure_time=departure_time,
+            train_summary=train_summary
+        )
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            template_name="saved_trip_confirmation",
+            context={
+                "origin": origin,
+                "destination": destination,
+                "departure_time": departure_time,
+                "train_summary": train_summary
+            }
+        )
+
+    async def send_train_departure_reminder_email(
+        self,
+        to_email: str,
+        train_number: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        minutes_until_departure: int,
+        platform: Optional[str] = None,
+        delay_minutes: int = 0,
+        transfer_note: Optional[str] = None,
+        user_name: Optional[str] = None
+    ) -> EmailMessageRecord:
+        subject, html_body, text_body = self._renderer.render_train_departure_reminder(
+            email_addr=to_email,
+            train_number=train_number,
+            origin=origin,
+            destination=destination,
+            departure_time=departure_time,
+            minutes_until_departure=minutes_until_departure,
+            platform=platform,
+            delay_minutes=delay_minutes,
+            transfer_note=transfer_note,
+            user_name=user_name
+        )
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            template_name="train_departure_reminder",
+            context={
+                "train_number": train_number,
+                "origin": origin,
+                "destination": destination,
+                "departure_time": departure_time,
+                "minutes_until_departure": minutes_until_departure,
+                "platform": platform,
+                "delay_minutes": delay_minutes,
+                "transfer_note": transfer_note,
+                "user_name": user_name
+            }
+        )
+
+    async def send_train_delay_alert_email(
+        self,
+        to_email: str,
+        train_number: str,
+        origin: str,
+        destination: str,
+        departure_time: str,
+        delay_minutes: int,
+        user_name: Optional[str] = None
+    ) -> EmailMessageRecord:
+        subject, html_body, text_body = self._renderer.render_train_delay_alert(
+            email_addr=to_email,
+            train_number=train_number,
+            origin=origin,
+            destination=destination,
+            departure_time=departure_time,
+            delay_minutes=delay_minutes,
+            user_name=user_name
+        )
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            template_name="train_delay_alert",
+            context={
+                "train_number": train_number,
+                "origin": origin,
+                "destination": destination,
+                "departure_time": departure_time,
+                "delay_minutes": delay_minutes,
+                "user_name": user_name
+            }
+        )
+
+    async def send_mfa_status_changed_email(
+        self,
+        to_email: str,
+        enabled: bool,
+        ip_address: Optional[str] = None
+    ) -> EmailMessageRecord:
+        if enabled:
+            return await self.send_2fa_enabled_alert(to_email=to_email, ip_address=ip_address)
+        else:
+            return await self.send_2fa_disabled_alert(to_email=to_email, ip_address=ip_address)
+
+    async def send_account_status_email(
+        self,
+        to_email: str,
+        action: str,
+        details: str
+    ) -> EmailMessageRecord:
+        subject, html_body, text_body = self._renderer.render_account_status(
+            email_addr=to_email,
+            action=action,
+            details=details
+        )
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            template_name="account_status_update",
+            context={
+                "action": action,
+                "details": details
+            }
         )
 
 

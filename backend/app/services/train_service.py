@@ -23,6 +23,8 @@ from scraper.collectors.train_api import (
     DataGovXMLAdapter,
     STATION_DICTIONARY,
     normalize_train_number,
+    resolve_known_station,
+    normalize_text,
 )
 
 OPERATORS_DATA: List[RailwayOperator] = [
@@ -503,12 +505,33 @@ class TrainService:
             effective_orig = origin or origin_code
             effective_dest = destination or destination_code
             if effective_orig and effective_dest:
+                orig_match = resolve_known_station(effective_orig)
+                dest_match = resolve_known_station(effective_dest)
+                if not orig_match or not dest_match:
+                    return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
                 xml_adapter = DataGovXMLAdapter.get_shared_instance()
                 records = xml_adapter.fetch_itinerary_sync(effective_orig, effective_dest, date_str=travel_date)
                 if records:
                     results = [_scrape_record_to_train_journey(r, travel_date) for r in records]
                 else:
-                    results = [t for t in TRAINS_DATA if t.departureTime.startswith(travel_date)]
+                    results = []
+            elif effective_orig or effective_dest:
+                if effective_orig and not resolve_known_station(effective_orig):
+                    return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
+                if effective_dest and not resolve_known_station(effective_dest):
+                    return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
+                date_trains = [t for t in TRAINS_DATA if t.departureTime.startswith(travel_date)]
+                if date_trains:
+                    results = date_trains
+                else:
+                    xml_adapter = DataGovXMLAdapter.get_shared_instance()
+                    store = xml_adapter._get_store_for_date(travel_date)
+                    routes_map = store.get("train_routes", {})
+                    results = [
+                        _scrape_record_to_train_journey(rinfo["record"], travel_date)
+                        for _, rinfo in list(routes_map.items())[:200]
+                        if rinfo.get("record")
+                    ]
             else:
                 date_trains = [t for t in TRAINS_DATA if t.departureTime.startswith(travel_date)]
                 if date_trains:
@@ -523,6 +546,12 @@ class TrainService:
                         if rinfo.get("record")
                     ]
         else:
+            effective_orig = origin or origin_code
+            effective_dest = destination or destination_code
+            if effective_orig and not resolve_known_station(effective_orig):
+                return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
+            if effective_dest and not resolve_known_station(effective_dest):
+                return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
             results = list(TRAINS_DATA)
 
         # Filters
@@ -552,6 +581,32 @@ class TrainService:
         if destination_code:
             dc = destination_code.upper().strip()
             results = [t for t in results if t.destination.code.upper() == dc]
+
+        if origin:
+            orig_match = resolve_known_station(origin)
+            if orig_match:
+                orig_names = {normalize_text(orig_match.name), normalize_text(origin)}
+                orig_codes = {orig_match.code.upper()}
+                results = [
+                    t for t in results
+                    if t.origin.code.upper() in orig_codes
+                    or normalize_text(t.origin.name) in orig_names
+                ]
+            else:
+                return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
+
+        if destination:
+            dest_match = resolve_known_station(destination)
+            if dest_match:
+                dest_names = {normalize_text(dest_match.name), normalize_text(destination)}
+                dest_codes = {dest_match.code.upper()}
+                results = [
+                    t for t in results
+                    if t.destination.code.upper() in dest_codes
+                    or normalize_text(t.destination.name) in dest_names
+                ]
+            else:
+                return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
 
         if travel_date:
             results = [t for t in results if t.departureTime.startswith(travel_date)]

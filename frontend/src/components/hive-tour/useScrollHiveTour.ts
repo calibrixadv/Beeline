@@ -75,7 +75,6 @@ export function useScrollHiveTour(): UseScrollHiveTourResult {
     // Determine active chapter: Check section positions first
     const queensEl = document.getElementById('tour-queens');
     const providersEl = document.getElementById('tour-providers');
-    const ecosystemEl = document.getElementById('tour-ecosystem');
 
     const hasLayout =
       queensEl &&
@@ -85,9 +84,7 @@ export function useScrollHiveTour(): UseScrollHiveTourResult {
     if (currentScrollY < 180) {
       setActiveChapter('hero');
     } else if (hasLayout) {
-      if (ecosystemEl && ecosystemEl.getBoundingClientRect().top <= winHeight * 0.45) {
-        setActiveChapter('ecosystem');
-      } else if (providersEl && providersEl.getBoundingClientRect().top <= winHeight * 0.45) {
+      if (providersEl && providersEl.getBoundingClientRect().top <= winHeight * 0.45) {
         setActiveChapter('providers');
       } else if (queensEl && queensEl.getBoundingClientRect().top <= winHeight * 0.7) {
         setActiveChapter('queens');
@@ -96,9 +93,7 @@ export function useScrollHiveTour(): UseScrollHiveTourResult {
       }
     } else {
       // Fallback threshold check if layout engine is absent (e.g. JSDOM)
-      if (currentScrollY >= 1800) {
-        setActiveChapter('ecosystem');
-      } else if (currentScrollY >= 900) {
+      if (currentScrollY >= 900) {
         setActiveChapter('providers');
       } else {
         setActiveChapter('queens');

@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     EMAIL_RATE_LIMIT_PER_SEC: int = 500
     FRONTEND_URL: str = "http://localhost:3000"
 
+    # Trip Departure & Delay Notifications
+    TRIP_REMINDER_WINDOW_MINUTES: int = 60
+    TRIP_NOTIFICATION_POLL_SECONDS: int = 60
+    ENABLE_TRIP_NOTIFICATION_WORKER: bool = True
+
     # Database
     DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR}/beeline.db"
 

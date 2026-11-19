@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, Header, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +13,10 @@ from app.schemas.booking import (
 )
 from app.schemas.common import PaginatedResponse
 from app.services.booking_service import booking_service
+from app.services.email_service import email_service
 from app.services.idempotency_service import IdempotencyService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -50,6 +54,33 @@ async def create_booking(
                 response_code=201,
                 response_data=booking.model_dump()
             )
+
+        # Dispatch non-blocking booking confirmation email to logged-in user
+        target_email = current_user.email or (str(data.contactEmail) if getattr(data, "contactEmail", None) else None)
+        if target_email and "@" in target_email and not target_email.endswith("@guest.beeline.local") and not getattr(current_user, "is_guest", False):
+            try:
+                first_ticket = booking.tickets[0] if booking.tickets else None
+                train_num = first_ticket.trainNumber if first_ticket else "IR 1572"
+                orig = first_ticket.origin if first_ticket else "Origin"
+                dest = first_ticket.destination if first_ticket else "Destination"
+                dep = first_ticket.departureTime if first_ticket else booking.createdAt
+                arr = first_ticket.arrivalTime if first_ticket else booking.createdAt
+                p_name = first_ticket.passengerName if first_ticket else (current_user.full_name or "Traveler")
+
+                await email_service.send_booking_confirmation_email(
+                    to_email=target_email,
+                    booking_reference=booking.bookingReference,
+                    train_number=train_num,
+                    origin=orig,
+                    destination=dest,
+                    departure_time=dep,
+                    arrival_time=arr,
+                    total_amount_lei=booking.totalAmountLei,
+                    tickets_count=len(booking.tickets),
+                    passenger_name=p_name
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to dispatch booking confirmation email: {exc}")
 
         return booking
     except Exception:
@@ -105,4 +136,21 @@ async def cancel_booking(
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """Idempotently cancel booking reservation."""
-    return await booking_service.cancel_booking(db, user=current_user, booking_id=booking_id)
+    cancelled = await booking_service.cancel_booking(db, user=current_user, booking_id=booking_id)
+
+    target_email = current_user.email or cancelled.contactEmail
+    if target_email and "@" in target_email and not target_email.endswith("@guest.beeline.local") and not getattr(current_user, "is_guest", False):
+        try:
+            first_ticket = cancelled.tickets[0] if cancelled.tickets else None
+            orig = first_ticket.origin if first_ticket else None
+            dest = first_ticket.destination if first_ticket else None
+            await email_service.send_booking_cancellation_email(
+                to_email=target_email,
+                booking_reference=cancelled.bookingReference,
+                origin=orig,
+                destination=dest
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to dispatch booking cancellation email: {exc}")
+
+    return cancelled

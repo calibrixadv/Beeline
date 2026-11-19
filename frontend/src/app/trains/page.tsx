@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { Search, Filter } from 'lucide-react';
 import { SAMPLE_TRAINS } from '../../data/sampleTrains';
 import { TrainJourney, TrainStatus } from '../../types/train';
 import { filterAndSortTrains } from '../../utils/trainFilters';
+import { apiClient } from '../../services/apiClient';
 import BaseCard from '../../components/BaseCard';
 import BaseInput from '../../components/BaseInput';
 import TrainCard from '../../components/TrainCard';
 import TrainDetailModal from '../../components/TrainDetailModal';
 import MascotBee from '../../components/MascotBee';
+import TrainsGhostSkeleton from '../../components/TrainsGhostSkeleton';
 
 const STATUS_FILTERS: { id: 'ALL' | TrainStatus; label: string }[] = [
   { id: 'ALL', label: 'All Trains' },
@@ -18,20 +20,66 @@ const STATUS_FILTERS: { id: 'ALL' | TrainStatus; label: string }[] = [
   { id: 'BOARDING', label: 'Boarding' },
 ];
 
-export default function TrainsPage() {
+function TrainsContent() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | TrainStatus>('ALL');
   const [selectedJourney, setSelectedJourney] = useState<TrainJourney | null>(null);
+  const [trains, setTrains] = useState<TrainJourney[]>(SAMPLE_TRAINS);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isCancelled = false;
+    setIsLoading(true);
+    const startTime = Date.now();
+
+    apiClient
+      .getTrains()
+      .then(async (res) => {
+        if (isCancelled) return;
+        if (process.env.NODE_ENV !== 'test') {
+          const elapsed = Date.now() - startTime;
+          if (elapsed < 260) {
+            await new Promise((resolve) => setTimeout(resolve, 260 - elapsed));
+          }
+        }
+        if (isCancelled) return;
+        if (res?.items && res.items.length > 0) {
+          setTrains(res.items);
+        } else {
+          setTrains(SAMPLE_TRAINS);
+        }
+      })
+      .catch(async () => {
+        if (isCancelled) return;
+        if (process.env.NODE_ENV !== 'test') {
+          const elapsed = Date.now() - startTime;
+          if (elapsed < 260) {
+            await new Promise((resolve) => setTimeout(resolve, 260 - elapsed));
+          }
+        }
+        if (isCancelled) return;
+        setTrains(SAMPLE_TRAINS);
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   const displayedTrains = useMemo(() => {
-    return filterAndSortTrains(SAMPLE_TRAINS, {
+    return filterAndSortTrains(trains, {
       searchQuery,
       statusFilter,
       operatorFilter: 'ALL',
       sortBy: 'departure',
       sortOrder: 'asc',
     });
-  }, [searchQuery, statusFilter]);
+  }, [trains, searchQuery, statusFilter]);
 
   return (
     <div className="py-6 md:py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
@@ -83,26 +131,32 @@ export default function TrainsPage() {
         </div>
       </BaseCard>
 
-      {/* Trains List */}
-      <div className="space-y-4">
-        {displayedTrains.length === 0 ? (
-          <BaseCard variant="outlined" className="p-8 text-center bg-white border-amber-200">
-            <MascotBee name="honey" size="lg" />
-            <h3 className="text-base font-bold text-stone-800 mt-3">No trains found</h3>
-            <p className="text-xs text-stone-500 max-w-xs mx-auto mt-1">
-              Try adjusting your query or resetting your status filter.
-            </p>
-          </BaseCard>
-        ) : (
-          displayedTrains.map((journey) => (
-            <TrainCard
-              key={journey.id}
-              journey={journey}
-              onPressDetails={(j) => setSelectedJourney(j)}
-            />
-          ))
-        )}
-      </div>
+      {/* Trains List or Glass Ghost Skeleton */}
+      {isLoading ? (
+        <div className="w-full my-4">
+          <TrainsGhostSkeleton />
+        </div>
+      ) : (
+        <div className="space-y-4 animate-fade-in">
+          {displayedTrains.length === 0 ? (
+            <BaseCard variant="outlined" className="p-8 text-center bg-white border-amber-200">
+              <MascotBee name="honey" size="lg" />
+              <h3 className="text-base font-bold text-stone-800 mt-3">No trains found</h3>
+              <p className="text-xs text-stone-500 max-w-xs mx-auto mt-1">
+                Try adjusting your query or resetting your status filter.
+              </p>
+            </BaseCard>
+          ) : (
+            displayedTrains.map((journey) => (
+              <TrainCard
+                key={journey.id}
+                journey={journey}
+                onPressDetails={(j) => setSelectedJourney(j)}
+              />
+            ))
+          )}
+        </div>
+      )}
 
       {/* Train Details Modal */}
       <TrainDetailModal
@@ -111,5 +165,19 @@ export default function TrainsPage() {
         onClose={() => setSelectedJourney(null)}
       />
     </div>
+  );
+}
+
+export default function TrainsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-6 md:py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+          <TrainsGhostSkeleton fullPage />
+        </div>
+      }
+    >
+      <TrainsContent />
+    </Suspense>
   );
 }

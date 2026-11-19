@@ -55,6 +55,9 @@ async def reset_rate_limits():
         bf_keys = await redis.keys("auth:*_bf*")
         if bf_keys:
             await redis.delete(*bf_keys)
+        notif_keys = await redis.keys("beeline:notif:*")
+        if notif_keys:
+            await redis.delete(*notif_keys)
     except Exception:
         pass
     yield
@@ -63,6 +66,11 @@ async def reset_rate_limits():
         from app.core.redis import get_redis
         redis = get_redis()
         bf_keys = await redis.keys("auth:*_bf*")
+        if bf_keys:
+            await redis.delete(*bf_keys)
+        notif_keys = await redis.keys("beeline:notif:*")
+        if notif_keys:
+            await redis.delete(*notif_keys)
         if bf_keys:
             await redis.delete(*bf_keys)
     except Exception:

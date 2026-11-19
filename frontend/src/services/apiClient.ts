@@ -7,10 +7,13 @@ import {
   ForgotPasswordResponse,
   SavedRouteResponse,
   BreachCheckResult,
+  NotificationStatusResponse,
+  TestDepartureAlertRequest,
+  TestDepartureAlertResponse,
+  UserPreferences,
 } from '../types/auth';
 import { TransitRoutePlan, TransitRouteQuery, BookingWindow, CuratedPillar, TrainItineraryResponse } from '../types/routePlan';
 import { TrainJourney } from '../types/train';
-import { TransitLineSchedule, ScheduleFilterParams } from '../types/schedule';
 import {
   StationAutocompleteCatalogResponse,
   StationSearchResponse,
@@ -336,6 +339,49 @@ export class ApiClient {
   }
 
   // ==========================================
+  // USER PREFERENCES & NOTIFICATION METHODS
+  // ==========================================
+
+  async getPreferences(): Promise<UserPreferences> {
+    const res = await this.fetchWithAuth('/users/me/preferences');
+    if (!res.ok) throw new Error('Failed to fetch user preferences');
+    return res.json();
+  }
+
+  async updatePreferences(preferences: Partial<UserPreferences>): Promise<UserPreferences> {
+    const res = await this.fetchWithAuth('/users/me/preferences', {
+      method: 'PATCH',
+      body: JSON.stringify(preferences),
+    });
+    if (!res.ok) throw new Error('Failed to update user preferences');
+    return res.json();
+  }
+
+  async getNotificationStatus(): Promise<NotificationStatusResponse> {
+    const res = await this.fetchWithAuth('/notifications/status');
+    if (!res.ok) throw new Error('Failed to fetch notification status');
+    return res.json();
+  }
+
+  async sendTestDepartureAlert(
+    payload?: TestDepartureAlertRequest
+  ): Promise<TestDepartureAlertResponse> {
+    const res = await this.fetchWithAuth('/notifications/test-departure-alert', {
+      method: 'POST',
+      body: JSON.stringify(payload || {}),
+    });
+    if (!res.ok) {
+      let msg = 'Failed to send test departure email';
+      try {
+        const err = await res.json();
+        if (err.detail) msg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+      } catch {}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  // ==========================================
   // ROUTING & SCHEDULE METHODS
   // ==========================================
 
@@ -407,20 +453,6 @@ export class ApiClient {
     }
 
     return data;
-  }
-
-  async getSchedules(params?: ScheduleFilterParams): Promise<TransitLineSchedule[]> {
-    const urlParams = new URLSearchParams();
-    if (params?.section) urlParams.append('section', params.section);
-    if (params?.selectedCity) urlParams.append('city', params.selectedCity);
-    if (params?.searchQuery) urlParams.append('search', params.searchQuery);
-
-    const qs = urlParams.toString();
-    const endpoint = `/schedules${qs ? `?${qs}` : ''}`;
-    const res = await this.fetchWithAuth(endpoint);
-
-    if (!res.ok) throw new Error('Failed to fetch schedules');
-    return res.json();
   }
 
   async getTrains(params?: {
@@ -595,4 +627,24 @@ export async function fetchTrainItinerary(
   date?: string
 ): Promise<TrainItineraryResponse> {
   return apiClient.fetchTrainItinerary(trainNumber, date);
+}
+
+export async function getNotificationStatus(): Promise<NotificationStatusResponse> {
+  return apiClient.getNotificationStatus();
+}
+
+export async function sendTestDepartureAlert(
+  payload?: TestDepartureAlertRequest
+): Promise<TestDepartureAlertResponse> {
+  return apiClient.sendTestDepartureAlert(payload);
+}
+
+export async function updatePreferences(
+  preferences: Partial<UserPreferences>
+): Promise<UserPreferences> {
+  return apiClient.updatePreferences(preferences);
+}
+
+export async function getPreferences(): Promise<UserPreferences> {
+  return apiClient.getPreferences();
 }

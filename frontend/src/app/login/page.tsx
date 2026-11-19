@@ -23,13 +23,26 @@ import { checkPasswordBreach, checkEmailBreach, PasswordBreachStatus, EmailBreac
 import BaseCard from '../../components/BaseCard';
 import BaseButton from '../../components/BaseButton';
 import MascotBee from '../../components/MascotBee';
+import AuthGhostSkeleton from '../../components/AuthGhostSkeleton';
 
 type AuthTab = 'login' | 'signup';
 
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, login, signup, continueAsGuest, mfaChallenge, verifyMFA, cancelMFA } = useAuth();
+  const { user, login, signup, continueAsGuest, mfaChallenge, verifyMFA, cancelMFA, isLoading: authLoading } = useAuth();
+
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(
+    () => process.env.NODE_ENV !== 'test'
+  );
+
+  useEffect(() => {
+    if (!isInitialLoading) return;
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [isInitialLoading]);
 
   const initialTab = searchParams.get('tab') === 'signup' ? 'signup' : 'login';
   const [activeTab, setActiveTab] = useState<AuthTab>(initialTab);
@@ -270,8 +283,12 @@ function AuthContent() {
     }
   };
 
+  if (isInitialLoading || (authLoading && process.env.NODE_ENV !== 'test')) {
+    return <AuthGhostSkeleton />;
+  }
+
   return (
-    <div className="min-h-[calc(100dvh-4rem)] flex flex-col justify-center items-center py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100dvh-4rem)] flex flex-col justify-center items-center py-8 px-4 sm:px-6 lg:px-8 animate-fade-in">
       {/* Background Ambience */}
       <div className="w-full max-w-md mx-auto">
         {/* Header Branding & Mascot */}
@@ -789,11 +806,7 @@ function AuthContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-[calc(100dvh-4rem)] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<AuthGhostSkeleton />}>
       <AuthContent />
     </Suspense>
   );

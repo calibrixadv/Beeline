@@ -29,6 +29,10 @@ from app.services.feature_store_service import (
 )
 from app.services.risk_service import risk_service
 from app.services.station_catalog_service import station_catalog_service
+from app.services.trip_notification_service import (
+    start_trip_notification_scheduler,
+    stop_trip_notification_scheduler,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,9 +108,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     station_scheduler_task = asyncio.create_task(station_catalog_service.start_weekly_station_scheduler())
     app.state.station_catalog_task = station_scheduler_task
 
+    # Start non-blocking trip departure notification scheduler
+    trip_notif_task = start_trip_notification_scheduler()
+    app.state.trip_notification_task = trip_notif_task
+
     yield
 
     # Shutdown: cleanly cancel background tasks
+    stop_trip_notification_scheduler()
+    if trip_notif_task is not None:
+        trip_notif_task.cancel()
+        try:
+            await trip_notif_task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            pass
+
     station_catalog_service.stop_weekly_station_scheduler()
     station_scheduler_task.cancel()
     try:
@@ -250,7 +268,6 @@ async def session_security_and_rotation_middleware(request: Request, call_next):
         path.startswith(f"{settings.API_V1_STR}/routes/plan") or
         path.startswith(f"{settings.API_V1_STR}/routes/corridors") or
         path.startswith(f"{settings.API_V1_STR}/trains") or
-        path.startswith(f"{settings.API_V1_STR}/schedules") or
         path.startswith(f"{settings.API_V1_STR}/stations") or
         path.startswith(f"{settings.API_V1_STR}/plan") or
         path.startswith("/plan") or

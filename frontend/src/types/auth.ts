@@ -62,3 +62,41 @@ export interface BreachCheckResult {
   warning?: string | null;
   recommendation: string;
 }
+
+export interface NotificationStatusResponse {
+  emailNotificationsEnabled: boolean;
+  departureReminderMinutes: number;
+  emailMode: string;
+  mailpitWebUrl?: string | null;
+  sentCount: number;
+}
+
+export interface TestDepartureAlertRequest {
+  trainNumber?: string;
+  origin?: string;
+  destination?: string;
+  departureTime?: string;
+  delayMinutes?: number;
+}
+
+export interface TestDepartureAlertResponse {
+  message: string;
+  recipientEmail: string;
+  trainNumber: string;
+  origin: string;
+  destination: string;
+  departureTime: string;
+  delayMinutes: number;
+}
+
+export interface UserPreferences {
+  default_pillar?: 'safe' | 'fast' | 'economy';
+  home_station_code?: string;
+  min_transfer_buffer_minutes?: number;
+  preferred_operators?: string[];
+  email_security_alerts?: boolean;
+  email_delay_alerts?: boolean;
+  email_notifications?: boolean;
+  departure_reminder_minutes?: number;
+  theme?: 'cozy_hive' | 'high_contrast';
+}
