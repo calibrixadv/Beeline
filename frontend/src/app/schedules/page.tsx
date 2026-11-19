@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Calendar, Train, Bus, Landmark, Sparkles } from 'lucide-react';
+import { Search, MapPin, Train, Bus, Landmark, Sparkles } from 'lucide-react';
 import { TransitLineSchedule, TransitMode } from '../../types/schedule';
 import { transitScheduleService } from '../../services/transitScheduleService';
 import { ROMANIAN_CITIES } from '../../data/romanianTransitTemplates';

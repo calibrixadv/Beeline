@@ -3,10 +3,9 @@ from datetime import datetime, timezone
 import json
 import logging
 import math
-import os
 from pathlib import Path
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import onnxruntime as ort
@@ -20,7 +19,7 @@ from app.ml_models.production_components import (
 import __main__
 __main__.DriftPurgedTwoStepCalibrator = DriftPurgedTwoStepCalibrator
 __main__.HierarchicalEmpiricalBayesTargetEncoder = HierarchicalEmpiricalBayesTargetEncoder
-from app.schemas.risk import RiskFactorExplanation, RiskFeatureVector, RiskPrediction
+from app.schemas.risk import RiskFeatureVector
 from app.schemas.route_plan import (
     BufferAdequacy,
     RiskLevel,

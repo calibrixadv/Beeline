@@ -11,14 +11,15 @@ import {
   RotateCcw, 
   ArrowRight, 
   MapPin, 
-  CheckCircle2
+  CheckCircle2,
+  Calendar
 } from 'lucide-react';
 import MascotBee, { MascotGear } from '../components/MascotBee';
 import MascotDebugModal from '../components/MascotDebugModal';
 import BaseButton from '../components/BaseButton';
 import BaseInput from '../components/BaseInput';
 import BaseCard from '../components/BaseCard';
-import { generateTripsForCorridor } from '../services/tripBookingService';
+import { generateTripsForCorridor, selectTrifectaPlans } from '../services/tripBookingService';
 import { TransitRoutePlan } from '../types/routePlan';
 import {
   useScrollHiveTour,
@@ -193,6 +194,51 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState<boolean>(false);
 
+  const [todayStr, setTodayStr] = useState<string>('');
+  const [maxDateStr, setMaxDateStr] = useState<string>('');
+  const [travelDate, setTravelDate] = useState<string>('');
+
+  const [quickDates, setQuickDates] = useState<{
+    today: string;
+    tomorrow: string;
+    weekend: string;
+    month: string;
+  }>({
+    today: '',
+    tomorrow: '',
+    weekend: '',
+    month: '',
+  });
+
+  useEffect(() => {
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    setTodayStr(todayIso);
+    setTravelDate((prev) => prev || todayIso);
+
+    const maxD = new Date();
+    maxD.setDate(maxD.getDate() + 90);
+    setMaxDateStr(maxD.toISOString().slice(0, 10));
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const weekend = new Date(today);
+    const dayOfWeek = weekend.getDay();
+    const daysUntilSat = (6 - dayOfWeek + 7) % 7 || 7;
+    weekend.setDate(weekend.getDate() + daysUntilSat);
+
+    const monthAhead = new Date(today);
+    monthAhead.setMonth(monthAhead.getMonth() + 1);
+
+    setQuickDates({
+      today: todayIso,
+      tomorrow: tomorrow.toISOString().slice(0, 10),
+      weekend: weekend.toISOString().slice(0, 10),
+      month: monthAhead.toISOString().slice(0, 10),
+    });
+  }, []);
+
   // Mascot & Route Gear State ('default' initially, then 'fast' | 'safe' | 'economy')
   const [activeGear, setActiveGear] = useState<MascotGear>('default');
   const [selectedRouteType, setSelectedRouteType] = useState<'fast' | 'safe' | 'economy'>('safe');
@@ -246,9 +292,7 @@ export default function HomePage() {
 
     // Compute generated corridor options
     const plans = generateTripsForCorridor(origin.trim(), destination.trim());
-    const fast = plans.find((p) => p.curatedPillar === 'FASTEST') || plans[0];
-    const safe = plans.find((p) => p.curatedPillar === 'MOST_RELIABLE') || plans[1] || plans[0];
-    const economy = plans.find((p) => p.curatedPillar === 'BEST_VALUE') || plans[2] || plans[0];
+    const { fast, safe, economy } = selectTrifectaPlans(plans);
 
     setSearchResults({ fast, safe, economy });
     setHasSearched(true);
@@ -325,6 +369,7 @@ export default function HomePage() {
       origin: origin.trim(),
       destination: destination.trim(),
       pillar: pillarParam,
+      date: travelDate,
     });
     router.push(`/trips?${queryParams.toString()}`);
   };
@@ -403,6 +448,87 @@ export default function HomePage() {
                         onClear={() => setDestination('')}
                         leftIcon={<MapPin className="w-4 h-4 text-amber-600" />}
                       />
+                    </div>
+                  </div>
+
+                  {/* Travel Date Selector & Quick Pills */}
+                  <div className="pt-1 space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <label htmlFor="hero-date-input" className="text-[11px] font-bold text-stone-700 tracking-wider uppercase flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                        TRAVEL DATE
+                      </label>
+                      <div
+                        data-testid="provider-booking-badge"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        CFR SA / IRIS Verified Booking Window: 90 Days • Timetable 2025-2026 / 2026-2027
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <input
+                        id="hero-date-input"
+                        data-testid="travel-date-picker"
+                        type="date"
+                        min={todayStr}
+                        max={maxDateStr}
+                        value={travelDate}
+                        onChange={(e) => setTravelDate(e.target.value)}
+                        className="w-full sm:w-44 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50/50 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                      />
+
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          data-testid="date-pill-today"
+                          onClick={() => setTravelDate(quickDates.today)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                            travelDate === quickDates.today
+                              ? 'bg-amber-500 text-stone-950 font-bold shadow-xs'
+                              : 'bg-stone-100 text-stone-700 hover:bg-amber-100 border border-stone-200'
+                          }`}
+                        >
+                          Today
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="date-pill-tomorrow"
+                          onClick={() => setTravelDate(quickDates.tomorrow)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                            travelDate === quickDates.tomorrow
+                              ? 'bg-amber-500 text-stone-950 font-bold shadow-xs'
+                              : 'bg-stone-100 text-stone-700 hover:bg-amber-100 border border-stone-200'
+                          }`}
+                        >
+                          Tomorrow
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="date-pill-weekend"
+                          onClick={() => setTravelDate(quickDates.weekend)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                            travelDate === quickDates.weekend
+                              ? 'bg-amber-500 text-stone-950 font-bold shadow-xs'
+                              : 'bg-stone-100 text-stone-700 hover:bg-amber-100 border border-stone-200'
+                          }`}
+                        >
+                          This Weekend
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="date-pill-month"
+                          onClick={() => setTravelDate(quickDates.month)}
+                          className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                            travelDate === quickDates.month
+                              ? 'bg-amber-500 text-stone-950 font-bold shadow-xs'
+                              : 'bg-stone-100 text-stone-700 hover:bg-amber-100 border border-stone-200'
+                          }`}
+                        >
+                          +1 Month
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -606,6 +732,7 @@ export default function HomePage() {
 
                 {/* Booking CTA Button */}
                 <BaseButton
+                  data-testid="book-selected-route-cta"
                   onClick={handleBookSelectedRoute}
                   variant="primary"
                   size="md"

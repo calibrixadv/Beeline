@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-import json
 import math
 from typing import Any, List, Optional, Union
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
@@ -14,6 +13,8 @@ from app.schemas.auth import MessageResponse
 from app.schemas.common import PaginatedResponse, PaginationMeta
 from app.schemas.route_corridor import PopularCorridorsResponse
 from app.schemas.route_plan import (
+    BookingWindowInfo,
+    LocationQuery,
     RoutePlanResponse,
     SaveRouteRequest,
     SavedRouteResponse,
@@ -24,6 +25,9 @@ from app.schemas.route_plan import (
 from app.services.corridor_service import corridor_service
 from app.services.idempotency_service import IdempotencyService
 from app.services.routing_service import routing_service
+from app.services.timetable_sync_service import timetable_sync_service
+from app.services.train_service import _scrape_record_to_train_journey
+from scraper.collectors.train_api import DataGovXMLAdapter
 
 router = APIRouter()
 
@@ -32,6 +36,39 @@ router = APIRouter()
 async def get_popular_corridors() -> Any:
     """Returns high-frequency Romanian transit corridors for quick one-tap search on homepage."""
     return PopularCorridorsResponse(corridors=corridor_service.get_popular_corridors())
+
+
+@router.get("/plan", response_model=RoutePlanResponse)
+async def plan_route_get(
+    origin: str = Query(..., description="Origin city or station name"),
+    destination: str = Query(..., description="Destination city or station name"),
+    date: Optional[str] = Query(None, description="Optional ISO travel date (YYYY-MM-DD)"),
+    current_user: User = Depends(get_optional_current_user)
+) -> Any:
+    """GET query variant of /plan for rapid browser navigation and prefetching."""
+    bw = timetable_sync_service.get_booking_window()
+    min_date = bw["minDate"]
+    max_date = bw["maxDate"]
+    travel_date = date if date else min_date
+
+    if travel_date < min_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot plan or book a trip in the past. Please choose a date from today onward."
+        )
+    if travel_date > max_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Travel date '{travel_date}' is outside the booking window ({min_date} to {max_date}). Please choose a date within 90 days."
+        )
+
+    q = TransitRouteQuery(
+        origin=LocationQuery(name=origin, city=origin),
+        destination=LocationQuery(name=destination, city=destination),
+        departureTime=f"{travel_date}T08:00:00+02:00",
+        allowedModes=["TRAIN"]
+    )
+    return await plan_route(query=q, current_user=current_user)
 
 
 @router.post("/plan", response_model=RoutePlanResponse)
@@ -43,15 +80,44 @@ async def plan_route(
     Facilitates the standard TransitRoutePlan contract:
     Computes door-to-door multi-modal journeys across Romania and Europe with
     Romanian Transfer Shield risk scores and mascot companion recommendations.
+    Validates provider booking window [minDate, maxDate].
     """
+    bw = timetable_sync_service.get_booking_window()
+    min_date = bw["minDate"]
+    max_date = bw["maxDate"]
+
+    if query.departureTime:
+        date_str = query.departureTime[:10]
+        if date_str < min_date:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Cannot plan or book a trip in the past. Please choose a date from today onward."
+            )
+        if date_str > max_date:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Travel date '{date_str}' is outside the booking window ({min_date} to {max_date}). Please choose a date within 90 days."
+            )
+    else:
+        query.departureTime = f"{min_date}T08:00:00+02:00"
+
     plans = await routing_service.plan_routes(query)
     recommended_id = plans[0].id if plans else ""
+
+    orig_q = query.origin.name or query.origin.city or ""
+    dest_q = query.destination.name or query.destination.city or ""
+    date_str = query.departureTime[:10] if query.departureTime else min_date
+    direct_recs = DataGovXMLAdapter.get_shared_instance().fetch_itinerary_sync(orig_q, dest_q, date_str=date_str)
+    all_day_deps = [_scrape_record_to_train_journey(r, date_str) for r in direct_recs] if direct_recs else None
 
     return RoutePlanResponse(
         plans=plans,
         recommendedPlanId=recommended_id,
         query=query,
-        generatedAt=datetime.now(timezone.utc).isoformat()
+        generatedAt=datetime.now(timezone.utc).isoformat(),
+        bookingWindow=BookingWindowInfo(**bw),
+        allDayDepartures=all_day_deps,
+        totalDayRoutes=len(plans),
     )
 
 

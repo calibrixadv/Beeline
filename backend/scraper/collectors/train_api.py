@@ -12,6 +12,7 @@ import unicodedata
 import xml.etree.ElementTree as ET
 from abc import ABC, abstractmethod
 from datetime import date, datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 from enum import Enum
 from pathlib import Path
 import sys
@@ -108,6 +109,7 @@ STATION_DICTIONARY: Dict[str, Dict[str, Any]] = {
     "MZL": {"name": "Mizil", "aliases": ["mizil", "mzl"]},
     "BBS": {"name": "Barboși", "aliases": ["barbosi", "gara barbosi", "bbs"]},
     "IAN": {"name": "Ianca", "aliases": ["ianca", "ianca hc.", "ian"]},
+    "IBZ": {"name": "Întorsura Buzăului", "aliases": ["intorsura buzaului", "gara intorsura buzaului", "intorsura buzaului hm", "ibz"]},
 }
 
 # 6 Primary Corridors specified in task:
@@ -130,6 +132,7 @@ OPERATORS_ALLOWED = {"CFR", "ASTRA", "TFC", "SOFTRANS", "REGIO"}
 # Normalization Helpers
 # ---------------------------------------------------------------------------
 
+@functools.lru_cache(maxsize=16384)
 def normalize_text(text: str) -> str:
     """Removes diacritics, extra spaces and lowers string."""
     if not text:
@@ -138,12 +141,15 @@ def normalize_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
-_PRECOMPUTED_ALIASES: List[Tuple[str, str]] = []
+_EXACT_ALIAS_MAP: Dict[str, str] = {}
 for _c, _meta in STATION_DICTIONARY.items():
-    _PRECOMPUTED_ALIASES.append((normalize_text(_meta["name"]), _c))
+    _EXACT_ALIAS_MAP[normalize_text(_meta["name"])] = _c
     for _al in _meta["aliases"]:
-        _PRECOMPUTED_ALIASES.append((normalize_text(_al), _c))
-_PRECOMPUTED_ALIASES.sort(key=lambda x: len(x[0]), reverse=True)
+        _EXACT_ALIAS_MAP[normalize_text(_al)] = _c
+
+_PRECOMPUTED_ALIASES: List[Tuple[str, str]] = sorted(
+    _EXACT_ALIAS_MAP.items(), key=lambda x: len(x[0]), reverse=True
+)
 
 _CITY_FALLBACKS: List[Tuple[str, str]] = [
     ("bucuresti", "BCT"), ("cluj", "CJN"), ("timisoara", "TIM"),
@@ -153,6 +159,18 @@ _CITY_FALLBACKS: List[Tuple[str, str]] = [
     ("sibiu", "SBZ"), ("suceava", "SCV"), ("oradea", "ORD"),
     ("bacau", "BAC"),
 ]
+
+
+_RE_SUFFIXES = re.compile(r"(?:\s+|^)(?:hm|hc|po|h|gr\.?\s*[ab]|halt[aă]|gara|calatori)\.?\s*$", re.IGNORECASE)
+_RE_PREFIXES = re.compile(r"^(?:gara|halt[aă]|pav\.?\s*cfr)\s+", re.IGNORECASE)
+
+
+@functools.lru_cache(maxsize=8192)
+def _strip_station_suffixes(norm_str: str) -> str:
+    s = (norm_str or "").strip()
+    s = _RE_PREFIXES.sub("", s)
+    s = _RE_SUFFIXES.sub("", s)
+    return s.strip()
 
 
 @functools.lru_cache(maxsize=16384)
@@ -169,26 +187,86 @@ def canonical_station_code(station_str: str) -> str:
         return raw_upper
 
     # 2. Exact match against canonical name or aliases
-    for alias_text, code in _PRECOMPUTED_ALIASES:
-        if raw_clean == alias_text:
-            return code
+    if raw_clean in _EXACT_ALIAS_MAP:
+        return _EXACT_ALIAS_MAP[raw_clean]
 
-    # 3. Substring search prioritizing longer specific aliases first
-    for alias_text, code in _PRECOMPUTED_ALIASES:
-        if len(alias_text) >= 3 and alias_text in raw_clean:
-            return code
+    # 3. Exact match after stripping common Romanian station suffixes / prefixes
+    stripped = _strip_station_suffixes(raw_clean)
+    if stripped and stripped in _EXACT_ALIAS_MAP:
+        return _EXACT_ALIAS_MAP[stripped]
 
-    # 4. Regional hub keywords fallback
+    # 4. Strict word-boundary matching for multi-word or distinct aliases (>= 4 chars)
+    # Avoids loose substring matching (e.g. 'ian' inside 'poiana' or 'buzau' inside 'intorsura buzaului')
+    for alias_text, code in _PRECOMPUTED_ALIASES:
+        if len(alias_text) >= 4:
+            if re.search(rf"\b{re.escape(alias_text)}\b", raw_clean) or (
+                stripped and re.search(rf"\b{re.escape(alias_text)}\b", stripped)
+            ):
+                return code
+
+    # 5. Strict word-boundary regional hub keywords fallback
     for keyword, code in _CITY_FALLBACKS:
-        if keyword in raw_clean:
+        if re.search(rf"\b{keyword}\b", raw_clean) or (
+            stripped and re.search(rf"\b{keyword}\b", stripped)
+        ):
             return code
 
-    # 5. Unknown station fallback: generate 3-letter uppercase string or central hub BCT
+    # 6. Unknown station fallback: generate 3-letter uppercase candidate without colliding with known hubs
     cleaned_letters = re.sub(r"[^A-Z]", "", raw_clean.upper())
     if len(cleaned_letters) >= 3:
         candidate = cleaned_letters[:3]
-        return candidate if candidate in STATION_DICTIONARY else candidate
+        if candidate in STATION_DICTIONARY:
+            if len(cleaned_letters) >= 4:
+                alt = cleaned_letters[0] + cleaned_letters[2:4]
+                if alt not in STATION_DICTIONARY:
+                    return alt
+        return candidate
     return "BCT"
+
+
+@functools.lru_cache(maxsize=4096)
+def clean_romanian_station_name(code: str, raw_name: str) -> str:
+    """Returns a clean Romanian station display name with proper diacritics."""
+    name = (raw_name or "").strip()
+    if not name or name.upper() == code:
+        if code in STATION_DICTIONARY and "name" in STATION_DICTIONARY[code]:
+            return STATION_DICTIONARY[code]["name"]
+        return code
+
+    # Check if raw_name matches the canonical station or its aliases
+    if code in STATION_DICTIONARY:
+        dict_meta = STATION_DICTIONARY[code]
+        raw_norm = normalize_text(name)
+        matched = (
+            raw_norm == normalize_text(dict_meta["name"])
+            or any(raw_norm == normalize_text(a) for a in dict_meta.get("aliases", []))
+        )
+        if not matched:
+            stripped_norm = _strip_station_suffixes(raw_norm)
+            matched = (
+                stripped_norm == normalize_text(dict_meta["name"])
+                or any(stripped_norm == normalize_text(a) for a in dict_meta.get("aliases", []))
+            )
+        if matched:
+            return dict_meta["name"]
+
+    # Otherwise, preserve the actual station name from raw_name, cleaning diacritics and suffixes
+    name = (
+        name.replace("ş", "ș")
+        .replace("ţ", "ț")
+        .replace("Ş", "Ș")
+        .replace("Ţ", "Ț")
+    )
+    for suffix in [
+        " Gr.A", " Gr.B", " Gr. A", " Gr. B",
+        " Hm.", " Hm", " hm.", " hm",
+        " Hc.", " Hc", " hc.", " hc",
+        " h.", " h", " PO", " po", " P.O.", " p.o."
+    ]:
+        if name.endswith(suffix):
+            name = name[:-len(suffix)].strip()
+            break
+    return name
 
 
 def normalize_train_number(train_num_str: Any) -> str:
@@ -1095,6 +1173,62 @@ class InfoFerLiveAdapter(BaseTrainAdapter):
             pass
         return 120.0
 
+    async def get_live_delays_and_status(
+        self, origin: str, destination: str, date_str: str
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        Retrieves live delay minutes and status for trains between origin & destination
+        on date_str from Redis (live:trains:{orig}:{dest}:{date_str}) or InfoFer live scrape.
+        TTL: 180s when date_str is today, 21600s for future dates.
+        Safe and non-blocking fallback if InfoFer times out or rate-limits.
+        """
+        orig_code = canonical_station_code(origin)
+        dest_code = canonical_station_code(destination)
+        redis_key = f"live:trains:{orig_code}:{dest_code}:{date_str}"
+
+        # 1. Try Redis cache
+        try:
+            from app.core.redis import get_redis
+            r = get_redis()
+            cached_val = await r.get(redis_key)
+            if cached_val:
+                try:
+                    return json.loads(cached_val)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # 2. Query InfoFer live itinerary (resilient & safe)
+        delays_map: Dict[str, Dict[str, Any]] = {}
+        try:
+            records = await asyncio.wait_for(
+                self.fetch_itinerary(origin, destination, date_str),
+                timeout=4.0,
+            )
+            for rec in records:
+                t_num = rec.train_number
+                act_del = int(round(rec.target_labels.actual_delay_minutes))
+                st = "DELAYED" if act_del > 5 else "ON_TIME"
+                delays_map[t_num] = {
+                    "delayMinutes": act_del,
+                    "status": st,
+                }
+        except Exception as exc:
+            logger.debug(f"InfoFerLiveAdapter live query non-blocking note: {exc}")
+
+        # 3. Cache into Redis
+        try:
+            from app.core.redis import get_redis
+            r = get_redis()
+            today_str = datetime.now(ZoneInfo("Europe/Bucharest")).date().isoformat()
+            ttl = 180 if date_str == today_str else 21600
+            await r.set(redis_key, json.dumps(delays_map), ex=ttl)
+        except Exception:
+            pass
+
+        return delays_map
+
 
 # ---------------------------------------------------------------------------
 # Official data.gov.ro Romanian Railway XML Timetables Adapter & Multi-Year Routing
@@ -1161,6 +1295,15 @@ class DataGovXMLAdapter(BaseTrainAdapter):
         "247232": "REGIO",
     }
 
+    _shared_instance: Optional["DataGovXMLAdapter"] = None
+
+    @classmethod
+    def get_shared_instance(cls) -> "DataGovXMLAdapter":
+        if cls._shared_instance is None:
+            cls._shared_instance = cls()
+            cls._shared_instance._ensure_loaded()
+        return cls._shared_instance
+
     def __init__(
         self,
         xml_dir: Optional[Union[str, Path]] = None,
@@ -1188,6 +1331,7 @@ class DataGovXMLAdapter(BaseTrainAdapter):
         self._station_index: Dict[str, List[str]] = self._default_store["station_index"]
         self._train_restrictions: Dict[str, int] = self._default_store["train_restrictions"]
         self._loaded: bool = False
+        self._itinerary_cache: Dict[Tuple[str, str, Optional[str]], List[TrainScrapeRecord]] = {}
 
     def _create_empty_store(self) -> Dict[str, Any]:
         return {
@@ -1203,14 +1347,20 @@ class DataGovXMLAdapter(BaseTrainAdapter):
             self.load_xml_timetables()
 
     def _add_station_train(
-        self, code: str, train_num: str, store: Optional[Dict[str, Any]] = None
+        self, code: str, train_num: str, store: Optional[Dict[str, Any]] = None, name: str = ""
     ) -> None:
-        """Indexes train under station code without duplicate entries."""
+        """Indexes train under station code and normalized station name without duplicate entries."""
         st_index = store["station_index"] if store is not None else self._station_index
-        t_list = st_index.setdefault(code, [])
-        if not t_list or t_list[-1] != train_num:
-            if train_num not in t_list:
-                t_list.append(train_num)
+        keys_to_index = [code]
+        if name:
+            clean_name = normalize_text(name)
+            if clean_name and clean_name != code:
+                keys_to_index.append(clean_name)
+        for k in keys_to_index:
+            t_list = st_index.setdefault(k, [])
+            if not t_list or t_list[-1] != train_num:
+                if train_num not in t_list:
+                    t_list.append(train_num)
 
     def _map_operator(self, filename: str, op_code: str) -> Literal["CFR", "ASTRA", "TFC", "SOFTRANS", "REGIO"]:
         """Maps filename / Operator code to canonical freeze_contract.md operator."""
@@ -1230,6 +1380,25 @@ class DataGovXMLAdapter(BaseTrainAdapter):
         if any(k in combined for k in ("regio-calatori", "interregional-calatori", "ferotrafictfi", "regiocalatori", "interregional")):
             return "REGIO"
         return canonical_operator(combined)
+
+    def _map_full_operator_name(self, filename: str, op_code: str) -> str:
+        """Returns the official full Romanian passenger operator name across all 7 rail operators."""
+        combined = f"{filename.lower()} {str(op_code or '').lower()}"
+        if "sntfc" in combined or "cfr" in combined or op_code == "6100826":
+            return "CFR Călători"
+        if "softrans" in combined or op_code == "236025":
+            return "Softrans"
+        if "astratranscarpatic" in combined or "astra" in combined or op_code == "237330":
+            return "Astra Trans Carpatic"
+        if "tfc" in combined or "transferoviar" in combined or op_code == "228389":
+            return "Transferoviar Călători"
+        if "interregional" in combined:
+            return "Interregional Călători"
+        if "ferotrafic" in combined:
+            return "Ferotrafic TFI"
+        if any(k in combined for k in ("regio-calatori", "regiocalatori")) or op_code in ("227098", "236037", "247232"):
+            return "Regio Călători"
+        return "CFR Călători"
 
     def load_xml_timetables(self) -> None:
         """Parses default XML timetables (from xml_dir or xml_archive/2025-2026)."""
@@ -1426,7 +1595,7 @@ class DataGovXMLAdapter(BaseTrainAdapter):
             "dep_sec": ora_p,
             "arr_sec": ora_p,
         })
-        self._add_station_train(origin_code, train_num, store=target_store)
+        self._add_station_train(origin_code, train_num, store=target_store, name=orig_station)
 
         # 2. Intermediate commercial stops
         cum_m = 0.0
@@ -1446,7 +1615,7 @@ class DataGovXMLAdapter(BaseTrainAdapter):
                     "dep_sec": el_ora_p,
                     "arr_sec": el_ora_s,
                 })
-                self._add_station_train(st_code, train_num, store=target_store)
+                self._add_station_train(st_code, train_num, store=target_store, name=st_name)
             cum_m += float(el.attrib.get("Km", 0.0))
 
         # 3. Terminal arrival stop
@@ -1459,12 +1628,20 @@ class DataGovXMLAdapter(BaseTrainAdapter):
             "dep_sec": ora_s,
             "arr_sec": ora_s,
         })
-        self._add_station_train(dest_code, train_num, store=target_store)
+        self._add_station_train(dest_code, train_num, store=target_store, name=dest_station)
+
+        full_orig_name = clean_romanian_station_name(origin_code, orig_station)
+        full_dest_name = clean_romanian_station_name(dest_code, dest_station)
 
         routes_map[train_num] = {
             "record": record,
             "stops": stops_list,
             "restrictions_count": restrictions_count,
+            "full_operator": self._map_full_operator_name(filename, op_code),
+            "filename": filename,
+            "full_train_origin": full_orig_name,
+            "full_train_destination": full_dest_name,
+            "train_category": cat_clean,
         }
 
     async def fetch_train(
@@ -1529,9 +1706,13 @@ class DataGovXMLAdapter(BaseTrainAdapter):
                     records.append(rec.model_copy(deep=True))
         return records
 
-    async def fetch_itinerary(
+    def _find_itinerary(
         self, origin: str, destination: str, date_str: Optional[str] = None
     ) -> List[TrainScrapeRecord]:
+        cache_key = (origin, destination, date_str)
+        if hasattr(self, "_itinerary_cache") and cache_key in self._itinerary_cache:
+            return [r.model_copy(deep=True) for r in self._itinerary_cache[cache_key]]
+
         store = self._get_store_for_date(date_str)
         station_index = store["station_index"]
         train_routes = store["train_routes"]
@@ -1540,9 +1721,39 @@ class DataGovXMLAdapter(BaseTrainAdapter):
         if orig_code == dest_code:
             return []
 
+        orig_clean = normalize_text(origin)
+        dest_clean = normalize_text(destination)
+
         orig_trains = set(station_index.get(orig_code, []))
+        if orig_clean and orig_clean in station_index:
+            orig_trains.update(station_index[orig_clean])
+
         dest_trains = set(station_index.get(dest_code, []))
+        if dest_clean and dest_clean in station_index:
+            dest_trains.update(station_index[dest_clean])
+
+        orig_stripped = _strip_station_suffixes(orig_clean)
+        dest_stripped = _strip_station_suffixes(dest_clean)
+
+        def _station_matches(target_code: str, target_clean: str, target_stripped: str, st_code: str, st_name: str) -> bool:
+            if st_code == target_code:
+                return True
+            s_clean = normalize_text(st_name)
+            if target_clean and (
+                s_clean == target_clean
+                or (target_stripped and _strip_station_suffixes(s_clean) == target_stripped)
+            ):
+                return True
+            return False
+
         candidate_trains = sorted(orig_trains & dest_trains)
+        if not candidate_trains and (not orig_trains or not dest_trains):
+            # Fallback scan across train_routes only if station alias was unindexed
+            candidate_trains = [
+                t_num for t_num, rinfo in train_routes.items()
+                if any(_station_matches(orig_code, orig_clean, orig_stripped, s["code"], s["name"]) for s in rinfo["stops"])
+                and any(_station_matches(dest_code, dest_clean, dest_stripped, s["code"], s["name"]) for s in rinfo["stops"])
+            ]
 
         results: List[TrainScrapeRecord] = []
         for t_num in candidate_trains:
@@ -1555,11 +1766,13 @@ class DataGovXMLAdapter(BaseTrainAdapter):
             dest_match: Optional[Tuple[int, Dict[str, Any]]] = None
 
             for idx, stop in enumerate(stops):
-                if stop["code"] == orig_code and orig_match is None:
-                    orig_match = (idx, stop)
-                if stop["code"] == dest_code and orig_match is not None:
-                    dest_match = (idx, stop)
-                    break
+                if orig_match is None:
+                    if _station_matches(orig_code, orig_clean, orig_stripped, stop["code"], stop["name"]):
+                        orig_match = (idx, stop)
+                if orig_match is not None and dest_match is None and idx > orig_match[0]:
+                    if _station_matches(dest_code, dest_clean, dest_stripped, stop["code"], stop["name"]):
+                        dest_match = (idx, stop)
+                        break
 
             if orig_match is not None and dest_match is not None:
                 idx_orig, stop_orig = orig_match
@@ -1593,9 +1806,32 @@ class DataGovXMLAdapter(BaseTrainAdapter):
                         provider="DataGovXMLAdapter",
                         scraped_at=datetime.now(timezone.utc).isoformat(),
                     )
+                    # Enrich record with operational stop attributes
+                    setattr(rec, "departure_seconds", stop_orig["dep_sec"])
+                    setattr(rec, "arrival_seconds", stop_dest["arr_sec"])
+                    setattr(rec, "full_operator", route_info.get("full_operator", "CFR Călători"))
+                    setattr(rec, "commercial_stops", [s["name"] for s in stops[idx_orig : idx_dest + 1]])
+                    setattr(rec, "restrictions_count", route_info.get("restrictions_count", 0))
+                    setattr(rec, "route_stops", stops[idx_orig : idx_dest + 1])
+                    setattr(rec, "full_train_origin", route_info.get("full_train_origin", clean_romanian_station_name(stops[0]["code"], stops[0]["name"])))
+                    setattr(rec, "full_train_destination", route_info.get("full_train_destination", clean_romanian_station_name(stops[-1]["code"], stops[-1]["name"])))
+                    setattr(rec, "train_category_name", route_info.get("train_category", "IR"))
                     results.append(rec)
 
-        return results
+        results.sort(key=lambda r: getattr(r, "departure_seconds", 0))
+        if hasattr(self, "_itinerary_cache"):
+            self._itinerary_cache[cache_key] = results
+        return [r.model_copy(deep=True) for r in results]
+
+    async def fetch_itinerary(
+        self, origin: str, destination: str, date_str: Optional[str] = None
+    ) -> List[TrainScrapeRecord]:
+        return self._find_itinerary(origin, destination, date_str)
+
+    def fetch_itinerary_sync(
+        self, origin: str, destination: str, date_str: Optional[str] = None
+    ) -> List[TrainScrapeRecord]:
+        return self._find_itinerary(origin, destination, date_str)
 
     def get_all_train_numbers(
         self, service_date: Optional[Union[str, datetime, date]] = None
@@ -1666,6 +1902,42 @@ class DataGovXMLAdapter(BaseTrainAdapter):
         if route_info and route_info.get("stops"):
             return int(route_info["stops"][0].get("dep_sec", 0))
         return 0
+
+    def get_train_route_info(
+        self, train_number: str, service_date: Optional[Union[str, datetime, date]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieves complete XML route dictionary for train_number in the active timetable."""
+        store = self._get_store_for_date(service_date)
+        routes = store.get("train_routes", {})
+        norm = normalize_train_number(train_number)
+        if norm in routes:
+            return routes[norm]
+
+        digit_match = re.search(r"(\d+)", norm)
+        if digit_match:
+            d = digit_match.group(1)
+            for prefix in ["IR", "IC", "RE", "R"]:
+                cand = f"{prefix} {d}"
+                if cand in routes:
+                    return routes[cand]
+            for t_num, rinfo in routes.items():
+                if re.search(rf"\b{d}\b", t_num):
+                    return rinfo
+
+        # Fallback to default store if year store didn't match
+        routes_def = self._default_store.get("train_routes", {})
+        if norm in routes_def:
+            return routes_def[norm]
+        if digit_match:
+            d = digit_match.group(1)
+            for prefix in ["IR", "IC", "RE", "R"]:
+                cand = f"{prefix} {d}"
+                if cand in routes_def:
+                    return routes_def[cand]
+            for t_num, rinfo in routes_def.items():
+                if re.search(rf"\b{d}\b", t_num):
+                    return rinfo
+        return None
 
 
 # ---------------------------------------------------------------------------

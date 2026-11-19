@@ -5,6 +5,7 @@
   "description": "VoyageRail / Beeline Trip Planner - Next.js TypeScript App & FastAPI Backend",
   "scripts": {
     "dev": "npm --prefix frontend run dev",
+    "backend": "cd backend && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
     "web": "npm --prefix frontend run dev",
     "start": "npm --prefix frontend run start",
     "build": "npm --prefix frontend run build",

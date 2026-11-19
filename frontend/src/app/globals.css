@@ -463,6 +463,20 @@
   animation: trainGlideEconomy 4.4s ease-in-out infinite;
 }
 
+/* Railway Track SVG Dash Flow for Chapter 1 Route Previews */
+@keyframes trackDashFlow {
+  from {
+    stroke-dashoffset: 40;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-track-flow {
+  animation: trackDashFlow 1.6s linear infinite;
+}
+
 /* Panoramic Railway Corridor Train Pulse (Variant 3) */
 @keyframes corridorTrainGlide {
   0% {
@@ -554,6 +568,7 @@
   .animate-train-glide-safe,
   .animate-train-glide-fast,
   .animate-train-glide-economy,
+  .animate-track-flow,
   .animate-corridor-train-safe,
   .animate-corridor-train-fast,
   .animate-corridor-train-economy {

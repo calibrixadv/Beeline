@@ -9,7 +9,7 @@ import unicodedata
 from app.core.config import settings
 from app.core.redis import get_redis
 from app.services.corridor_service import POPULAR_CORRIDORS
-from app.services.disruption_service import DISRUPTIONS_DATA, DisruptionService
+from app.services.disruption_service import DisruptionService
 from app.services.station_service import STATIONS_DATA
 from app.services.train_service import OPERATORS_DATA, TRAINS_DATA
 

@@ -10,7 +10,6 @@ import {
   Clock, 
   Coins, 
   ArrowRight, 
-  MapPin, 
   Train 
 } from 'lucide-react';
 import { useTrip } from '../../context/TripContext';
@@ -26,7 +25,6 @@ export default function MyTripPage() {
     clearTrip, 
     totalCost, 
     totalDurationMinutes, 
-    totalCo2Kg, 
     totalCo2SavedKg 
   } = useTrip();
 

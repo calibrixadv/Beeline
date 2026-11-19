@@ -45,7 +45,7 @@ export const CozyHiveSection: React.FC<CozyHiveSectionProps> = ({
 
       {/* 3 Physical Honey Props Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch mb-12">
-        {/* Prop 1: The Nectar Telemetry Pots (Borcanele cu Miere - ML Risk Engine) */}
+        {/* Prop 1: The Nectar Telemetry Pots (ML Risk Engine) */}
         <BaseCard
           variant="elevated"
           className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center ${
@@ -67,7 +67,7 @@ export const CozyHiveSection: React.FC<CozyHiveSectionProps> = ({
           </span>
 
           <h4 className="text-lg font-black text-stone-900 mb-1">
-            The Nectar Telemetry Pots (Borcanele cu Miere)
+            The Nectar Telemetry Pots
           </h4>
           <div className="text-xs font-bold text-amber-700 mb-2">
             Multi-Source Railway Physics & Causal Telemetry
@@ -90,7 +90,7 @@ export const CozyHiveSection: React.FC<CozyHiveSectionProps> = ({
           </div>
         </BaseCard>
 
-        {/* Prop 2: The Calibrated Nectar Dipper (Lingurița de Miere - Sub-Millisecond Edge Inference) */}
+        {/* Prop 2: The Calibrated Nectar Dipper (Sub-Millisecond Edge Inference) */}
         <BaseCard
           variant="elevated"
           className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center ${
@@ -112,7 +112,7 @@ export const CozyHiveSection: React.FC<CozyHiveSectionProps> = ({
           </span>
 
           <h4 className="text-lg font-black text-stone-900 mb-1">
-            The Calibrated Nectar Dipper (Lingurița de Miere)
+            The Calibrated Nectar Dipper
           </h4>
           <div className="text-xs font-bold text-amber-700 mb-2">
             Sub-Millisecond Edge Inference & Calibration
@@ -134,7 +134,7 @@ export const CozyHiveSection: React.FC<CozyHiveSectionProps> = ({
           </div>
         </BaseCard>
 
-        {/* Prop 3: The Junction Transfer Beehive (Stupul Central - Algorithmic Transfer Shield) */}
+        {/* Prop 3: The Junction Transfer Beehive (Algorithmic Transfer Shield) */}
         <BaseCard
           variant="elevated"
           className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center ${
@@ -156,7 +156,7 @@ export const CozyHiveSection: React.FC<CozyHiveSectionProps> = ({
           </span>
 
           <h4 className="text-lg font-black text-stone-900 mb-1">
-            The Junction Transfer Beehive (Stupul Central)
+            The Junction Transfer Beehive
           </h4>
           <div className="text-xs font-bold text-amber-700 mb-2">
             Algorithmic Transfer Shield & Real-Time Rerouting

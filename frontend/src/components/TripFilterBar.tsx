@@ -5,7 +5,6 @@ import { Filter, RotateCcw, Zap, Coins, ShieldCheck, Sparkles, ArrowUpDown } fro
 import { TripFilterState, POPULAR_ROMANIAN_PROVIDERS } from '../services/tripBookingService';
 import { TransitMode, CuratedPillar } from '../types/routePlan';
 import BaseCard from './BaseCard';
-import BaseButton from './BaseButton';
 
 export interface TripFilterBarProps {
   filters: TripFilterState;
@@ -22,10 +21,7 @@ const PILLARS: { id: 'ALL' | CuratedPillar; label: string; icon: React.Component
 ];
 
 const MODES: { id: TransitMode; label: string }[] = [
-  { id: 'TRAIN', label: 'Trains' },
-  { id: 'METRO', label: 'Metrorex' },
-  { id: 'TRAM', label: 'Trams' },
-  { id: 'BUS', label: 'Buses' },
+  { id: 'TRAIN', label: 'Trains & Rail' },
 ];
 
 const PRICE_TIERS = [
@@ -77,10 +73,10 @@ export const TripFilterBar: React.FC<TripFilterBarProps> = ({
               onChange={(e) => onChange({ ...filters, sortBy: e.target.value as any })}
               className="bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 text-xs font-medium text-stone-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
             >
-              <option value="departure">Departure Time</option>
-              <option value="duration">Shortest Duration</option>
-              <option value="price">Lowest Fare</option>
-              <option value="risk">Most Reliable (Shield)</option>
+              <option value="departure">Departure Time (00:00–23:59)</option>
+              <option value="risk">Recommended / Safest</option>
+              <option value="duration">Fastest</option>
+              <option value="price">Lowest Price</option>
             </select>
           </div>
 

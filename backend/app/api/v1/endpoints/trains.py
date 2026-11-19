@@ -5,12 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.schemas.auth import MessageResponse
 from app.schemas.common import PaginatedResponse
+from app.schemas.route_plan import TrainItineraryResponse
 from app.schemas.train import (
     RailwayOperatorsResponse,
+    TimetableStatusResponse,
+    TimetableSyncResponse,
     TrainCreate,
     TrainJourney,
     TrainUpdate,
 )
+from app.services.timetable_sync_service import timetable_sync_service
 from app.services.train_service import train_service
 
 router = APIRouter()
@@ -23,7 +27,10 @@ async def search_trains(
     operator: Optional[str] = Query(None, description="Filter by railway operator"),
     originCode: Optional[str] = Query(None, description="Origin station code (e.g. GLT, BCT)"),
     destinationCode: Optional[str] = Query(None, description="Destination station code (e.g. BSV, BCT)"),
+    origin: Optional[str] = Query(None, description="Origin station name or code"),
+    destination: Optional[str] = Query(None, description="Destination station name or code"),
     date: Optional[str] = Query(None, description="Travel date in YYYY-MM-DD format"),
+    travel_date: Optional[str] = Query(None, description="Travel date alias in YYYY-MM-DD format"),
     maxPrice: Optional[float] = Query(None, description="Maximum price in LEI"),
     sortBy: str = Query("departure", description="Sort by 'departure', 'price', or 'duration'"),
     sortOrder: str = Query("asc", description="'asc' or 'desc'"),
@@ -31,20 +38,36 @@ async def search_trains(
     pageSize: int = Query(20, ge=1, le=100, description="Items per page")
 ) -> Any:
     """Search Romanian rail journeys with status, tiered seat classes, amenities, and multi-operator fares."""
+    effective_date = travel_date or date
     trains, pagination = train_service.get_trains(
         search_query=searchQuery,
         status_filter=status,
         operator_filter=operator,
         origin_code=originCode,
         destination_code=destinationCode,
-        travel_date=date,
+        origin=origin,
+        destination=destination,
+        travel_date=effective_date,
         max_price=maxPrice,
         sort_by=sortBy,
         sort_order=sortOrder,
         page=page,
         page_size=pageSize
     )
-    return PaginatedResponse[TrainJourney](data=trains, pagination=pagination)
+    bw = timetable_sync_service.get_booking_window()
+    return PaginatedResponse[TrainJourney](data=trains, pagination=pagination, bookingWindow=bw)
+
+
+@router.get("/timetable-status", response_model=TimetableStatusResponse)
+async def get_timetable_status() -> Any:
+    """Returns active Romanian railway timetable period, operator train counts, and bookingWindow metadata."""
+    return timetable_sync_service.get_timetable_status()
+
+
+@router.post("/sync-timetables", response_model=TimetableSyncResponse)
+async def sync_timetables() -> Any:
+    """Discovers and synchronizes 2026-2027 and active 2025-2026 XML timetables from data.gov.ro CKAN API."""
+    return await timetable_sync_service.sync_timetables()
 
 
 @router.post("", response_model=TrainJourney, status_code=status.HTTP_201_CREATED)
@@ -61,6 +84,17 @@ async def list_railway_operators() -> Any:
     """Returns registered Romanian railway operators, live GTFS-RT feed health, and contact channels."""
     operators = train_service.list_operators()
     return RailwayOperatorsResponse(operators=operators)
+
+
+@router.get("/{train_number}/itinerary", response_model=TrainItineraryResponse)
+async def get_train_itinerary(
+    train_number: str,
+    date: Optional[str] = Query(None, description="Travel date in YYYY-MM-DD format"),
+    travel_date: Optional[str] = Query(None, description="Travel date alias in YYYY-MM-DD format"),
+) -> Any:
+    """Returns the train's complete end-to-end commercial itinerary with all stops, times, and dwell minutes."""
+    effective_date = travel_date or date
+    return train_service.get_train_itinerary(train_number, effective_date)
 
 
 @router.get("/{train_id}", response_model=TrainJourney)

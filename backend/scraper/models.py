@@ -85,7 +85,7 @@ class TrainScrapeRecord(BaseModel):
     Scraped train record encapsulating both Source 1 (TrainApiFeatures)
     and Source 5 (TargetLabels) matching freeze_contract.md.
     """
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
 
     source_train_api: TrainApiFeatures
     target_labels: TargetLabels

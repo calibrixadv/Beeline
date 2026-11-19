@@ -16,20 +16,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
-from app.core.database import AsyncSessionLocal, get_async_session_maker
+from app.core.database import get_async_session_maker
 from app.core.redis import get_redis
 from app.core.security import (
     compute_device_proof,
-    create_access_token,
-    create_refresh_token,
     decode_token,
     encrypt_auth_token,
     generate_secure_random_token,
     hash_password,
     hash_token,
-    verify_password,
 )
-from app.models.user import MFACredential, PasswordResetToken, User, UserSession, utcnow
+from app.models.user import PasswordResetToken, User, UserSession, utcnow
 from app.services.email_service import email_service
 
 logger = logging.getLogger(__name__)

@@ -8,7 +8,8 @@ import {
   SavedRouteResponse,
   BreachCheckResult,
 } from '../types/auth';
-import { TransitRoutePlan, TransitRouteQuery } from '../types/routePlan';
+import { TransitRoutePlan, TransitRouteQuery, BookingWindow, CuratedPillar, TrainItineraryResponse } from '../types/routePlan';
+import { TrainJourney } from '../types/train';
 import { TransitLineSchedule, ScheduleFilterParams } from '../types/schedule';
 
 export interface RoutePlanResponse {
@@ -16,6 +17,9 @@ export interface RoutePlanResponse {
   recommendedPlanId: string;
   query: TransitRouteQuery;
   generatedAt: string;
+  bookingWindow?: BookingWindow;
+  allDayDepartures?: TrainJourney[];
+  totalDayRoutes?: number;
 }
 
 class TokenStorage {
@@ -98,7 +102,19 @@ export class ApiClient {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(url, { ...options, headers });
+    let response: Response;
+    try {
+      response = await fetch(url, { ...options, headers });
+    } catch (err) {
+      // In-browser fallback: if direct cross-origin fetch to localhost:8000 fails (e.g. CORS or network boundary),
+      // retry via Next.js same-origin rewrite proxy (/api/v1/...)
+      if (typeof window !== 'undefined' && url.startsWith('http://localhost:8000/api/v1')) {
+        const proxyUrl = `/api/v1${endpoint}`;
+        response = await fetch(proxyUrl, { ...options, headers });
+      } else {
+        throw err;
+      }
+    }
 
     if (response.status === 401 && retryOnAuthFailure) {
       const refreshToken = tokenStorage.getRefreshToken();
@@ -325,41 +341,62 @@ export class ApiClient {
       body: JSON.stringify(query),
     });
 
-    if (!res.ok) throw new Error('Failed to compute route plan');
+    if (!res.ok) {
+      let errorMsg = 'Failed to compute route plan';
+      try {
+        const err = await res.json();
+        if (err.detail) errorMsg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+      } catch {}
+      const error = new Error(errorMsg);
+      (error as any).status = res.status;
+      throw error;
+    }
     const data: RoutePlanResponse = await res.json();
 
     if (data && Array.isArray(data.plans)) {
       data.plans = data.plans.map((plan) => {
-        if (plan && plan.riskAnalysis) {
-          const rawRisk = plan.riskAnalysis as unknown as Record<string, unknown>;
-          plan.riskAnalysis = {
-            ...plan.riskAnalysis,
-            expectedDelayMinutes:
-              typeof rawRisk.expectedDelayMinutes === 'number'
-                ? rawRisk.expectedDelayMinutes
-                : typeof rawRisk.expected_delay_minutes === 'number'
-                ? (rawRisk.expected_delay_minutes as number)
-                : 0,
-            missedConnectionProbability:
-              typeof rawRisk.missedConnectionProbability === 'number'
-                ? rawRisk.missedConnectionProbability
-                : typeof rawRisk.missed_connection_probability === 'number'
-                ? (rawRisk.missed_connection_probability as number)
-                : 0.0,
-            riskFactors: Array.isArray(rawRisk.riskFactors)
-              ? (rawRisk.riskFactors as string[])
-              : Array.isArray(rawRisk.risk_factors)
-              ? (rawRisk.risk_factors as string[])
-              : Array.isArray(rawRisk.delayRiskFactors)
-              ? (rawRisk.delayRiskFactors as string[])
-              : [],
-            isMlComputed:
-              typeof rawRisk.isMlComputed === 'boolean'
-                ? rawRisk.isMlComputed
-                : typeof rawRisk.is_ml_computed === 'boolean'
-                ? (rawRisk.is_ml_computed as boolean)
-                : false,
-          };
+        if (plan) {
+          const rawPlan = plan as unknown as Record<string, unknown>;
+          const rawPillars = rawPlan.curatedPillars || rawPlan.curated_pillars;
+          if (Array.isArray(rawPillars)) {
+            plan.curatedPillars = rawPillars as CuratedPillar[];
+          } else if (plan.curatedPillar) {
+            plan.curatedPillars = [plan.curatedPillar];
+          } else {
+            plan.curatedPillars = [];
+          }
+
+          if (plan.riskAnalysis) {
+            const rawRisk = plan.riskAnalysis as unknown as Record<string, unknown>;
+            plan.riskAnalysis = {
+              ...plan.riskAnalysis,
+              expectedDelayMinutes:
+                typeof rawRisk.expectedDelayMinutes === 'number'
+                  ? rawRisk.expectedDelayMinutes
+                  : typeof rawRisk.expected_delay_minutes === 'number'
+                  ? (rawRisk.expected_delay_minutes as number)
+                  : 0,
+              missedConnectionProbability:
+                typeof rawRisk.missedConnectionProbability === 'number'
+                  ? rawRisk.missedConnectionProbability
+                  : typeof rawRisk.missed_connection_probability === 'number'
+                  ? (rawRisk.missed_connection_probability as number)
+                  : 0.0,
+              riskFactors: Array.isArray(rawRisk.riskFactors)
+                ? (rawRisk.riskFactors as string[])
+                : Array.isArray(rawRisk.risk_factors)
+                ? (rawRisk.risk_factors as string[])
+                : Array.isArray(rawRisk.delayRiskFactors)
+                ? (rawRisk.delayRiskFactors as string[])
+                : [],
+              isMlComputed:
+                typeof rawRisk.isMlComputed === 'boolean'
+                  ? rawRisk.isMlComputed
+                  : typeof rawRisk.is_ml_computed === 'boolean'
+                  ? (rawRisk.is_ml_computed as boolean)
+                  : false,
+            };
+          }
         }
         return plan;
       });
@@ -379,6 +416,72 @@ export class ApiClient {
     const res = await this.fetchWithAuth(endpoint);
 
     if (!res.ok) throw new Error('Failed to fetch schedules');
+    return res.json();
+  }
+
+  async getTrains(params?: {
+    origin?: string;
+    destination?: string;
+    travel_date?: string;
+    operator?: string;
+    page?: number;
+    page_size?: number;
+  }): Promise<{ items: TrainJourney[]; total: number; bookingWindow?: BookingWindow }> {
+    const urlParams = new URLSearchParams();
+    if (params?.origin) urlParams.append('origin', params.origin);
+    if (params?.destination) urlParams.append('destination', params.destination);
+    if (params?.travel_date) urlParams.append('travel_date', params.travel_date);
+    if (params?.operator) urlParams.append('operator', params.operator);
+    if (params?.page) urlParams.append('page', String(params.page));
+    if (params?.page_size) urlParams.append('page_size', String(params.page_size));
+
+    const qs = urlParams.toString();
+    const endpoint = `/trains${qs ? `?${qs}` : ''}`;
+    const res = await this.fetchWithAuth(endpoint);
+
+    if (!res.ok) {
+      let errorMsg = 'Failed to fetch trains';
+      try {
+        const err = await res.json();
+        if (err.detail) errorMsg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+      } catch {}
+      const e = new Error(errorMsg);
+      (e as any).status = res.status;
+      throw e;
+    }
+    return res.json();
+  }
+
+  async fetchTrainItinerary(
+    trainNumber: string,
+    date?: string
+  ): Promise<TrainItineraryResponse> {
+    const encodedNumber = encodeURIComponent(trainNumber.trim());
+    const dateParam = date ? `?date=${encodeURIComponent(date.slice(0, 10))}` : '';
+    const res = await this.fetchWithAuth(`/trains/${encodedNumber}/itinerary${dateParam}`);
+
+    if (!res.ok) {
+      let errorMsg = `Failed to fetch itinerary for train ${trainNumber}`;
+      try {
+        const err = await res.json();
+        if (err.detail) errorMsg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+      } catch {}
+      const e = new Error(errorMsg);
+      (e as any).status = res.status;
+      throw e;
+    }
+    return res.json();
+  }
+
+  async getTimetableStatus(): Promise<{
+    activeTimetable: string;
+    totalDailyTrains: number;
+    totalRoutes: number;
+    operators: Record<string, number>;
+    bookingWindow: BookingWindow;
+  }> {
+    const res = await this.fetchWithAuth('/trains/timetable-status');
+    if (!res.ok) throw new Error('Failed to fetch timetable status');
     return res.json();
   }
 
@@ -457,4 +560,11 @@ export function formatConnectionGuaranteeBadge(
   }
   const pct = Math.max(0, Math.min(100, Math.round((1 - missedProb) * 100)));
   return `🛡️ ${pct}% ${label}`;
+}
+
+export async function fetchTrainItinerary(
+  trainNumber: string,
+  date?: string
+): Promise<TrainItineraryResponse> {
+  return apiClient.fetchTrainItinerary(trainNumber, date);
 }

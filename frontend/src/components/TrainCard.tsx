@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Train, Clock, ShieldCheck, Leaf, Info, Check, Plus } from 'lucide-react';
+import { Leaf, Info, Check, Plus } from 'lucide-react';
 import { TrainJourney } from '../types/train';
-import { getLowestFare, formatCurrency, formatTimeOnly } from '../utils/trainFilters';
+import { getLowestFare, formatTimeOnly } from '../utils/trainFilters';
 import { useTrip } from '../context/TripContext';
 import BaseCard from './BaseCard';
 import BaseButton from './BaseButton';

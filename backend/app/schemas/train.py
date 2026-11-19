@@ -109,3 +109,48 @@ class RailwayOperator(BaseModel):
 
 class RailwayOperatorsResponse(BaseModel):
     operators: List[RailwayOperator]
+
+
+class TimetableBookingWindow(BaseModel):
+    minDate: str
+    maxDate: str
+    advanceBookingDays: int = 90
+    activeTimetable: str = "2025-2026 / 2026-2027"
+    liveSource: str = "INFOFER_IRIS_AND_OFFICIAL_XML"
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class TimetableStatusResponse(BaseModel):
+    status: str = "OPERATIONAL"
+    activeTimetable: str
+    timetableTransitionDate: str
+    operatorCounts: dict
+    totalActiveDailyTrains: int
+    totalRoutes: int
+    operatorsCovered: List[str]
+    bookingWindow: TimetableBookingWindow
+    lastSyncedAt: str
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class TimetableSyncResponse(BaseModel):
+    status: str
+    apiSourceStatus: str
+    discoveredPackages: int
+    downloadedFiles: int
+    activeTimetable: str
+    totalActiveDailyTrains: int
+    totalRoutes: int
+    operatorCounts: dict
+    bookingWindow: TimetableBookingWindow
+    lastSyncedAt: str
+
+    model_config = ConfigDict(extra="ignore")
+
+
+# Re-export TrainItineraryResponse for backward compatibility
+from app.schemas.route_plan import TrainItineraryResponse  # noqa: E402
+
+

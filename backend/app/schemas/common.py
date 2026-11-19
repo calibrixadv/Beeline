@@ -1,4 +1,4 @@
-from typing import Generic, List, TypeVar
+from typing import Any, Generic, List, Optional, TypeVar
 from pydantic import BaseModel, ConfigDict
 
 T = TypeVar("T")
@@ -18,5 +18,6 @@ class PaginationMeta(BaseModel):
 class PaginatedResponse(BaseModel, Generic[T]):
     data: List[T]
     pagination: PaginationMeta
+    bookingWindow: Optional[Any] = None
 
     model_config = ConfigDict(extra="ignore")

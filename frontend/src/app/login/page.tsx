@@ -22,7 +22,6 @@ import { useAuth } from '../../context/AuthContext';
 import { checkPasswordBreach, checkEmailBreach, PasswordBreachStatus, EmailBreachStatus } from '../../services/breachCheckerService';
 import BaseCard from '../../components/BaseCard';
 import BaseButton from '../../components/BaseButton';
-import BaseInput from '../../components/BaseInput';
 import MascotBee from '../../components/MascotBee';
 
 type AuthTab = 'login' | 'signup';
@@ -268,18 +267,6 @@ function AuthContent() {
       setSignupError(err.message || 'Registration failed. Please check your details.');
     } finally {
       setSignupLoading(false);
-    }
-  };
-
-  // Handle Manual Breach Check Trigger
-  const handleManualBreachScan = async () => {
-    if (!signupPassword) return;
-    setIsCheckingPasswordBreach(true);
-    try {
-      const result = await checkPasswordBreach(signupPassword);
-      setPasswordBreach(result);
-    } finally {
-      setIsCheckingPasswordBreach(false);
     }
   };
 

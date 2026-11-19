@@ -12,7 +12,6 @@ from urllib.parse import quote
 
 import pyotp
 import qrcode
-from qrcode.image.pil import PilImage
 from qrcode.image.svg import SvgImage
 
 from app.core.config import settings

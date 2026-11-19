@@ -1,4 +1,16 @@
 import { TrainClass, TrainJourney } from './train';
+import { CuratedPillar, TransferDetail } from './routePlan';
+
+export interface TripOption {
+  id: string;
+  journey: TrainJourney;
+  curatedPillar?: CuratedPillar | null;
+  curatedPillars?: CuratedPillar[];
+  date?: string;
+  totalDurationMinutes?: number;
+  priceLei?: number;
+  transfers?: TransferDetail[];
+}
 
 export interface TripItem {
   id: string;
@@ -7,6 +19,18 @@ export interface TripItem {
   travelDate: string;
   notes?: string;
   addedAt: string;
+  date?: string;
+  bookingWindow?: {
+    minDate: string;
+    maxDate: string;
+    advanceBookingDays: number;
+    activeTimetable: string;
+    liveSource: string;
+  };
+  liveStatus?: 'ON_TIME' | 'DELAYED' | 'CANCELLED' | 'SCHEDULED';
+  delayMinutes?: number;
+  timetableSource?: string;
+  commercialStops?: string[];
 }
 
 export interface TripContextType {

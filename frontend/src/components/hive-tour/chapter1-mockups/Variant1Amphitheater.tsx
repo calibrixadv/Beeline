@@ -9,12 +9,9 @@ import {
   Sparkles,
   Play,
   RotateCcw,
-  ArrowRight,
-  TrendingDown,
   Gauge,
   Clock,
   Shield,
-  Activity,
 } from 'lucide-react';
 import MascotBee, { MascotGear } from '../../MascotBee';
 import MiniWorkerBee from '../MiniWorkerBee';
@@ -52,7 +49,7 @@ const QUEENS_CONFIG: Record<'safe' | 'fast' | 'economy', QueenProfile> = {
     name: 'Queen Meli',
     roleTitle: 'Queen Transfer Guard',
     title: 'Queen Meli • Queen Transfer Guard',
-    romanianTitle: 'Regina Meli — Matca Scutului de Transfer',
+    romanianTitle: 'Queen Meli — Royal Transfer Shield',
     badge: 'SAFE ROUTE GUARDIAN',
     color: '#10B981',
     glowColor: 'rgba(16, 185, 129, 0.45)',
@@ -76,7 +73,7 @@ const QUEENS_CONFIG: Record<'safe' | 'fast' | 'economy', QueenProfile> = {
     name: 'Queen Vira',
     roleTitle: 'Queen Express Scout',
     title: 'Queen Vira • Queen Express Scout',
-    romanianTitle: 'Regina Vira — Matca Vitezei InterCity',
+    romanianTitle: 'Queen Vira — Supersonic Express Scout',
     badge: 'SUPERSONIC SCOUT',
     color: '#3B82F6',
     glowColor: 'rgba(59, 130, 246, 0.45)',
@@ -100,7 +97,7 @@ const QUEENS_CONFIG: Record<'safe' | 'fast' | 'economy', QueenProfile> = {
     name: 'Queen Flora',
     roleTitle: 'Queen Nectar Saver',
     title: 'Queen Flora • Queen Nectar Saver',
-    romanianTitle: 'Regina Flora — Matca Economiei Inteligente',
+    romanianTitle: 'Queen Flora — Smart Fare Harvester',
     badge: 'BEST VALUE NECTAR',
     color: '#D97706',
     glowColor: 'rgba(217, 119, 6, 0.45)',
@@ -395,7 +392,7 @@ export const Variant1Amphitheater: React.FC<Variant1AmphitheaterProps> = ({
           {/* 2. FLOATING HEXAGONAL QUEEN DOCK (3 Interactive Glassmorphic Cards) */}
           <div className="w-full">
             <div className="text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-2.5 px-1 flex items-center justify-between">
-              <span>SELECT ROYAL QUEEN MATCĂ</span>
+              <span>SELECT ROYAL QUEEN</span>
               <span className="text-amber-700 font-extrabold">3 DEDICATED SWARMS</span>
             </div>
 

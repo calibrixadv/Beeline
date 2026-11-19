@@ -10,15 +10,14 @@ import Variant5BentoTrainRadar from '../components/hive-tour/chapter1-mockups/Va
 import Variant6MagneticHoneyPortal from '../components/hive-tour/chapter1-mockups/Variant6MagneticHoneyPortal';
 
 describe('Chapter 1 Design Lab & Variant Architectures', () => {
-  it('renders Chapter 1 unified production architecture combining Design 4 Golden Rail and Design 6 Beehive Route Preview Map', () => {
+  it('renders Chapter 1 unified production architecture: Queen Sanctuaries and Unified Beehive Route Preview Map', () => {
     const handleSelectQueen = jest.fn();
     const { container } = render(
       <QueenBeesSection activeGear="safe" onSelectQueen={handleSelectQueen} />
     );
 
-    // Assert top Chapter 1 heading and Golden Railway Track exist
+    // Assert top Chapter 1 heading exists
     expect(screen.getByRole('heading', { level: 3, name: /The Three Queen Bees & Their Hive Swarms/i })).toBeInTheDocument();
-    expect(screen.getByTestId('variant-4-living-rail-track')).toBeInTheDocument();
 
     // Assert the 3 Queen sanctuary cards exist
     expect(screen.getByTestId('queen-card-safe')).toBeInTheDocument();
@@ -33,10 +32,6 @@ describe('Chapter 1 Design Lab & Variant Architectures', () => {
     expect(safePortalBtn).toBeInTheDocument();
     expect(fastPortalBtn).toBeInTheDocument();
     expect(economyPortalBtn).toBeInTheDocument();
-
-    // Assert Railway Switch (Macaz) on top track
-    expect(screen.getByTestId('rail-switch-south')).toBeInTheDocument();
-    expect(screen.getByTestId('rail-switch-central')).toBeInTheDocument();
 
     // Assert Interactive Route Preview Map (#queen-route-preview)
     expect(screen.getByTestId('queen-route-preview')).toBeInTheDocument();
@@ -142,7 +137,7 @@ describe('Chapter 1 Design Lab & Variant Architectures', () => {
   });
 
   it('renders Queen Vira Magistrala 300 Speed Comparator with -60 min saved and animated dual-track race', () => {
-    const { container } = render(<Variant1Amphitheater activeGear="fast" />);
+    render(<Variant1Amphitheater activeGear="fast" />);
 
     // Header & Corridor
     expect(screen.getByText(/Interactive Magistrala 300 Speed Comparator/i)).toBeInTheDocument();
@@ -365,9 +360,9 @@ describe('Chapter 1 Design Lab & Variant Architectures', () => {
       expect(screen.getAllByText(/Queen Meli/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Queen Vira/i).length).toBeGreaterThan(0);
       expect(screen.getAllByText(/Queen Flora/i).length).toBeGreaterThan(0);
-      expect(screen.getByText(/Regina Meli — Matca Scutului de Transfer/i)).toBeInTheDocument();
-      expect(screen.getByText(/Regina Vira — Matca Vitezei InterCity/i)).toBeInTheDocument();
-      expect(screen.getByText(/Regina Flora — Matca Economiei Inteligente/i)).toBeInTheDocument();
+      expect(screen.getByText(/Queen Meli — Royal Transfer Shield/i)).toBeInTheDocument();
+      expect(screen.getByText(/Queen Vira — Supersonic Express Scout/i)).toBeInTheDocument();
+      expect(screen.getByText(/Queen Flora — Smart Fare Harvester/i)).toBeInTheDocument();
 
       // Hero Metric Badges
       expect(screen.getByText(/96\/100 Buffer/i)).toBeInTheDocument();
@@ -775,7 +770,7 @@ describe('Chapter 1 Design Lab & Variant Architectures', () => {
     });
 
     it('renders the cursor-following magnetic bee swarm field and morphs based on cursor zone', () => {
-      const { container } = render(<Variant6MagneticHoneyPortal activeGear="safe" />);
+      render(<Variant6MagneticHoneyPortal activeGear="safe" />);
       const swarmField = screen.getByTestId('magnetic-worker-bee-swarm-field');
       expect(swarmField).toBeInTheDocument();
 

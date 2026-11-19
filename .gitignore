@@ -1,28 +1,65 @@
+# Dependencies
 node_modules/
-.expo/
-dist/
-coverage/
 frontend/node_modules/
+mobile/node_modules/
+.expo/
 frontend/.expo/
+
+# Build and Compilation Artifacts
+dist/
 frontend/dist/
+frontend/.next/
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+
+# Test and Coverage Artifacts
+coverage/
 frontend/coverage/
+.pytest_cache/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+
+# Python Bytecode and Virtual Environments
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+
+# ML Training & CatBoost Artifacts
+catboost_info/
+**/catboost_info/
+
+# Scraper Caches & Scratch Data (Preserving locally, ignored from git)
+backend/scraper/.cache/*.parquet
+backend/scraper/.cache/*.csv
+backend/scraper/.cache/trains/
+
+# Local Databases & Secrets
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.local
+.env.*.local
+*.log
+
+# OS & Editor Junk
+.DS_Store
+**/.DS_Store
+*.swp
+.*.swp
+.system_generated/
 npm-debug.*
+
+# Mobile Credentials
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
 *.orig.*
-.system_generated/
-.DS_Store
-*.swp
-.*.swp
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.pytest_cache/
-*.db
-*.sqlite
-*.sqlite3
-.env

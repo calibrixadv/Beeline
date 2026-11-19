@@ -88,7 +88,7 @@ export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
   default: {
     gear: 'default',
     characterName: 'Bumbi',
-    romanianRole: 'Cercetașul Magistralei Feroviare',
+    romanianRole: 'Mainline Rail Explorer',
     title: 'Beeline Explorer',
     badge: '🧭 EXPLORER',
     gearName: 'Aviator Goggles & Explorer Knot',
@@ -103,7 +103,7 @@ export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
   fast: {
     gear: 'fast',
     characterName: 'Queen Vira',
-    romanianRole: 'Matca Vitezei InterCity',
+    romanianRole: 'Supersonic Express Scout',
     title: 'Express Scout',
     badge: '⚡ FAST ROUTE',
     gearName: 'Supersonic Speed Visor & Scarf',
@@ -118,7 +118,7 @@ export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
   safe: {
     gear: 'safe',
     characterName: 'Queen Meli',
-    romanianRole: 'Matca Scutului de Transfer',
+    romanianRole: 'Royal Transfer Shield',
     title: 'Transfer Guard',
     badge: '🛡️ SAFE ROUTE',
     gearName: 'Romanian Transfer Shield',
@@ -133,7 +133,7 @@ export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
   economy: {
     gear: 'economy',
     characterName: 'Queen Flora',
-    romanianRole: 'Matca Economiei Feroviare',
+    romanianRole: 'Smart Fare Harvester',
     title: 'Nectar Saver',
     badge: '💰 BEST VALUE',
     gearName: 'Nectar Jar & Bargain Specs',

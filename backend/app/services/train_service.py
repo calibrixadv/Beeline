@@ -1,8 +1,8 @@
 import json
 import math
 import uuid
-from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from datetime import datetime, timedelta, timezone
+from typing import Any, List, Optional, Tuple
 from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,13 @@ from app.schemas.train import (
     TrainStation,
     TrainStop,
     TrainUpdate,
+)
+from app.schemas.route_plan import BookingWindowInfo, TrainItineraryResponse
+from app.services.timetable_sync_service import timetable_sync_service
+from scraper.collectors.train_api import (
+    DataGovXMLAdapter,
+    STATION_DICTIONARY,
+    normalize_train_number,
 )
 
 OPERATORS_DATA: List[RailwayOperator] = [
@@ -68,6 +75,26 @@ OPERATORS_DATA: List[RailwayOperator] = [
         phone="+40260611222",
         gtfsRtHealth="DEGRADED",
         logoUrl="https://beeline.io/assets/operators/irc.png"
+    ),
+    RailwayOperator(
+        id="ferotrafic-tfi",
+        name="Ferotrafic TFI",
+        shortName="Ferotrafic",
+        country="Romania",
+        website="https://ferotrafic.ro",
+        phone="+40232252525",
+        gtfsRtHealth="OPERATIONAL",
+        logoUrl="https://beeline.io/assets/operators/ferotrafic.png"
+    ),
+    RailwayOperator(
+        id="softrans",
+        name="Softrans",
+        shortName="Softrans",
+        country="Romania",
+        website="https://softrans.ro",
+        phone="+40251414000",
+        gtfsRtHealth="OPERATIONAL",
+        logoUrl="https://beeline.io/assets/operators/softrans.png"
     )
 ]
 
@@ -323,6 +350,123 @@ TRAINS_DATA: List[TrainJourney] = [
 ]
 
 
+def _scrape_record_to_train_journey(rec: Any, travel_date: str) -> TrainJourney:
+    t_num = rec.train_number
+    dep_sec = getattr(rec, "departure_seconds", 0)
+    duration_min = max(10, int(round(rec.source_train_api.scheduled_duration_minutes)))
+    arr_sec = getattr(rec, "arrival_seconds", dep_sec + duration_min * 60)
+
+    dep_hh = dep_sec // 3600
+    dep_mm = (dep_sec % 3600) // 60
+    dep_time_iso = f"{travel_date}T{dep_hh:02d}:{dep_mm:02d}:00+02:00"
+
+    arr_day_offset = arr_sec // 86400
+    arr_rem_sec = arr_sec % 86400
+    arr_hh = arr_rem_sec // 3600
+    arr_mm = (arr_rem_sec % 3600) // 60
+    if arr_day_offset > 0:
+        arr_date = (datetime.strptime(travel_date, "%Y-%m-%d").date() + timedelta(days=arr_day_offset)).isoformat()
+    else:
+        arr_date = travel_date
+    arr_time_iso = f"{arr_date}T{arr_hh:02d}:{arr_mm:02d}:00+02:00"
+
+    full_op = getattr(rec, "full_operator", None)
+    if not full_op:
+        op_map = {
+            "CFR": "CFR Călători",
+            "ASTRA": "Astra Trans Carpatic",
+            "TFC": "Transferoviar Călători",
+            "SOFTRANS": "Softrans",
+            "REGIO": "Regio Călători",
+        }
+        full_op = op_map.get(rec.operator, "CFR Călători")
+
+    orig_c = rec.source_train_api.origin_station_code
+    dest_c = rec.source_train_api.destination_station_code
+    orig_name = STATION_DICTIONARY.get(orig_c, {}).get("name", orig_c)
+    dest_name = STATION_DICTIONARY.get(dest_c, {}).get("name", dest_c)
+
+    dist = rec.source_train_api.distance_km
+    cat = rec.source_train_api.train_category
+    if cat == 3:  # IC
+        p_std = round(18.0 + dist * 0.38, 2)
+    elif cat == 2:  # IR
+        p_std = round(12.0 + dist * 0.30, 2)
+    elif cat == 1:  # RE
+        p_std = round(7.0 + dist * 0.25, 2)
+    else:  # R
+        p_std = round(5.0 + dist * 0.20, 2)
+    p_1st = round(p_std * 1.5, 2)
+
+    fares = [
+        TrainFare(classType="STANDARD", price=p_std, currency="RON", seatsAvailable=48),
+        TrainFare(classType="FIRST", price=p_1st, currency="RON", seatsAvailable=12),
+    ]
+    if cat >= 2:
+        fares.append(TrainFare(classType="BUSINESS", price=round(p_std * 2.0, 2), currency="RON", seatsAvailable=4))
+
+    amenities = ["POWER_OUTLETS", "WHEELCHAIR_ACCESSIBLE"]
+    if cat >= 2:
+        amenities.append("WIFI")
+    if cat == 3 or "astra" in full_op.lower() or "softrans" in full_op.lower():
+        amenities.append("DINING_CAR")
+
+    stops_data = []
+    raw_stops = getattr(rec, "route_stops", None)
+    if raw_stops:
+        for idx, s in enumerate(raw_stops):
+            s_dep_sec = s.get("dep_sec", 0)
+            s_arr_sec = s.get("arr_sec", s_dep_sec)
+            s_dep_iso = f"{travel_date}T{(s_dep_sec // 3600):02d}:{((s_dep_sec % 3600) // 60):02d}:00+02:00"
+            s_arr_iso = f"{travel_date}T{(s_arr_sec // 3600):02d}:{((s_arr_sec % 3600) // 60):02d}:00+02:00"
+            stops_data.append(TrainStop(
+                stopNumber=idx + 1,
+                station=TrainStation(code=s["code"], name=s["name"], city=s["name"]),
+                scheduledArrival=s_arr_iso,
+                scheduledDeparture=s_dep_iso,
+                platform=str((idx % 4) + 1)
+            ))
+    else:
+        stops_data = [
+            TrainStop(
+                stopNumber=1,
+                station=TrainStation(code=orig_c, name=orig_name, city=orig_name),
+                scheduledDeparture=dep_time_iso,
+                platform="1"
+            ),
+            TrainStop(
+                stopNumber=2,
+                station=TrainStation(code=dest_c, name=dest_name, city=dest_name),
+                scheduledArrival=arr_time_iso,
+                platform="2"
+            )
+        ]
+
+    delay = int(round(rec.target_labels.actual_delay_minutes))
+    status_str = "DELAYED" if delay > 5 else "ON_TIME"
+
+    clean_num = t_num.lower().replace(" ", "-")
+    journey_id = f"tr-{clean_num}-{travel_date.replace('-', '')}"
+
+    return TrainJourney(
+        id=journey_id,
+        trainNumber=t_num,
+        operator=full_op,
+        origin=TrainStation(code=orig_c, name=orig_name, city=orig_name, platform="1"),
+        destination=TrainStation(code=dest_c, name=dest_name, city=dest_name, platform="2"),
+        departureTime=dep_time_iso,
+        arrivalTime=arr_time_iso,
+        durationMinutes=duration_min,
+        durationFormatted=f"{duration_min // 60}h {duration_min % 60}m",
+        status=status_str,
+        delayMinutes=delay,
+        carbonFootprintKg=round(dist * 0.035, 1),
+        amenities=amenities,
+        fares=fares,
+        stops=stops_data
+    )
+
+
 class TrainService:
     @staticmethod
     def get_trains(
@@ -331,6 +475,8 @@ class TrainService:
         operator_filter: Optional[str] = None,
         origin_code: Optional[str] = None,
         destination_code: Optional[str] = None,
+        origin: Optional[str] = None,
+        destination: Optional[str] = None,
         travel_date: Optional[str] = None,
         max_price: Optional[float] = None,
         sort_by: str = "departure",
@@ -338,7 +484,46 @@ class TrainService:
         page: int = 1,
         page_size: int = 20
     ) -> Tuple[List[TrainJourney], PaginationMeta]:
-        results = list(TRAINS_DATA)
+        # 1. Booking window validation if travel_date specified
+        if travel_date:
+            bw = timetable_sync_service.get_booking_window()
+            min_date = bw["minDate"]
+            max_date = bw["maxDate"]
+            if travel_date < min_date:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Cannot plan or book a trip in the past. Please choose a date from today onward."
+                )
+            if travel_date > max_date:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Travel date '{travel_date}' is outside the booking window ({min_date} to {max_date}). Please choose a date within 90 days."
+                )
+
+            effective_orig = origin or origin_code
+            effective_dest = destination or destination_code
+            if effective_orig and effective_dest:
+                xml_adapter = DataGovXMLAdapter.get_shared_instance()
+                records = xml_adapter.fetch_itinerary_sync(effective_orig, effective_dest, date_str=travel_date)
+                if records:
+                    results = [_scrape_record_to_train_journey(r, travel_date) for r in records]
+                else:
+                    results = [t for t in TRAINS_DATA if t.departureTime.startswith(travel_date)]
+            else:
+                date_trains = [t for t in TRAINS_DATA if t.departureTime.startswith(travel_date)]
+                if date_trains:
+                    results = date_trains
+                else:
+                    xml_adapter = DataGovXMLAdapter.get_shared_instance()
+                    store = xml_adapter._get_store_for_date(travel_date)
+                    routes_map = store.get("train_routes", {})
+                    results = [
+                        _scrape_record_to_train_journey(rinfo["record"], travel_date)
+                        for _, rinfo in list(routes_map.items())[:200]
+                        if rinfo.get("record")
+                    ]
+        else:
+            results = list(TRAINS_DATA)
 
         # Filters
         if search_query:
@@ -412,11 +597,94 @@ class TrainService:
         for t in TRAINS_DATA:
             if t.id == train_id:
                 return t
+        parts = train_id.split("-")
+        if len(parts) >= 4 and parts[0] == "tr" and parts[-1].isdigit() and len(parts[-1]) == 8:
+            date_guess = parts[-1]
+            date_str = f"{date_guess[:4]}-{date_guess[4:6]}-{date_guess[6:8]}"
+            train_category = parts[1].upper()
+            train_number = parts[2]
+            target_norm = f"{train_category} {train_number}"
+            xml_adapter = DataGovXMLAdapter()
+            store = xml_adapter._get_store_for_date(date_str)
+            routes = store.get("train_routes", {})
+            for t_num, rinfo in routes.items():
+                if target_norm == t_num or (train_number in t_num and train_category in t_num):
+                    rec = rinfo.get("record")
+                    if rec:
+                        return _scrape_record_to_train_journey(rec, date_str)
         return None
 
     @staticmethod
     def list_operators() -> List[RailwayOperator]:
         return OPERATORS_DATA
+
+    @staticmethod
+    def get_train_itinerary(
+        train_number: str, travel_date: Optional[str] = None
+    ) -> TrainItineraryResponse:
+        bw = timetable_sync_service.get_booking_window()
+        min_date = bw["minDate"]
+        max_date = bw["maxDate"]
+
+        effective_date = travel_date or min_date
+        date_str = effective_date[:10]
+
+        if date_str < min_date:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Cannot plan or book a trip in the past. Please choose a date from today onward.",
+            )
+        if date_str > max_date:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Travel date '{date_str}' is outside the booking window ({min_date} to {max_date}). Please choose a date within 90 days.",
+            )
+
+        xml_adapter = DataGovXMLAdapter.get_shared_instance()
+        route_info = xml_adapter.get_train_route_info(train_number, service_date=date_str)
+        if not route_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Train '{train_number}' not found in active timetable.",
+            )
+
+        rec = route_info["record"]
+        raw_stops = route_info["stops"]
+        operator = route_info.get("full_operator") or "CFR Călători"
+        full_train_origin = route_info.get("full_train_origin") or (raw_stops[0]["name"] if raw_stops else "Origin")
+        full_train_destination = route_info.get("full_train_destination") or (raw_stops[-1]["name"] if raw_stops else "Destination")
+        cat_name = route_info.get("train_category") or "IR"
+
+        # Build complete stop-by-stop itinerary
+        from app.services.routing_service import build_leg_stops
+        stops = build_leg_stops(raw_stops, date_str, is_first_leg=True, is_last_leg=True)
+
+        tot_dist = float(stops[-1].distanceFromOriginKm) if stops else float(rec.source_train_api.distance_km)
+        tot_dur = int(rec.source_train_api.scheduled_duration_minutes)
+
+        norm_num = normalize_train_number(train_number) or rec.train_number
+
+        bw_info = BookingWindowInfo(
+            minDate=min_date,
+            maxDate=max_date,
+            advanceBookingDays=bw.get("advanceBookingDays", 90),
+            activeTimetable=bw.get("activeTimetable", "2025-2026 / 2026-2027"),
+            liveSource=bw.get("liveSource", "INFOFER_IRIS_AND_OFFICIAL_XML"),
+        )
+
+        return TrainItineraryResponse(
+            trainNumber=norm_num,
+            operator=operator,
+            trainCategory=cat_name,
+            date=date_str,
+            fullTrainOrigin=full_train_origin,
+            fullTrainDestination=full_train_destination,
+            totalDistanceKm=tot_dist,
+            totalDurationMinutes=tot_dur,
+            stops=stops,
+            liveSource="INFOFER_IRIS_AND_OFFICIAL_XML",
+            bookingWindow=bw_info,
+        )
 
     @staticmethod
     async def create_train(data: TrainCreate, db: Optional[AsyncSession] = None) -> TrainJourney:

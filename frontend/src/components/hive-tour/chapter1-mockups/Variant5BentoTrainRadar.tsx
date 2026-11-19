@@ -3,28 +3,13 @@
 import React, { useState, useEffect, useId } from 'react';
 import {
   ShieldCheck,
-  Zap,
   Coins,
   Check,
-  Clock,
-  ArrowRight,
   Gauge,
-  Sparkles,
   Radio,
-  Train,
-  Wifi,
-  Coffee,
-  Layers,
-  ChevronRight,
   Activity,
   Cpu,
-  Percent,
-  Shield,
-  AlertCircle,
-  Navigation,
-  Flame,
   CheckCircle2,
-  Info,
 } from 'lucide-react';
 import MascotBee, { MascotGear } from '../../MascotBee';
 import MiniWorkerBee from '../MiniWorkerBee';
@@ -550,7 +535,7 @@ export const Variant5BentoTrainRadar: React.FC<Variant5BentoTrainRadarProps> = (
                   Queen Meli • Queen Transfer Guard
                 </h4>
                 <div className="text-xs font-semibold text-stone-500">
-                  Regina Meli — Matca Scutului de Transfer
+                  Queen Meli — Royal Transfer Shield
                 </div>
               </div>
             </div>
@@ -942,7 +927,7 @@ export const Variant5BentoTrainRadar: React.FC<Variant5BentoTrainRadarProps> = (
                     Queen Vira • Queen Express Scout
                   </h4>
                   <div className="text-[11px] font-semibold text-stone-500">
-                    Regina Vira — Matca Vitezei InterCity
+                    Queen Vira — Supersonic Express Scout
                   </div>
                 </div>
               </div>
@@ -1211,7 +1196,7 @@ export const Variant5BentoTrainRadar: React.FC<Variant5BentoTrainRadarProps> = (
                   Queen Flora • Queen Nectar Saver
                 </h4>
                 <div className="text-xs font-semibold text-stone-500">
-                  Regina Flora — Matca Economiei Inteligente
+                  Queen Flora — Smart Fare Harvester
                 </div>
               </div>
             </div>
