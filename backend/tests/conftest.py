@@ -7,6 +7,7 @@ from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import Base, get_db
+from app.core.rate_limit import auth_rate_limiter
 from app.main import app
 
 # Test SQLite in-memory database
@@ -43,6 +44,29 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest_asyncio.fixture(scope="function", autouse=True)
+async def reset_rate_limits():
+    await auth_rate_limiter.reset()
+    try:
+        from app.core.redis import get_redis
+        redis = get_redis()
+        bf_keys = await redis.keys("auth:*_bf*")
+        if bf_keys:
+            await redis.delete(*bf_keys)
+    except Exception:
+        pass
+    yield
+    await auth_rate_limiter.reset()
+    try:
+        from app.core.redis import get_redis
+        redis = get_redis()
+        bf_keys = await redis.keys("auth:*_bf*")
+        if bf_keys:
+            await redis.delete(*bf_keys)
+    except Exception:
+        pass
 
 
 @pytest_asyncio.fixture(scope="function")

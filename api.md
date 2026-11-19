@@ -1048,11 +1048,29 @@ GET /api/v1/trains/{trainId}
 ```
 Returns real-time stop-by-stop live updates, actual versus scheduled arrival times, train coach composition, and platform assignments.
 
+### 7.2.1 Get Complete Stop-by-Stop Train Itinerary
+```http
+GET /api/v1/trains/{train_number}/itinerary?date=YYYY-MM-DD
+```
+Returns the complete end-to-end commercial itinerary with all stops, arrival/departure seconds, scheduled arrival/departure ISO times, dwell minutes, cumulative distance (km), and stop type tagging (`BOARDING`, `INTERMEDIATE`, `ALIGHTING`).
+
 ### 7.3 List Romanian Railway Operators
 ```http
 GET /api/v1/trains/operators
 ```
 Returns registered operators, contact channels, live GTFS-RT feed health, and logo URLs.
+
+### 7.3.1 Romanian Railway Timetable Period Status
+```http
+GET /api/v1/trains/timetable-status
+```
+Returns active railway timetable period (`2025-2026` / `2026-2027`), operator counts, and active 90-day booking window.
+
+### 7.3.2 Discover & Sync Timetables from Data.gov.ro CKAN API
+```http
+POST /api/v1/trains/sync-timetables
+```
+Discovers, downloads, and archives the latest official open XML railway timetables from the Romanian Open Data portal (`data.gov.ro`), supporting seamless transitions between 2025-2026 and 2026-2027 seasons.
 
 ### 7.4 Create Scheduled Train Journey
 ```http

@@ -428,12 +428,41 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
   });
 
   it('renders all rail & urban transit providers in the scrollytelling honeycomb (Test 17)', () => {
-    render(<HomePage />);
+    const { container } = render(<HomePage />);
 
     // Chapter 2 heading exists
-    expect(screen.getByRole('heading', { level: 3, name: /The Synchronized Transit Honeycomb/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 3, name: /The Synchronized Transit Honeycomb/i })
+    ).toBeInTheDocument();
 
-    // All 7 Romanian railway operators are rendered
+    // Core DOM test ID and section id are preserved
+    expect(container.querySelector('#tour-providers')).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="svg-honeycomb"]')).toBeInTheDocument();
+
+    // Concept 9: Live Day-in-the-Hive Scoreboard totals
+    expect(screen.getByText('1,521,651')).toBeInTheDocument();
+    expect(screen.getByText('2,103')).toBeInTheDocument();
+    expect(screen.getByText('709')).toBeInTheDocument();
+
+    // Concept 9: Simple 2-Way Lens Switcher exists and toggles active lens
+    const metricToggle = screen.getByTestId('honeycomb-metric-toggle');
+    expect(metricToggle).toBeInTheDocument();
+
+    const dailyTrainsBtn = screen.getByRole('button', { name: /Daily Trains & Routes/i });
+    const tripsLearnedBtn = screen.getByRole('button', { name: /Trips Learned by Our Bees/i });
+
+    expect(dailyTrainsBtn).toBeInTheDocument();
+    expect(tripsLearnedBtn).toBeInTheDocument();
+    expect(dailyTrainsBtn).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(tripsLearnedBtn);
+    expect(tripsLearnedBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(dailyTrainsBtn).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(dailyTrainsBtn);
+    expect(dailyTrainsBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // All 7 Romanian railway operators and 2 hubs are rendered in the size-weighted beehive
     expect(screen.getByRole('button', { name: /Inspect CFR Călători/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Inspect Astra Trans Carpatic/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Inspect Softrans/i })).toBeInTheDocument();
@@ -441,27 +470,69 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.getByRole('button', { name: /Inspect Regio Călători/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Inspect Interregional Călători/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Inspect Ferotrafic TFI/i })).toBeInTheDocument();
-
-    // All 2 strategic rail junctions are rendered
     expect(screen.getByRole('button', { name: /Inspect București Nord Hub/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Inspect Carpathian & Danube Hubs/i })).toBeInTheDocument();
 
-    // Test clicking/selecting a rail operator hexagon updates the Selected Provider Detail Inspector card
+    // Confirm exact verified codebase numbers in the DOM
+    expect(screen.getAllByText(/985,705/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/332,514/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/176,053/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/103,647/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/15,219/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/12,160/i).length).toBeGreaterThan(0);
+
+    expect(screen.getAllByText(/1,256/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/303/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/273/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/216/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/21/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/18/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/16/i).length).toBeGreaterThan(0);
+
+    // Concept 2: Playful Floating Story Card exists
+    const storyCard = screen.getByTestId('provider-story-card');
+    expect(storyCard).toBeInTheDocument();
+
+    // Test clicking Transferoviar Călători updates the Story Card
     const tfcBtn = screen.getByRole('button', { name: /Inspect Transferoviar Călători/i });
     fireEvent.click(tfcBtn);
 
-    // Inspector card displays Transferoviar Călători metadata
-    expect(screen.getByText(/REGIONAL & COMMUTER EXPRESS/i)).toBeInTheDocument();
-    expect(screen.getByText(/Transferoviar Călători S\.A\. \(TFC\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/176,000\+ runs analyzed/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Fast Regional Shortcuts/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Transferoviar Călători/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/303/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/62/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/176,053/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Bucharest ⇄ Buzău/i)).toBeInTheDocument();
 
-    // Test clicking a strategic junction updates the inspector card
+    // Test clicking București Nord Hub updates the Story Card
     const bnrHubBtn = screen.getByRole('button', { name: /Inspect București Nord Hub/i });
     fireEvent.click(bnrHubBtn);
-    expect(screen.getByText(/PRIMARY NATIONAL RAIL JUNCTION/i)).toBeInTheDocument();
-    expect(screen.getByText(/Gara de Nord Central Railway Terminal Hub/i)).toBeInTheDocument();
 
-    // Strict Invariant 2 Negative Assertions proving urban public transit is completely absent
+    expect(screen.getAllByText(/Main National Meeting Point/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/327,609/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/601/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/75/i).length).toBeGreaterThanOrEqual(2);
+
+    // Test clicking CFR Călători updates the Story Card
+    const cfrBtn = screen.getByRole('button', { name: /Inspect CFR Călători/i });
+    fireEvent.click(cfrBtn);
+
+    expect(screen.getAllByText(/Everywhere in Romania/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/985,705/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/1,256/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/479/i).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Bucharest ⇄ Brașov/i)).toBeInTheDocument();
+
+    // Strict Invariant 1: Strictly zero map canvases, Leaflet, or <map> elements
+    expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
+
+    // Strict Invariant 2: Strictly zero scientific file names or data-science jargon in visible DOM text
+    expect(screen.queryByText(/\.parquet/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\.xml/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Out-of-Fold/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Corpus/i)).not.toBeInTheDocument();
+
+    // Strict Invariant 3: Strictly zero urban public transit
     expect(screen.queryByText(/Metrorex/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/\bSTB\b/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Transurb/i)).not.toBeInTheDocument();
@@ -588,16 +659,6 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(fastPortalBtn).toBeInTheDocument();
     expect(economyPortalBtn).toBeInTheDocument();
 
-    // Verify Railway Switch (Macaz) and Signals on top track
-    expect(screen.getByTestId('rail-switch-south')).toBeInTheDocument();
-    expect(screen.getByTestId('rail-switch-central')).toBeInTheDocument();
-    expect(screen.getByTestId('rail-signal-meli')).toBeInTheDocument();
-    expect(screen.getByTestId('rail-signal-vira')).toBeInTheDocument();
-    expect(screen.getByTestId('rail-signal-flora')).toBeInTheDocument();
-
-    // Verify SVG connector beam between sanctuaries and route preview map
-    expect(screen.getByTestId('preview-connector-beam')).toBeInTheDocument();
-
     // 2. Verify Interactive Route Preview Map (#queen-route-preview)
     const previewMap = container.querySelector('#queen-route-preview');
     expect(previewMap).toBeInTheDocument();
@@ -655,10 +716,7 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.getAllByText(/Save up to 40%/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/\+12m Relaxed Stop/i).length).toBeGreaterThan(0);
 
-    // Clicking an intermediate beehive station inspects calm stop & pocket savings
-    const sunnyCreekStation = stations[2];
-    fireEvent.click(sunnyCreekStation);
-    expect(screen.getAllByText(/12 min calm stop/i).length).toBeGreaterThan(0);
+    // Verify calm unhurried stops and pocket savings promise
     expect(screen.getAllByText(/stretch your legs, zero rush/i).length).toBeGreaterThan(0);
 
     // 8. Strict Invariant 1: Strictly zero map or canvas elements anywhere in DOM

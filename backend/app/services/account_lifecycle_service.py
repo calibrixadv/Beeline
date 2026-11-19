@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import logging
 import secrets
 import time
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from fastapi import HTTPException, Request, Response, status
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession

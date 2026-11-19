@@ -1,8 +1,8 @@
-from typing import Any, Dict, List, Literal, Optional
+from typing import List, Literal, Optional
 import numpy as np
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
-from app.schemas.route_plan import BufferAdequacy, RiskLevel, RouteRiskFactor
+from app.schemas.route_plan import RiskLevel, RouteRiskFactor
 
 
 class RiskFactorExplanation(BaseModel):

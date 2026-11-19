@@ -39,6 +39,18 @@ Migrated client-side static heuristics to an enterprise-grade in-process ML pipe
 5. **Zero-Downtime Deterministic Fallback**: Automatic circuit breaker to the deterministic Romanian Transfer Shield heuristic on any Redis outage or model error (zero 500 errors).
 6. **Distributed Concurrency Lock**: `IdempotencyService` enhanced with Redis `SET NX EX 120` atomic claim and automatic SQL fallback.
 
+### Primary Milestone 4 Deliverable: Complete Auth, MFA & Security Lifecycle
+Full enterprise authentication and account lifecycle across backend and frontend:
+1. **Session & Security Engine**: Fernet symmetric token encryption with HMAC-SHA256 device proof binding, sliding session renewal, and automatic rotation.
+2. **Multi-Factor Authentication (TOTP)**: RFC 6238 TOTP with Fernet-encrypted secret storage at rest, QR code setup, time-window drift tolerance, and single-use emergency recovery codes.
+3. **Password Security & Breach Defense**: Native bcrypt hashing (cost factor 12), HaveIBeenPwned k-Anonymity range API integration, local dictionary blocklist, and email breach scanning.
+4. **Account Lifecycle**: Self-service profile editing, travel preferences persistence, remote multi-device session revocation, and 30-day soft deletion freeze.
+
+### Primary Milestone 5 Deliverable: Live Timetable Sync, Multi-Badge Routing & Full Stop Itinerary
+1. **Live & 2026-2027 XML Timetable Transition**: `timetable_sync_service.py` with DataGovXMLAdapter, automated CKAN discovery, year-partitioned XML archives, and dynamic 90-day booking window enforcement.
+2. **All-Day Multi-Badge Routing & De-duplication**: Canonical journey signatures, full 00:00-23:59 operating day coverage across all 7 Romanian passenger carriers, and simultaneous multi-pillar badge assignment (`MOST_RELIABLE`, `FASTEST`, `BEST_VALUE`).
+3. **End-to-End Stop-by-Stop Itinerary API**: `/api/v1/trains/{train_number}/itinerary` and `RouteItineraryTimeline` component rendering boarding, intermediate, transfer, and alighting stations with live dwell times and overnight day rollover.
+
 ---
 
 ## 2. Multi-Agent Workflow Architecture

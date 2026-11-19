@@ -1,8 +1,7 @@
 import logging
 from typing import Optional, Tuple
-from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +10,6 @@ from app.core.redis import get_redis
 from app.core.security import (
     compute_device_fingerprint,
     compute_device_proof,
-    decode_token,
     decrypt_auth_token,
 )
 from app.models.user import User, UserSession, utcnow

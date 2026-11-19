@@ -9,7 +9,6 @@ import {
   Calendar, 
   Train, 
   Briefcase, 
-  User, 
   LogOut, 
   Sparkles,
   Menu,
@@ -30,7 +29,7 @@ const NAV_LINKS = [
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const { trips } = useTrip();
-  const { user, isAuthenticated, isGuest, logout, continueAsGuest } = useAuth();
+  const { user, logout, continueAsGuest } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (

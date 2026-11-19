@@ -1,21 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useId, useRef } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import {
-  ShieldCheck,
   Zap,
   Coins,
-  Check,
   Sparkles,
-  ArrowRight,
-  Clock,
   Coffee,
-  HeartHandshake,
-  CheckCircle2,
-  TrendingUp,
-  MapPin,
-  Timer,
-  Smile,
   AlertTriangle,
 } from 'lucide-react';
 import MascotBee, { MascotGear } from '../../MascotBee';
@@ -61,7 +51,7 @@ const QUEENS_CONFIG: Record<QueenGear, QueenSanctuaryConfig> = {
     name: 'Queen Meli',
     roleTitle: 'Queen Transfer Guard',
     title: 'Queen Meli • Queen Transfer Guard',
-    romanianTitle: 'Regina Meli — Matca Scutului de Transfer',
+    romanianTitle: 'Queen Meli — Royal Transfer Shield',
     badge: 'ZERO TRANSFER PANIC',
     color: '#10B981',
     glowHex: '#10B981',
@@ -88,7 +78,7 @@ const QUEENS_CONFIG: Record<QueenGear, QueenSanctuaryConfig> = {
     name: 'Queen Vira',
     roleTitle: 'Queen Express Scout',
     title: 'Queen Vira • Queen Express Scout',
-    romanianTitle: 'Regina Vira — Matca Vitezei InterCity',
+    romanianTitle: 'Queen Vira — Supersonic Express Scout',
     badge: 'SUPERSONIC DIRECT EXPRESS',
     color: '#3B82F6',
     glowHex: '#3B82F6',
@@ -115,7 +105,7 @@ const QUEENS_CONFIG: Record<QueenGear, QueenSanctuaryConfig> = {
     name: 'Queen Flora',
     roleTitle: 'Queen Nectar Saver',
     title: 'Queen Flora • Queen Nectar Saver',
-    romanianTitle: 'Regina Flora — Matca Economiei Inteligente',
+    romanianTitle: 'Queen Flora — Smart Fare Harvester',
     badge: 'BEST VALUE HARVEST',
     color: '#D97706',
     glowHex: '#F59E0B',

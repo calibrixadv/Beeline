@@ -212,6 +212,14 @@ async def session_security_and_rotation_middleware(request: Request, call_next):
         path.startswith(f"{settings.API_V1_STR}/auth/forgot-password") or
         path.startswith(f"{settings.API_V1_STR}/auth/reset-password") or
         path.startswith(f"{settings.API_V1_STR}/auth/check-breach") or
+        path.startswith(f"{settings.API_V1_STR}/routes/plan") or
+        path.startswith(f"{settings.API_V1_STR}/routes/corridors") or
+        path.startswith(f"{settings.API_V1_STR}/trains") or
+        path.startswith(f"{settings.API_V1_STR}/schedules") or
+        path.startswith(f"{settings.API_V1_STR}/stations") or
+        path.startswith(f"{settings.API_V1_STR}/plan") or
+        path.startswith("/plan") or
+        (request.method == "DELETE" and path == f"{settings.API_V1_STR}/users/me/sessions") or
         path in ("/", "/health", f"{settings.API_V1_STR}/docs", f"{settings.API_V1_STR}/redoc", f"{settings.API_V1_STR}/openapi.json")
     )
 
@@ -220,6 +228,17 @@ async def session_security_and_rotation_middleware(request: Request, call_next):
             payload = decrypt_auth_token(auth_cookie)
             sid = payload.get("sid") or payload.get("session_id")
             now_ts = int(datetime.now(timezone.utc).timestamp())
+
+            # If request has Authorization Bearer from a DIFFERENT session, the cookie is stale residue
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                try:
+                    h_payload = decrypt_auth_token(auth_header[7:].strip())
+                    h_sid = h_payload.get("sid") or h_payload.get("session_id")
+                    if h_sid and sid and h_sid != sid:
+                        return await call_next(request)
+                except Exception:
+                    pass
 
             # 1. Anti-Hijack Device-Context Verification
             current_dfp = compute_device_fingerprint(request)

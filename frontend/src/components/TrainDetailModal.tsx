@@ -1,11 +1,10 @@
 'use client';
 
 import React from 'react';
-import { X, Train, Clock, MapPin, Wifi, BatteryCharging, Coffee, Accessibility } from 'lucide-react';
-import { TrainJourney, Amenity } from '../types/train';
+import { X } from 'lucide-react';
+import { TrainJourney } from '../types/train';
 import { formatTimeOnly } from '../utils/trainFilters';
 import BaseButton from './BaseButton';
-import BaseBadge from './BaseBadge';
 
 export interface TrainDetailModalProps {
   journey: TrainJourney | null;

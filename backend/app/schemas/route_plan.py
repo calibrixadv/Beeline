@@ -59,6 +59,63 @@ class IntermediateStop(BaseModel):
     platform: Optional[str] = None
 
 
+class LegStop(BaseModel):
+    stopSequence: int = Field(..., validation_alias=AliasChoices("stopSequence", "stop_sequence"))
+    stationCode: str = Field(..., validation_alias=AliasChoices("stationCode", "station_code"))
+    stationName: str = Field(..., validation_alias=AliasChoices("stationName", "station_name"))
+    city: Optional[str] = None
+    arrivalTime: Optional[str] = Field(default=None, validation_alias=AliasChoices("arrivalTime", "arrival_time"))
+    departureTime: Optional[str] = Field(default=None, validation_alias=AliasChoices("departureTime", "departure_time"))
+    dwellMinutes: int = Field(default=0, validation_alias=AliasChoices("dwellMinutes", "dwell_minutes"))
+    distanceFromOriginKm: float = Field(default=0.0, validation_alias=AliasChoices("distanceFromOriginKm", "distance_from_origin_km"))
+    stopType: Literal["BOARDING", "INTERMEDIATE", "TRANSFER", "ALIGHTING"] = Field(
+        default="INTERMEDIATE",
+        validation_alias=AliasChoices("stopType", "stop_type"),
+    )
+    platform: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    delayMinutes: Optional[int] = Field(default=None, validation_alias=AliasChoices("delayMinutes", "delay_minutes"))
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    @property
+    def stop_sequence(self) -> int:
+        return self.stopSequence
+
+    @property
+    def station_code(self) -> str:
+        return self.stationCode
+
+    @property
+    def station_name(self) -> str:
+        return self.stationName
+
+    @property
+    def arrival_time(self) -> Optional[str]:
+        return self.arrivalTime
+
+    @property
+    def departure_time(self) -> Optional[str]:
+        return self.departureTime
+
+    @property
+    def dwell_minutes(self) -> int:
+        return self.dwellMinutes
+
+    @property
+    def distance_from_origin_km(self) -> float:
+        return self.distanceFromOriginKm
+
+    @property
+    def stop_type(self) -> str:
+        return self.stopType
+
+    @property
+    def delay_minutes(self) -> Optional[int]:
+        return self.delayMinutes
+
+
 class LegNames(BaseModel):
     originName: str
     originCity: str
@@ -178,6 +235,90 @@ class TransitLeg(BaseModel):
     fare: LegFare
     amenities: LegAmenities
     instructions: LegInstructions
+
+    # Rich Itinerary Fields (Backward Compatible defaults)
+    stops: List[LegStop] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("stops"),
+        serialization_alias="stops",
+    )
+    intermediateStopCount: int = Field(
+        default=0,
+        validation_alias=AliasChoices("intermediateStopCount", "intermediate_stop_count"),
+        serialization_alias="intermediateStopCount",
+    )
+    distanceKm: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("distanceKm", "distance_km"),
+        serialization_alias="distanceKm",
+    )
+    trainCategory: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("trainCategory", "train_category"),
+        serialization_alias="trainCategory",
+    )
+    fullTrainOrigin: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("fullTrainOrigin", "full_train_origin"),
+        serialization_alias="fullTrainOrigin",
+    )
+    fullTrainDestination: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices("fullTrainDestination", "full_train_destination"),
+        serialization_alias="fullTrainDestination",
+    )
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    @property
+    def intermediate_stop_count(self) -> int:
+        return self.intermediateStopCount
+
+    @property
+    def distance_km(self) -> Optional[float]:
+        return self.distanceKm
+
+    @property
+    def train_category(self) -> Optional[str]:
+        return self.trainCategory
+
+    @property
+    def full_train_origin(self) -> Optional[str]:
+        return self.fullTrainOrigin
+
+    @property
+    def full_train_destination(self) -> Optional[str]:
+        return self.fullTrainDestination
+
+    @property
+    def lineCode(self) -> str:
+        return (self.names.lineCode if self.names else "") or ""
+
+    @property
+    def origin(self) -> str:
+        return (self.names.originName if self.names else "") or ""
+
+    @property
+    def destination(self) -> str:
+        return (self.names.destinationName if self.names else "") or ""
+
+    @property
+    def departureTime(self) -> str:
+        return (self.timings.scheduledDeparture if self.timings else "") or ""
+
+    @property
+    def arrivalTime(self) -> str:
+        return (self.timings.scheduledArrival if self.timings else "") or ""
+
+
+def compute_leg_signature(leg: TransitLeg) -> str:
+    line_code = (leg.lineCode or "").strip().upper()
+    return f"{line_code}|{leg.origin}|{leg.destination}|{leg.departureTime}|{leg.arrivalTime}"
+
+
+def compute_plan_signature(plan: "TransitRoutePlan") -> str:
+    return "->".join(compute_leg_signature(leg) for leg in plan.legs)
+
 
 
 class RouteRiskFactor(BaseModel):
@@ -337,7 +478,7 @@ class TransitRouteQuery(BaseModel):
     allowedModes: List[TransitMode] = Field(
         default_factory=lambda: [TransitMode.TRAIN, TransitMode.METRO, TransitMode.TRAM, TransitMode.BUS, TransitMode.WALK]
     )
-    optimizationPreference: Literal["FASTEST", "BEST_VALUE", "SAFE_BUFFERS", "LEAST_TRANSFERS"] = "SAFE_BUFFERS"
+    optimizationPreference: Literal["FASTEST", "BEST_VALUE", "SAFE_BUFFERS", "LEAST_TRANSFERS", "MOST_RELIABLE"] = "SAFE_BUFFERS"
     minimumBufferMinutes: Optional[int] = 20
 
 
@@ -345,6 +486,77 @@ class MascotRecommendation(BaseModel):
     persona: Literal["barnaby", "honey", "bumble"]
     badgeLabel: str
     advice: str
+
+
+class TransferDetail(BaseModel):
+    transferIndex: int = Field(..., validation_alias=AliasChoices("transferIndex", "transfer_index"))
+    stationCode: str = Field(..., validation_alias=AliasChoices("stationCode", "station_code"))
+    stationName: str = Field(..., validation_alias=AliasChoices("stationName", "station_name"))
+    arrivalTime: str = Field(..., validation_alias=AliasChoices("arrivalTime", "arrival_time"))
+    departureTime: str = Field(..., validation_alias=AliasChoices("departureTime", "departure_time"))
+    waitMinutes: int = Field(..., validation_alias=AliasChoices("waitMinutes", "wait_minutes"))
+    fromLineCode: str = Field(..., validation_alias=AliasChoices("fromLineCode", "from_line_code"))
+    fromOperator: str = Field(..., validation_alias=AliasChoices("fromOperator", "from_operator"))
+    toLineCode: str = Field(..., validation_alias=AliasChoices("toLineCode", "to_line_code"))
+    toOperator: str = Field(..., validation_alias=AliasChoices("toOperator", "to_operator"))
+    bufferStatus: Literal["SAFE", "TIGHT", "RISKY"] = Field(
+        ...,
+        validation_alias=AliasChoices("bufferStatus", "buffer_status")
+    )
+    missedConnectionProbability: float = Field(
+        default=0.0,
+        validation_alias=AliasChoices("missedConnectionProbability", "missed_connection_probability")
+    )
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    @property
+    def transfer_index(self) -> int:
+        return self.transferIndex
+
+    @property
+    def station_code(self) -> str:
+        return self.stationCode
+
+    @property
+    def station_name(self) -> str:
+        return self.stationName
+
+    @property
+    def arrival_time(self) -> str:
+        return self.arrivalTime
+
+    @property
+    def departure_time(self) -> str:
+        return self.departureTime
+
+    @property
+    def wait_minutes(self) -> int:
+        return self.waitMinutes
+
+    @property
+    def from_line_code(self) -> str:
+        return self.fromLineCode
+
+    @property
+    def from_operator(self) -> str:
+        return self.fromOperator
+
+    @property
+    def to_line_code(self) -> str:
+        return self.toLineCode
+
+    @property
+    def to_operator(self) -> str:
+        return self.toOperator
+
+    @property
+    def buffer_status(self) -> str:
+        return self.bufferStatus
+
+    @property
+    def missed_connection_probability(self) -> float:
+        return self.missedConnectionProbability
 
 
 class TransitRoutePlan(BaseModel):
@@ -357,16 +569,92 @@ class TransitRoutePlan(BaseModel):
     totalWalkMinutes: int
     totalWalkDistanceMeters: int
     transfersCount: int
-    curatedPillar: CuratedPillar
+    curatedPillar: Optional[Union[CuratedPillar, str]] = None
+    curatedPillars: List[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("curatedPillars", "curated_pillars"),
+        serialization_alias="curatedPillars",
+    )
     mascotRecommendation: MascotRecommendation
     riskAnalysis: RouteRiskAnalysis
     fare: RouteFareSummary
     eco: EcoBenchmark
     legs: List[TransitLeg]
+    transfers: List[TransferDetail] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("transfers"),
+        serialization_alias="transfers",
+    )
     createdAt: str
     validUntil: str
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    @property
+    def curated_pillars(self) -> List[str]:
+        return self.curatedPillars
+
+    @curated_pillars.setter
+    def curated_pillars(self, value: List[str]) -> None:
+        self.curatedPillars = value
+
+
+# Semantic alias
+RoutePlan = TransitRoutePlan
+
+
+class BookingWindowInfo(BaseModel):
+    minDate: str
+    maxDate: str
+    advanceBookingDays: int = 90
+    activeTimetable: str = "2025-2026 / 2026-2027"
+    liveSource: str = "INFOFER_IRIS_AND_OFFICIAL_XML"
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+
+class TrainItineraryResponse(BaseModel):
+    trainNumber: str = Field(..., validation_alias=AliasChoices("trainNumber", "train_number"))
+    operator: str
+    trainCategory: Optional[str] = Field(default=None, validation_alias=AliasChoices("trainCategory", "train_category"))
+    date: str
+    fullTrainOrigin: str = Field(..., validation_alias=AliasChoices("fullTrainOrigin", "full_train_origin"))
+    fullTrainDestination: str = Field(..., validation_alias=AliasChoices("fullTrainDestination", "full_train_destination"))
+    totalDistanceKm: float = Field(..., validation_alias=AliasChoices("totalDistanceKm", "total_distance_km"))
+    totalDurationMinutes: int = Field(..., validation_alias=AliasChoices("totalDurationMinutes", "total_duration_minutes"))
+    stops: List[LegStop] = Field(default_factory=list)
+    liveSource: str = "INFOFER_IRIS_AND_OFFICIAL_XML"
+    bookingWindow: Optional[BookingWindowInfo] = Field(default=None, validation_alias=AliasChoices("bookingWindow", "booking_window"))
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+    @property
+    def train_number(self) -> str:
+        return self.trainNumber
+
+    @property
+    def train_category(self) -> Optional[str]:
+        return self.trainCategory
+
+    @property
+    def full_train_origin(self) -> str:
+        return self.fullTrainOrigin
+
+    @property
+    def full_train_destination(self) -> str:
+        return self.fullTrainDestination
+
+    @property
+    def total_distance_km(self) -> float:
+        return self.totalDistanceKm
+
+    @property
+    def total_duration_minutes(self) -> int:
+        return self.totalDurationMinutes
+
+    @property
+    def booking_window(self) -> Optional[BookingWindowInfo]:
+        return self.bookingWindow
 
 
 class RoutePlanResponse(BaseModel):
@@ -374,6 +662,15 @@ class RoutePlanResponse(BaseModel):
     recommendedPlanId: str
     query: TransitRouteQuery
     generatedAt: str
+    bookingWindow: Optional[BookingWindowInfo] = None
+    allDayDepartures: Optional[List[Any]] = None
+    totalDayRoutes: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("totalDayRoutes", "total_day_routes"),
+        serialization_alias="totalDayRoutes",
+    )
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
 
 class SaveRouteRequest(BaseModel):

@@ -1,9 +1,7 @@
 from datetime import datetime, timezone
-import hashlib
 import json
 import secrets
 from typing import Any, Optional, Union
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -16,9 +14,7 @@ from app.core.security import (
     compute_device_proof,
     create_mfa_session_token,
     decode_token,
-    decrypt_totp_secret,
     encrypt_auth_token,
-    encrypt_totp_secret,
     hash_token,
     verify_password,
 )
@@ -32,7 +28,6 @@ from app.schemas.auth import (
     GuestLoginRequest,
     LoginRequest,
     MessageResponse,
-    MFAChallengeRequest,
     MFAConfirmSetupRequest,
     MFADisableRequest,
     MFALoginChallengeResponse,

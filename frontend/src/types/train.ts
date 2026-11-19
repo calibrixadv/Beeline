@@ -53,6 +53,16 @@ export interface TrainJourney {
   amenities: Amenity[];
   carbonFootprintKg: number;
   riskAnalysis?: RouteRiskAnalysis;
+  date?: string;
+  commercialStops?: string[];
+  timetableSource?: string;
+  bookingWindow?: {
+    minDate: string;
+    maxDate: string;
+    advanceBookingDays: number;
+    activeTimetable: string;
+    liveSource: string;
+  };
 }
 
 export interface TrainFilterState {

@@ -160,9 +160,23 @@ def test_multihead_inference_sub_2ms_latency_benchmark():
     X_dummy[:, 10] = 20.0  # 20-min buffer
     X_dummy[:, 9] = 1.0    # connecting
 
-    # Warmup
-    for _ in range(15):
-        _ = raw["h1_res"].predict(X_dummy)
+    # Warmup all booster heads
+    for _ in range(5):
+        p_res = np.maximum(0.0, raw["h1_res"].predict(X_dummy))
+        p_dir = np.maximum(0.0, raw["h1_dir"].predict(X_dummy))
+        p50 = 0.50 * p_res + 0.50 * p_dir
+        p_l2 = np.maximum(0.0, raw["h2_l2"].predict(X_dummy))
+        p25 = np.maximum(0.0, raw["h2_p25"].predict(X_dummy))
+        p75 = np.maximum(p25, raw["h2_p75"].predict(X_dummy))
+        p90 = np.maximum(p75, raw["h2_p90"].predict(X_dummy))
+        iqr = np.maximum(1.0, p75 - p25)
+        z15 = (15.0 - p50) / iqr
+        z_tr = (20.0 - p50) / iqr
+        eff_tr = 20.0 - p50
+        X_h3 = np.column_stack([X_dummy, z_tr, eff_tr, z15, iqr, p50, p_l2])
+        _ = raw["h3"].predict(X_h3)
+        raw_rel = raw["h4"].predict(X_dummy)
+        _ = bundle["head4_calibrator"].transform(raw_rel)
 
     runs = 100
     t0 = time.perf_counter()

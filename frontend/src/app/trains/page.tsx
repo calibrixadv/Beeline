@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Train, Sparkles, Filter } from 'lucide-react';
+import { Search, Filter } from 'lucide-react';
 import { SAMPLE_TRAINS } from '../../data/sampleTrains';
 import { TrainJourney, TrainStatus } from '../../types/train';
 import { filterAndSortTrains } from '../../utils/trainFilters';

@@ -4,12 +4,12 @@ import hashlib
 import hmac
 import json
 import secrets
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 import bcrypt
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 from fastapi import Request
-from jose import JWTError, jwt
+from jose import jwt
 
 from app.core.config import settings
 

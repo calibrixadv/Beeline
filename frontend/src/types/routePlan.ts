@@ -160,6 +160,25 @@ export interface LegInstructions {
 }
 
 /**
+ * Passenger stop within an official railway journey leg.
+ */
+export interface LegStop {
+  stopSequence: number;
+  stationCode: string;
+  stationName: string;
+  city?: string | null;
+  arrivalTime?: string | null;
+  departureTime?: string | null;
+  dwellMinutes: number;
+  distanceFromOriginKm: number;
+  stopType: 'BOARDING' | 'INTERMEDIATE' | 'TRANSFER' | 'ALIGHTING';
+  platform?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  delayMinutes?: number | null;
+}
+
+/**
  * MANDATORY: Single sequential leg of a multi-modal itinerary.
  */
 export interface TransitLeg {
@@ -173,6 +192,47 @@ export interface TransitLeg {
   fare: LegFare;
   amenities: LegAmenities;
   instructions: LegInstructions;
+  stops?: LegStop[];
+  intermediateStopCount?: number;
+  distanceKm?: number | null;
+  trainCategory?: string | null;
+  fullTrainOrigin?: string | null;
+  fullTrainDestination?: string | null;
+}
+
+/**
+ * Operational transfer connection between consecutive legs.
+ */
+export interface TransferDetail {
+  transferIndex: number;
+  stationCode: string;
+  stationName: string;
+  arrivalTime: string;
+  departureTime: string;
+  waitMinutes: number;
+  fromLineCode: string;
+  fromOperator: string;
+  toLineCode: string;
+  toOperator: string;
+  bufferStatus: 'SAFE' | 'TIGHT' | 'RISKY';
+  missedConnectionProbability: number;
+}
+
+/**
+ * Dedicated full commercial route itinerary response for a train.
+ */
+export interface TrainItineraryResponse {
+  trainNumber: string;
+  operator: string;
+  trainCategory: string;
+  date: string;
+  fullTrainOrigin: string;
+  fullTrainDestination: string;
+  totalDistanceKm: number;
+  totalDurationMinutes: number;
+  stops: LegStop[];
+  liveSource: string;
+  bookingWindow: BookingWindow;
 }
 
 /**
@@ -273,8 +333,16 @@ export interface TransitRouteQuery {
   };
   departureTime?: string;
   allowedModes: TransitMode[];
-  optimizationPreference: 'FASTEST' | 'BEST_VALUE' | 'SAFE_BUFFERS' | 'LEAST_TRANSFERS';
+  optimizationPreference: 'FASTEST' | 'BEST_VALUE' | 'SAFE_BUFFERS' | 'LEAST_TRANSFERS' | 'MOST_RELIABLE';
   minimumBufferMinutes?: number;
+}
+
+export interface BookingWindow {
+  minDate: string;
+  maxDate: string;
+  advanceBookingDays: number;
+  activeTimetable: string;
+  liveSource: string;
 }
 
 /**
@@ -283,6 +351,24 @@ export interface TransitRouteQuery {
 export interface TransitRoutePlan {
   /** Unique itinerary identifier (UUID v4) */
   id: string;
+
+  /** Service date (YYYY-MM-DD) */
+  date?: string;
+
+  /** Provider booking window metadata */
+  bookingWindow?: BookingWindow;
+
+  /** Live real-time operational status */
+  liveStatus?: 'ON_TIME' | 'DELAYED' | 'CANCELLED' | 'SCHEDULED';
+
+  /** Live delay in minutes overlay */
+  delayMinutes?: number;
+
+  /** Timetable source catalog (e.g. 2025-2026 or 2026-2027) */
+  timetableSource?: string;
+
+  /** Commercial stop names along the route */
+  commercialStops?: string[];
 
   /** Originating query parameters */
   query: TransitRouteQuery;
@@ -308,8 +394,11 @@ export interface TransitRoutePlan {
   /** Number of transit vehicle transfers (0 = direct) */
   transfersCount: number;
 
-  /** Curated Trifecta badge classification */
-  curatedPillar: CuratedPillar;
+  /** Curated Trifecta badge classification (backward compatibility) */
+  curatedPillar?: CuratedPillar | null;
+
+  /** Multi-badge pillars earned simultaneously */
+  curatedPillars?: CuratedPillar[];
 
   /** Companion mascot recommendation (Barnaby, Honey, or Bumble) */
   mascotRecommendation: {
@@ -330,9 +419,15 @@ export interface TransitRoutePlan {
   /** MANDATORY: Sequential door-to-door transit legs */
   legs: TransitLeg[];
 
+  /** Rich operational transfer details between consecutive legs */
+  transfers?: TransferDetail[];
+
   /** Timestamp when this itinerary was generated */
   createdAt: string;
 
   /** Cache validity expiration timestamp */
   validUntil: string;
 }
+
+export type RoutePlan = TransitRoutePlan;
+

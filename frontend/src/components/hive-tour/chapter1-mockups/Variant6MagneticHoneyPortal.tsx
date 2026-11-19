@@ -1,27 +1,18 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useId, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import {
   ShieldCheck,
   Zap,
   Coins,
-  Check,
   Sparkles,
-  ArrowRight,
   Clock,
-  RotateCcw,
-  Play,
-  HeartHandshake,
-  CheckCircle2,
-  Sliders,
   MapPin,
   Coffee,
-  Smile,
 } from 'lucide-react';
 import MascotBee, { MascotGear } from '../../MascotBee';
 import MiniWorkerBee from '../MiniWorkerBee';
 import { RoyalCrownSvg } from '../HiveSvgProps';
-import { MiniBeeVariant } from '../types';
 
 export interface Variant6MagneticHoneyPortalProps {
   activeGear?: MascotGear;
@@ -61,7 +52,7 @@ const QUEENS_CONFIG: Record<QueenGear, QueenPortalConfig> = {
     name: 'Queen Meli',
     roleTitle: 'Queen Transfer Guard',
     title: 'Queen Meli • Queen Transfer Guard',
-    romanianTitle: 'Regina Meli — Matca Scutului de Transfer',
+    romanianTitle: 'Queen Meli — Royal Transfer Shield',
     badge: 'ZERO TRANSFER PANIC',
     color: '#10B981',
     glowColor: 'rgba(16, 185, 129, 0.45)',
@@ -88,7 +79,7 @@ const QUEENS_CONFIG: Record<QueenGear, QueenPortalConfig> = {
     name: 'Queen Vira',
     roleTitle: 'Queen Express Scout',
     title: 'Queen Vira • Queen Express Scout',
-    romanianTitle: 'Regina Vira — Matca Vitezei InterCity',
+    romanianTitle: 'Queen Vira — Supersonic Express Scout',
     badge: 'DIRECT & NON-STOP',
     color: '#3B82F6',
     glowColor: 'rgba(59, 130, 246, 0.45)',
@@ -115,7 +106,7 @@ const QUEENS_CONFIG: Record<QueenGear, QueenPortalConfig> = {
     name: 'Queen Flora',
     roleTitle: 'Queen Nectar Saver',
     title: 'Queen Flora • Queen Nectar Saver',
-    romanianTitle: 'Regina Flora — Matca Economiei Inteligente',
+    romanianTitle: 'Queen Flora — Smart Fare Harvester',
     badge: 'UP TO 40% CHEAPER',
     color: '#D97706',
     glowColor: 'rgba(217, 119, 6, 0.45)',
@@ -184,9 +175,6 @@ export const Variant6MagneticHoneyPortal: React.FC<Variant6MagneticHoneyPortalPr
   const [isDelaySimulated, setIsDelaySimulated] = useState<boolean>(false);
   const [isExpressSimulated, setIsExpressSimulated] = useState<boolean>(false);
   const [isFaresCompared, setIsFaresCompared] = useState<boolean>(false);
-
-  // Interactive Transfer Buffer Slider (5 to 35 min)
-  const [transferBufferMin, setTransferBufferMin] = useState<number>(20);
 
   // Sync internal state when external prop changes
   useEffect(() => {

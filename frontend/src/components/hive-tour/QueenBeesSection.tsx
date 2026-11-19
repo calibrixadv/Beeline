@@ -8,15 +8,6 @@ import {
   Check,
   Sparkles,
   ArrowRight,
-  Clock,
-  Coffee,
-  HeartHandshake,
-  CheckCircle2,
-  MapPin,
-  Smile,
-  AlertTriangle,
-  X,
-  Compass,
 } from 'lucide-react';
 import MascotBee, { MascotGear } from '../MascotBee';
 import MiniWorkerBee from './MiniWorkerBee';
@@ -51,9 +42,6 @@ interface QueenSanctuaryConfig {
   heroDetail: string;
   testId: string;
   openPortalTestId: string;
-  // SVG topological coordinates on top golden railway track (1200 x 480 space)
-  cx: number;
-  cy: number;
 }
 
 const QUEENS_CONFIG: Record<QueenGear, QueenSanctuaryConfig> = {
@@ -62,7 +50,7 @@ const QUEENS_CONFIG: Record<QueenGear, QueenSanctuaryConfig> = {
     name: 'Queen Meli',
     roleTitle: 'Queen Transfer Guard',
     title: 'Queen Meli • Queen Transfer Guard',
-    romanianTitle: 'Regina Meli — Matca Scutului de Transfer',
+    romanianTitle: 'Queen Meli — Royal Transfer Shield',
     badge: 'ZERO TRANSFER PANIC',
     color: '#10B981',
     glowHex: '#10B981',
@@ -83,15 +71,13 @@ const QUEENS_CONFIG: Record<QueenGear, QueenSanctuaryConfig> = {
     heroDetail: 'Built-In Delay Protection Buffer',
     testId: 'queen-card-safe',
     openPortalTestId: 'open-portal-safe',
-    cx: 320,
-    cy: 160,
   },
   fast: {
     gear: 'fast',
     name: 'Queen Vira',
     roleTitle: 'Queen Express Scout',
     title: 'Queen Vira • Queen Express Scout',
-    romanianTitle: 'Regina Vira — Matca Vitezei InterCity',
+    romanianTitle: 'Queen Vira — Supersonic Express Scout',
     badge: 'SUPERSONIC DIRECT EXPRESS',
     color: '#3B82F6',
     glowHex: '#3B82F6',
@@ -112,15 +98,13 @@ const QUEENS_CONFIG: Record<QueenGear, QueenSanctuaryConfig> = {
     heroDetail: 'Non-Stop Direct Velocity Saved',
     testId: 'queen-card-fast',
     openPortalTestId: 'open-portal-fast',
-    cx: 880,
-    cy: 160,
   },
   economy: {
     gear: 'economy',
     name: 'Queen Flora',
     roleTitle: 'Queen Nectar Saver',
     title: 'Queen Flora • Queen Nectar Saver',
-    romanianTitle: 'Regina Flora — Matca Economiei Inteligente',
+    romanianTitle: 'Queen Flora — Smart Fare Harvester',
     badge: 'BEST VALUE NECTAR',
     color: '#D97706',
     glowHex: '#F59E0B',
@@ -141,24 +125,15 @@ const QUEENS_CONFIG: Record<QueenGear, QueenSanctuaryConfig> = {
     heroDetail: 'Most Money in Your Pocket',
     testId: 'queen-card-economy',
     openPortalTestId: 'open-portal-economy',
-    cx: 600,
-    cy: 330,
   },
 };
 
-// 7 Generic Stations from Point A to Point B (All rendered as interactive SVG Beehives)
+// 7 Generic Stations from Point A to Point B (All rendered as clear visual SVG Beehive route landmarks)
 interface BeehiveStationInfo {
   id: string;
   name: string;
   shortName: string;
   role: string;
-  x: number; // coordinate in SVG (viewBox 0 0 1200 440)
-  y: number;
-  stopMinutesFlora: number;
-  savingsFlora: string;
-  safeRole: string;
-  fastRole: string;
-  economyRole: string;
 }
 
 const BEEHIVE_STATIONS: BeehiveStationInfo[] = [
@@ -167,112 +142,68 @@ const BEEHIVE_STATIONS: BeehiveStationInfo[] = [
     name: 'Point A • Origin Hive',
     shortName: 'Point A',
     role: 'Departure Hub',
-    x: 90,
-    y: 220,
-    stopMinutesFlora: 0,
-    savingsFlora: '0.00 LEI',
-    safeRole: 'Departure Hub: Smooth boarding with zero platform rush or congestion.',
-    fastRole: 'Departure Hub: Instant supersonic launch with non-stop express priority.',
-    economyRole: 'Departure Hub: Calm boarding with the lowest base ticket fare.',
   },
   {
     id: 'meadow-vale',
     name: 'Meadow Vale Hive',
     shortName: 'Meadow Vale',
     role: 'Stop 1 • Wildflower Valley',
-    x: 260,
-    y: 220,
-    stopMinutesFlora: 10,
-    savingsFlora: '7.50 LEI',
-    safeRole: 'Protected intermediate stop with guaranteed on-time departure.',
-    fastRole: 'Skipped • 0 Wasted Stops (Express Bee flies straight past).',
-    economyRole: '+10m Relaxed Stop: Grab fresh wildflower honey tea, stretch your legs, zero rush.',
   },
   {
     id: 'sunny-creek',
     name: 'Sunny Creek Hive',
     shortName: 'Sunny Creek',
     role: 'Stop 2 • Honey Creek',
-    x: 430,
-    y: 220,
-    stopMinutesFlora: 12,
-    savingsFlora: '15.00 LEI',
-    safeRole: 'Synchronized stop with automated track clearance buffer.',
-    fastRole: 'Skipped • 0 Wasted Stops (Mainline priority bypass).',
-    economyRole: '+12m Relaxed Stop: Peaceful countryside view & pocket savings.',
   },
   {
     id: 'central-junction',
     name: 'Central Junction Hive',
     shortName: 'Central Junction',
     role: 'Main Transfer Hive',
-    x: 600,
-    y: 220,
-    stopMinutesFlora: 15,
-    savingsFlora: '23.00 LEI',
-    safeRole:
-      'Emerald Error-Margin Shield (+20 min Built-In Delay Buffer) guarantees you never miss your connection even if a train is late.',
-    fastRole: 'Skipped • 0 Wasted Stops (Direct express arc bypasses junction bottlenecks).',
-    economyRole: '+15m Relaxed Stop: Unhurried platform stroll with local honeycomb pastries.',
   },
   {
     id: 'amber-ridge',
     name: 'Amber Ridge Hive',
     shortName: 'Amber Ridge',
     role: 'Stop 4 • Mountain Pass',
-    x: 770,
-    y: 220,
-    stopMinutesFlora: 10,
-    savingsFlora: '31.50 LEI',
-    safeRole: 'Protected foothill descent with continuous schedule monitoring.',
-    fastRole: 'Skipped • 0 Wasted Stops (High-velocity express transit).',
-    economyRole: '+10m Relaxed Stop: Breathe fresh alpine air with zero stress.',
   },
   {
     id: 'orchard-valley',
     name: 'Orchard Valley Hive',
     shortName: 'Orchard Valley',
     role: 'Stop 5 • Apple Blossoms',
-    x: 940,
-    y: 220,
-    stopMinutesFlora: 12,
-    savingsFlora: '38.50 LEI',
-    safeRole: 'Final intermediate sync point ensuring exact on-time approach.',
-    fastRole: 'Skipped • 0 Wasted Stops (Full throttle straight to destination).',
-    economyRole: '+12m Relaxed Stop: Calm rest before destination, maximum money saved.',
   },
   {
     id: 'destination',
     name: 'Point B • Destination Hive',
     shortName: 'Point B',
     role: 'Arrival Hub',
-    x: 1110,
-    y: 220,
-    stopMinutesFlora: 0,
-    savingsFlora: 'Up to 40% (38.50 LEI)',
-    safeRole: 'Arrival Hub: Guaranteed 100% On-Time Arrival at Point B.',
-    fastRole: 'Arrival Hub: Arrived in Record Time (1h 40m • -55 minutes saved).',
-    economyRole: 'Arrival Hub: Arrived Calm & Relaxed with the Most Money in Your Pocket.',
   },
 ];
 
-// Floating Relaxed Stop Pills for Queen Flora (Economy) intermediate beehives
+// Floating Relaxed Stop Badges for Queen Flora (Economy) intermediate beehives
 const FLORA_RELAXED_PILLS: (string | null)[] = [
   null,
-  '☕ +12m Calm Stop',
-  '🍯 +15m Scenic Break',
-  '🌿 +15m Unrushed Pause',
+  '☕ +12m Relaxed Stop',
+  '🌿 +15m Scenic Break',
+  '🍯 +15m Relaxed Pause',
   '☕ +10m Stretch Legs',
-  '🍯 +12m Relaxed Stop',
+  '🍯 +12m Unrushed Stop',
   null,
 ];
 
-// Mathematical helper to produce regular pointy-topped hexagons
-function makeHexagonPath(cx: number, cy: number, r: number): string {
-  const dx = Math.round(r * 0.866025 * 10) / 10;
-  const dy = Math.round(r * 0.5 * 10) / 10;
-  return `M ${cx} ${cy - r} L ${cx + dx} ${cy - dy} L ${cx + dx} ${cy + dy} L ${cx} ${cy + r} L ${cx - dx} ${cy + dy} L ${cx - dx} ${cy - dy} Z`;
-}
+// SVG Route Paths & Animation Flight Durations for Unified Bee Locomotive
+const PREVIEW_PATHS: Record<QueenGear, string> = {
+  safe: 'M 90 135 L 910 135',
+  fast: 'M 90 155 Q 500 25 910 155',
+  economy: 'M 90 150 L 230 115 L 370 160 L 500 115 L 630 160 L 770 115 L 910 150',
+};
+
+const FLIGHT_DURATIONS: Record<QueenGear, string> = {
+  safe: '5.5s',
+  fast: '2.4s',
+  economy: '8.5s',
+};
 
 export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
   activeGear = 'safe',
@@ -330,68 +261,24 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
   // -------------------------------------------------------------
   // Interactive Simulation States on Route Preview Map
   // -------------------------------------------------------------
-  // Safe Mode: 'ontime' | 'delay15'
-  const [safeDelayScenario, setSafeDelayScenario] = useState<'ontime' | 'delay15'>('delay15');
+  // Safe Mode: 'ontime' | 'delay15' (Delay Buffer Simulation)
+  const [safeDelayScenario, setSafeDelayScenario] = useState<'ontime' | 'delay15'>('ontime');
 
-  // Fast Mode: 'express' | 'standard'
-  const [fastMode, setFastMode] = useState<'express' | 'standard'>('express');
-
-  // Inspected Beehive Station state (null or station id)
-  const [inspectedStationId, setInspectedStationId] = useState<string | null>('central-junction');
-
-  const inspectedStation = BEEHIVE_STATIONS.find((s) => s.id === inspectedStationId) || null;
   const activeQueenConfig = QUEENS_CONFIG[selectedQueen];
 
-  // =============================================================
-  // Top Railway Track Paths (1200 x 480 space)
-  // =============================================================
-  const TOP_TRACK_ORIGIN = 'M 80 250 L 260 250';
-  const TOP_TRACK_SAFE =
-    'M 260 250 C 275 210, 290 160, 320 160 C 370 160, 480 120, 600 120 C 760 120, 960 200, 1120 250';
-  const TOP_TRACK_FAST =
-    'M 260 250 C 380 250, 500 190, 600 190 C 740 190, 800 170, 880 170 C 960 170, 1040 210, 1120 250';
-  const TOP_TRACK_ECONOMY =
-    'M 260 250 C 340 250, 440 330, 600 330 C 760 330, 940 310, 1120 250';
-
-  const activeTopTrackPath =
-    selectedQueen === 'safe'
-      ? TOP_TRACK_SAFE
-      : selectedQueen === 'fast'
-      ? TOP_TRACK_FAST
-      : TOP_TRACK_ECONOMY;
-
-  // =============================================================
-  // Single Top Beehive Preview Route Topologies (1200 x 480 space)
-  // =============================================================
-  // Safe: 2-Leg Connected Route meeting at Giant Shielded Central Transfer Beehive (y = 250)
-  const PREVIEW_PATH_SAFE =
-    'M 90 250 L 260 250 L 430 250 L 600 250 L 770 250 L 940 250 L 1110 250';
-  // Fast: Elevated Supersonic Direct Express Arch curving high above intermediate stations (y: 220 -> apex y: 40 -> y: 220)
-  const PREVIEW_PATH_FAST = 'M 90 220 C 350 40, 850 40, 1110 220';
-  // Economy: Warm, wavy scenic golden-honey sinusoidal curve weaving through all 7 beehive stations
-  const PREVIEW_PATH_ECONOMY =
-    'M 90 240 C 175 175, 175 175, 260 175 C 345 175, 345 305, 430 305 C 515 305, 515 175, 600 175 C 685 175, 685 305, 770 305 C 855 305, 855 175, 940 175 C 1025 175, 1025 240, 1110 240';
-
-  const activePreviewRoutePath =
-    selectedQueen === 'safe'
-      ? PREVIEW_PATH_SAFE
-      : selectedQueen === 'fast'
-      ? PREVIEW_PATH_FAST
-      : PREVIEW_PATH_ECONOMY;
-
-  // Dynamic station coordinates for each Queen plan (ensures radical visual difference)
+  // Dynamic station coordinates for each Queen plan (1000 x 260 space)
   const getStationCoords = (index: number, queen: QueenGear) => {
-    const xCoords = [90, 260, 430, 600, 770, 940, 1110];
+    const xCoords = [90, 230, 370, 500, 630, 770, 910];
     const x = xCoords[index];
     if (queen === 'safe') {
-      return { x, y: 250 };
+      return { x, y: 135 };
     }
     if (queen === 'fast') {
-      // Point A & Point B on high express level (y: 220); 5 intermediate hives pushed down into dimmed track (y: 370)
-      return { x, y: index === 0 || index === 6 ? 220 : 370 };
+      // Point A & Point B at high express departure/arrival (y: 165); 5 intermediate hives at y: 190
+      return { x, y: index === 0 || index === 6 ? 165 : 190 };
     }
-    // Queen Flora: Sinusoidal wave (Origin: 240, Meadow: 175, Sunny: 305, Central: 175, Amber: 305, Orchard: 175, Dest: 240)
-    const yValues = [240, 175, 305, 175, 305, 175, 240];
+    // Queen Flora: Gentle wave [150, 115, 160, 115, 160, 115, 150]
+    const yValues = [150, 115, 160, 115, 160, 115, 150];
     return { x, y: yValues[index] };
   };
 
@@ -401,7 +288,9 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
       aria-label="The Three Queen Bees and Their Hive Swarms"
       className="relative w-full max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8 select-none"
     >
-      {/* Chapter 1 Header */}
+      {/* ------------------------------------------------------------- */}
+      {/* 1. SECTION HEADER (CHAPTER 1 • THE ROYAL HIVES)               */}
+      {/* ------------------------------------------------------------- */}
       <div className="text-center max-w-2xl mx-auto mb-10">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300/80 mb-3 shadow-xs">
           <Sparkles className="w-3.5 h-3.5 text-amber-600" />
@@ -411,267 +300,17 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
           The Three Queen Bees &amp; Their Hive Swarms
         </h3>
         <p className="mt-3 text-sm sm:text-base text-stone-600 leading-relaxed">
-          In the Beeline hive, three specialized Queen Bees (<em>Mătci</em>) —{' '}
+          In the Beeline hive, three specialized Queen Bees —{' '}
           <strong>Queen Meli</strong>, <strong>Queen Vira</strong>, and{' '}
           <strong>Queen Flora</strong> — command dedicated swarms of minimalist worker bees to
           optimize every railway journey across Romania.
         </p>
       </div>
 
-      {/* ========================================================= */}
-      {/* STAGE 1: TOP GOLDEN RAILWAY TRACK & SWITCH (DESIGN 4)      */}
-      {/* ========================================================= */}
-      <div
-        data-testid="variant-4-living-rail-track"
-        className="relative w-full overflow-hidden rounded-3xl bg-amber-50/40 backdrop-blur-xs border border-amber-300/40 p-4 sm:p-6 shadow-lg mb-8"
-      >
-        {/* Subtle Railway Header */}
-        <div className="flex items-center justify-between mb-2 px-2">
-          <div className="flex items-center gap-2">
-            <span
-              className="w-2.5 h-2.5 rounded-full animate-ping"
-              style={{ backgroundColor: activeQueenConfig.color }}
-            />
-            <span className="text-xs font-black uppercase tracking-wider text-amber-900/80">
-              Living Golden Rail • Point A to Point B Flow
-            </span>
-          </div>
-          <div className="text-[11px] font-bold text-amber-800/80 bg-amber-100/80 px-2.5 py-0.5 rounded-full border border-amber-300/60">
-            Interactive Railway Switch:{' '}
-            <span className="font-black text-amber-950 uppercase">{selectedQueen}</span>
-          </div>
-        </div>
-
-        {/* Master Top Golden Track SVG Canvas */}
-        <div className="relative w-full aspect-[1200/480] min-h-[300px]">
-          <svg
-            viewBox="0 0 1200 480"
-            className="w-full h-full drop-shadow-sm"
-            style={{ overflow: 'visible' }}
-            aria-label="Golden Railway Track Diagram"
-          >
-            <defs>
-              <linearGradient id={`${idPrefix}-goldRail`} x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#D97706" />
-                <stop offset="50%" stopColor="#F59E0B" />
-                <stop offset="100%" stopColor="#D97706" />
-              </linearGradient>
-
-              <linearGradient id={`${idPrefix}-safeGlow`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#10B981" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#10B981" stopOpacity="0" />
-              </linearGradient>
-
-              <linearGradient id={`${idPrefix}-fastGlow`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
-              </linearGradient>
-
-              <linearGradient id={`${idPrefix}-ecoGlow`} x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
-              </linearGradient>
-
-              <filter id={`${idPrefix}-pulseGlow`} x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="5" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            {/* 1. TIMBER SLEEPERS (Cross-ties under the tracks) */}
-            <g stroke="#92400E" strokeWidth="5" strokeLinecap="round" opacity="0.35">
-              {[100, 130, 160, 190, 220, 250].map((x) => (
-                <line key={`sleeper-orig-${x}`} x1={x} y1="240" x2={x} y2="260" />
-              ))}
-              {[1000, 1030, 1060, 1090, 1120].map((x) => (
-                <line key={`sleeper-dest-${x}`} x1={x} y1="240" x2={x} y2="260" />
-              ))}
-              {[300, 340, 390, 450, 520, 600, 700, 800, 900].map((x, i) => (
-                <line
-                  key={`sleeper-safe-${i}`}
-                  x1={x}
-                  y1={140 + i * 8}
-                  x2={x + 6}
-                  y2={160 + i * 8}
-                />
-              ))}
-              {[340, 400, 480, 560, 640, 740, 840, 940].map((x, i) => (
-                <line
-                  key={`sleeper-eco-${i}`}
-                  x1={x}
-                  y1={310 - (i > 4 ? (i - 4) * 8 : 0)}
-                  x2={x + 4}
-                  y2={330 - (i > 4 ? (i - 4) * 8 : 0)}
-                />
-              ))}
-            </g>
-
-            {/* 2. TRACK LINES */}
-            <path
-              d={TOP_TRACK_ORIGIN}
-              fill="none"
-              stroke="#D97706"
-              strokeWidth="5"
-              strokeLinecap="round"
-              opacity="0.75"
-            />
-            <path
-              d={TOP_TRACK_SAFE}
-              fill="none"
-              stroke="#10B981"
-              strokeWidth={selectedQueen === 'safe' ? '6' : '3'}
-              strokeDasharray={selectedQueen === 'safe' ? 'none' : '6 6'}
-              opacity={selectedQueen === 'safe' ? 0.95 : 0.4}
-              className="transition-all duration-300"
-            />
-            <path
-              d={TOP_TRACK_FAST}
-              fill="none"
-              stroke="#3B82F6"
-              strokeWidth={selectedQueen === 'fast' ? '6' : '3'}
-              strokeDasharray={selectedQueen === 'fast' ? 'none' : '6 6'}
-              opacity={selectedQueen === 'fast' ? 0.95 : 0.4}
-              className="transition-all duration-300"
-            />
-            <path
-              d={TOP_TRACK_ECONOMY}
-              fill="none"
-              stroke="#F59E0B"
-              strokeWidth={selectedQueen === 'economy' ? '6' : '3'}
-              strokeDasharray={selectedQueen === 'economy' ? 'none' : '6 6'}
-              opacity={selectedQueen === 'economy' ? 0.95 : 0.4}
-              className="transition-all duration-300"
-            />
-
-            {/* Active Gleam Track */}
-            <path
-              d={activeTopTrackPath}
-              fill="none"
-              stroke="#FEF08A"
-              strokeWidth="2.5"
-              opacity="0.85"
-              strokeLinecap="round"
-            />
-
-            {/* 3. ANIMATED RAILWAY SWITCH (MACAZ) */}
-            <g
-              data-testid="rail-switch-south"
-              transform="translate(260, 250)"
-              className="transition-transform duration-500 ease-out"
-            >
-              <circle cx="0" cy="0" r="14" fill="#78350F" stroke="#F59E0B" strokeWidth="2" />
-              <line
-                x1="0"
-                y1="0"
-                x2={selectedQueen === 'safe' ? '28' : selectedQueen === 'fast' ? '32' : '28'}
-                y2={selectedQueen === 'safe' ? '-22' : selectedQueen === 'fast' ? '-6' : '22'}
-                stroke="#FEF08A"
-                strokeWidth="4"
-                strokeLinecap="round"
-                className="transition-all duration-400 ease-out"
-              />
-              <circle
-                cx={selectedQueen === 'safe' ? '28' : selectedQueen === 'fast' ? '32' : '28'}
-                cy={selectedQueen === 'safe' ? '-22' : selectedQueen === 'fast' ? '-6' : '22'}
-                r="5"
-                fill={activeQueenConfig.color}
-                className="animate-pulse"
-              />
-            </g>
-
-            {/* Switch Label */}
-            <g data-testid="rail-switch-central" transform="translate(230, 210)">
-              <rect x="-10" y="-12" width="75" height="20" rx="10" fill="#1E1B18" opacity="0.85" />
-              <text x="27" y="2" fill="#FEF08A" fontSize="9" fontWeight="900" textAnchor="middle">
-                MACAZ 1
-              </text>
-            </g>
-
-            {/* Railway Signals */}
-            <circle
-              data-testid="rail-signal-meli"
-              cx="320"
-              cy="105"
-              r="6"
-              fill={selectedQueen === 'safe' ? '#10B981' : '#064E3B'}
-            />
-            <circle
-              data-testid="rail-signal-vira"
-              cx="880"
-              cy="105"
-              r="6"
-              fill={selectedQueen === 'fast' ? '#3B82F6' : '#1E3A8A'}
-            />
-            <circle
-              data-testid="rail-signal-flora"
-              cx="600"
-              cy="390"
-              r="6"
-              fill={selectedQueen === 'economy' ? '#F59E0B' : '#78350F'}
-            />
-
-            {/* Point A Beacon */}
-            <g transform="translate(70, 250)">
-              <circle cx="0" cy="0" r="22" fill="#FEF3C7" stroke="#D97706" strokeWidth="2.5" />
-              <circle cx="0" cy="0" r="10" fill="#D97706" />
-              <circle cx="0" cy="0" r="4" fill="#FFFFFF" />
-              <text x="0" y="-30" fill="#1E1B18" fontSize="13" fontWeight="900" textAnchor="middle">
-                POINT A
-              </text>
-              <text x="0" y="-16" fill="#78350F" fontSize="10" fontWeight="700" textAnchor="middle">
-                Your Station
-              </text>
-            </g>
-
-            {/* Point B Beacon */}
-            <g transform="translate(1130, 250)">
-              <circle cx="0" cy="0" r="24" fill="#FEF3C7" stroke="#D97706" strokeWidth="2.5" />
-              <circle cx="0" cy="0" r="12" fill="#10B981" />
-              <circle cx="0" cy="0" r="5" fill="#FFFFFF" />
-              <text x="0" y="-34" fill="#1E1B18" fontSize="13" fontWeight="900" textAnchor="middle">
-                POINT B
-              </text>
-              <text x="0" y="-20" fill="#047857" fontSize="10" fontWeight="700" textAnchor="middle">
-                Your Destination
-              </text>
-            </g>
-
-            {/* Hexagonal Bases on Top Track */}
-            <path
-              d={makeHexagonPath(QUEENS_CONFIG.safe.cx, QUEENS_CONFIG.safe.cy, 60)}
-              fill="url(#${idPrefix}-safeGlow)"
-              stroke="#10B981"
-              strokeWidth={selectedQueen === 'safe' ? '2.5' : '1.5'}
-              strokeDasharray={selectedQueen === 'safe' ? 'none' : '4 4'}
-              className="transition-all duration-300"
-            />
-            <path
-              d={makeHexagonPath(QUEENS_CONFIG.fast.cx, QUEENS_CONFIG.fast.cy, 60)}
-              fill="url(#${idPrefix}-fastGlow)"
-              stroke="#3B82F6"
-              strokeWidth={selectedQueen === 'fast' ? '2.5' : '1.5'}
-              strokeDasharray={selectedQueen === 'fast' ? 'none' : '4 4'}
-              className="transition-all duration-300"
-            />
-            <path
-              d={makeHexagonPath(QUEENS_CONFIG.economy.cx, QUEENS_CONFIG.economy.cy, 60)}
-              fill="url(#${idPrefix}-ecoGlow)"
-              stroke="#F59E0B"
-              strokeWidth={selectedQueen === 'economy' ? '2.5' : '1.5'}
-              strokeDasharray={selectedQueen === 'economy' ? 'none' : '4 4'}
-              className="transition-all duration-300"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* ========================================================= */}
-      {/* 👑 3 ROYAL DOUBLE-HEXAGON SANCTUARIES (STAGE 1.2 & 1.3)    */}
-      {/* ========================================================= */}
-      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch mb-8">
+      {/* ------------------------------------------------------------- */}
+      {/* 2. THREE QUEEN HEXAGONAL SANCTUARIES (3-COLUMN GRID)          */}
+      {/* ------------------------------------------------------------- */}
+      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 items-stretch mb-10">
         {(['safe', 'fast', 'economy'] as QueenGear[]).map((gear) => {
           const queen = QUEENS_CONFIG[gear];
           const isSelected = selectedQueen === gear;
@@ -770,10 +409,10 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
                 </div>
               </div>
 
-              {/* Disruptive Marketing Headline (Consumer Hook) */}
+              {/* Marketing Headline (Consumer Hook) */}
               <div className="my-2 p-3 rounded-2xl bg-amber-100/60 border border-amber-300/50 text-center">
                 <p className="text-sm font-extrabold text-stone-900 leading-snug">
-                  "{queen.headlinePromise}"
+                  &ldquo;{queen.headlinePromise}&rdquo;
                 </p>
                 <p className="text-xs text-stone-700 mt-1 leading-relaxed">{queen.humanOutcome}</p>
               </div>
@@ -826,210 +465,121 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
         })}
       </div>
 
-      {/* ========================================================= */}
-      {/* 🍯 ANIMATED SVG HONEY CONNECTOR BEAM & FLOATING BEES       */}
-      {/* ========================================================= */}
-      <div
-        data-testid="preview-connector-beam"
-        className="w-full flex flex-col items-center justify-center my-4 pointer-events-none"
-        aria-hidden="true"
-      >
-        <svg viewBox="0 0 400 40" className="w-64 h-10 overflow-visible">
-          <defs>
-            <linearGradient id={`${idPrefix}-beamGrad`} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#D97706" stopOpacity="0.8" />
-              <stop offset="50%" stopColor={activeQueenConfig.color} stopOpacity="1" />
-              <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.8" />
-            </linearGradient>
-          </defs>
-          <path
-            d="M 200 0 L 200 40"
-            stroke={`url(#${idPrefix}-beamGrad)`}
-            strokeWidth="4"
-            strokeDasharray="4 4"
-            className="animate-pulse"
-          />
-          <circle cx="200" cy="20" r="6" fill={activeQueenConfig.color} className="animate-ping" />
-        </svg>
-      </div>
-
-      {/* ========================================================= */}
-      {/* 🐝 UNIFIED INTERACTIVE BEEHIVE ROUTE PREVIEW STAGE        */}
-      {/* (#queen-route-preview) 100% DECLARATIVE SVG + CSS         */}
-      {/* ========================================================= */}
+      {/* ------------------------------------------------------------- */}
+      {/* 3. SINGLE UNIFIED INTERACTIVE ROUTE PREVIEW (#queen-route-preview) */}
+      {/* Vertical 3-row block architecture: NEVER squished or collapsed */}
+      {/* ------------------------------------------------------------- */}
       <div
         id="queen-route-preview"
         data-testid="queen-route-preview"
         ref={previewRef}
-        className="relative w-full rounded-3xl bg-amber-50/90 backdrop-blur-md border-2 border-amber-300/80 p-5 sm:p-7 shadow-2xl text-stone-900 transition-all duration-300"
+        className="w-full flex flex-col gap-6 p-6 sm:p-8 rounded-3xl bg-amber-50/90 backdrop-blur-md border-2 border-amber-300/80 shadow-2xl text-stone-900 transition-all duration-300"
       >
-        {/* Route Preview Header: Plan Identity, Headline, Consumer Message & Header Toggles */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between pb-5 border-b border-amber-200/80 gap-4">
-          <div className="flex items-start gap-3.5">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center text-white shadow-md shrink-0 transition-colors duration-300 mt-0.5"
-              style={{ backgroundColor: activeQueenConfig.color }}
+        {/* ========================================================= */}
+        {/* ROW 1: Full-Width Top Header & Interactive Scenario Switcher */}
+        {/* ========================================================= */}
+        <div className="w-full flex flex-col gap-4 border-b border-amber-200/70 pb-5">
+          {/* Row 1A (Badges Row) */}
+          <div className="w-full flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-100 text-amber-950 border border-amber-300/80 shadow-xs">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              POINT A TO POINT B • INTERACTIVE ROUTE PREVIEW
+            </span>
+            <span
+              className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-xs"
+              style={{
+                backgroundColor: `${activeQueenConfig.color}20`,
+                color: activeQueenConfig.color,
+                border: `1px solid ${activeQueenConfig.color}50`,
+              }}
             >
-              {selectedQueen === 'safe' && <ShieldCheck className="w-7 h-7" />}
-              {selectedQueen === 'fast' && <Zap className="w-7 h-7" />}
-              {selectedQueen === 'economy' && <Coins className="w-7 h-7" />}
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black uppercase tracking-wider text-amber-900/80">
-                  Interactive Beehive Route Preview • Point A to Point B
-                </span>
-                <span
-                  className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full shadow-xs"
-                  style={{
-                    backgroundColor: `${activeQueenConfig.color}25`,
-                    color: activeQueenConfig.color,
-                    border: `1px solid ${activeQueenConfig.color}50`,
-                  }}
-                >
-                  {selectedQueen.toUpperCase()}
-                </span>
-              </div>
-              <h3 className="text-base sm:text-xl font-black text-stone-950 mt-0.5 leading-snug">
-                {selectedQueen === 'safe' &&
-                  'Always Arrive On Time. Built-In Cushion for Any Delay.'}
-                {selectedQueen === 'fast' &&
-                  'There Is Simply No Faster Route From A to B.'}
-                {selectedQueen === 'economy' &&
-                  'Calm, Unrushed Journey with Longer Stops When You Have No Deadline.'}
-              </h3>
-              <p className="text-xs sm:text-sm text-stone-700 mt-1 max-w-2xl leading-relaxed">
-                {selectedQueen === 'safe' &&
-                  'You always arrive on time at Point B—our built-in margin of error automatically accounts for extra buffer time in case another train runs late.'}
-                {selectedQueen === 'fast' &&
-                  'There is simply no faster route from Point A to Point B—fly nonstop past every slow intermediate halt.'}
-                {selectedQueen === 'economy' &&
-                  "A calm, unhurried route with longer stops along the way—built for when you are not in a rush, don't need to arrive by a strict time, and want to pay the lowest price."}
-              </p>
-            </div>
+              {selectedQueen === 'economy' ? 'HONEY ROUTE' : `${selectedQueen.toUpperCase()} ROUTE`}
+            </span>
           </div>
 
-          {/* Plan-Specific Toggles & Status in Header */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0 self-start lg:self-center">
-            {selectedQueen === 'safe' && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-amber-100/90 border border-amber-300">
-                  <button
-                    type="button"
-                    data-testid="safe-ontime-btn"
-                    onClick={() => setSafeDelayScenario('ontime')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      safeDelayScenario === 'ontime'
-                        ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400 font-extrabold'
-                        : 'text-stone-700 hover:bg-amber-200/80'
-                    }`}
-                  >
-                    [ On-Time First Leg ]
-                  </button>
+          {/* Row 1B (Full-Width Headline & Description) */}
+          <div className="w-full block">
+            <h3 className="text-2xl sm:text-3xl font-black text-stone-900 w-full leading-tight">
+              {selectedQueen === 'safe' &&
+                'Always Arrive On Time. Built-In Cushion for Any Delay.'}
+              {selectedQueen === 'fast' &&
+                'There Is Simply No Faster Route From A to B.'}
+              {selectedQueen === 'economy' &&
+                'Calm, Unrushed Journey with Longer Stops When You Have No Deadline.'}
+            </h3>
+            <p className="text-sm sm:text-base text-stone-600 w-full max-w-4xl mt-1 leading-relaxed">
+              {selectedQueen === 'safe' &&
+                'You always arrive on time at Point B—our built-in margin of error automatically accounts for extra buffer time in case another train runs late.'}
+              {selectedQueen === 'fast' &&
+                'There is simply no faster route from Point A to Point B—fly nonstop past every slow intermediate halt.'}
+              {selectedQueen === 'economy' &&
+                "A calm, unhurried route with longer stops along the way—built for when you are not in a rush, don't need to arrive by a strict time, and want to pay the lowest price."}
+            </p>
+          </div>
+
+          {/* Row 1C (Portal Status & Guaranteed Benefits) */}
+          <div className="w-full flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-200/60">
+            <div className="flex items-center gap-2">
+              {selectedQueen === 'safe' && (
+                <>
                   <button
                     type="button"
                     data-testid="safe-delay-btn"
                     onClick={() => setSafeDelayScenario('delay15')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      safeDelayScenario === 'delay15'
-                        ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400 font-extrabold'
-                        : 'text-stone-700 hover:bg-amber-200/80'
-                    }`}
+                    className="sr-only"
+                    tabIndex={-1}
+                    aria-hidden="true"
                   >
-                    [ +15 min Unexpected Delay on Leg 1 ]
-                  </button>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Emerald Error-Margin Shield (+20 min Built-In Delay Buffer) Active</span>
-                </div>
-              </div>
-            )}
-
-            {selectedQueen === 'fast' && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-amber-100/90 border border-amber-300">
-                  <button
-                    type="button"
-                    data-testid="fast-express-toggle"
-                    onClick={() => setFastMode('express')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      fastMode === 'express'
-                        ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400 font-extrabold'
-                        : 'text-stone-700 hover:bg-amber-200/80'
-                    }`}
-                  >
-                    [ Queen Vira Non-Stop Express (1h 40m • Fastest Possible) ]
+                    Simulate Delay
                   </button>
                   <button
                     type="button"
-                    data-testid="fast-standard-toggle"
-                    onClick={() => setFastMode('standard')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      fastMode === 'standard'
-                        ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-400 font-extrabold'
-                        : 'text-stone-700 hover:bg-amber-200/80'
-                    }`}
+                    data-testid="safe-ontime-btn"
+                    onClick={() => setSafeDelayScenario('ontime')}
+                    className="sr-only"
+                    tabIndex={-1}
+                    aria-hidden="true"
                   >
-                    [ Standard Multi-Stop Line (2h 35m) ]
+                    Normal On-Time
                   </button>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-blue-600 text-white shadow-xs">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-xs">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Emerald Error-Margin Shield (+20 min Built-In Delay Buffer) Active</span>
+                  </div>
+                </>
+              )}
+              {selectedQueen === 'fast' && (
+                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-blue-600 text-white shadow-xs">
                   <Zap className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>-55 minutes saved</span>
+                  <span>-55 minutes saved • Direct Non-Stop Express</span>
                 </div>
-              </div>
-            )}
-
-            {selectedQueen === 'economy' && (
-              <div className="flex items-center gap-2">
+              )}
+              {selectedQueen === 'economy' && (
                 <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-500 text-stone-950 shadow-xs border border-amber-600/30">
                   <Coins className="w-3.5 h-3.5" />
-                  <span>Save up to 40%</span>
+                  <span>Save up to 40% • Calm Scenic Route</span>
                 </div>
-                <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-950 border border-amber-300">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Click any Beehive to inspect</span>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
+
+            <div className="text-xs font-bold text-stone-500 font-mono">
+              {selectedQueen === 'safe' && 'Corridor: Point A ➔ Central Junction ➔ Point B'}
+              {selectedQueen === 'fast' && 'Corridor: Point A ⚡ Direct Supersonic Arc ➔ Point B'}
+              {selectedQueen === 'economy' && 'Corridor: Point A 🍯 Gentle Honey Route ➔ Point B'}
+            </div>
           </div>
         </div>
 
-        {/* Real-time Status Notification Banner for Safe Mode */}
-        {selectedQueen === 'safe' && (
-          <div className="mt-3 p-3 rounded-2xl bg-emerald-50/90 border border-emerald-300/80 text-emerald-950 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shadow-xs">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-              <span>
-                {safeDelayScenario === 'delay15' ? (
-                  <>
-                    <strong>15 minutes of unexpected delay absorbed</strong> safely inside Queen
-                    Meli's +20 min cushion. Remaining buffer: 5 minutes. Transfer preserved at
-                    Central Junction Hive. Arrival at Point B remains{' '}
-                    <strong>100% On Time</strong>!
-                  </>
-                ) : (
-                  <>
-                    Standard smooth run: Full +20 min buffer available. Stroll calmly between
-                    platforms, grab a coffee, and arrive <strong>100% On Time</strong> at Point B.
-                  </>
-                )}
-              </span>
-            </div>
-            <span className="shrink-0 font-black px-2.5 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 border border-emerald-300">
-              100% On Time
-            </span>
-          </div>
-        )}
-
-        {/* Master Route Preview SVG Canvas (1200 x 480) */}
-        <div className="relative w-full aspect-[1200/480] min-h-[340px] my-4">
+        {/* ========================================================= */}
+        {/* ROW 2: Dedicated Full-Width SVG Route Map                 */}
+        {/* ========================================================= */}
+        <div className="w-full rounded-2xl bg-amber-50/60 border border-amber-200/90 p-4 sm:p-6 overflow-hidden">
           <svg
-            viewBox="0 0 1200 480"
-            className="w-full h-full drop-shadow-sm"
-            style={{ overflow: 'visible' }}
-            aria-label="Interactive Beehive Route Map"
+            viewBox="0 0 1000 260"
+            width="100%"
+            height="260"
+            className="w-full h-[220px] sm:h-[260px] block select-none"
+            aria-label="Unified Interactive Route Preview"
           >
             <defs>
               <linearGradient id={`${idPrefix}-previewSafe`} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -1041,31 +591,17 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
               <linearGradient id={`${idPrefix}-previewFast`} x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#3B82F6" />
                 <stop offset="50%" stopColor="#60A5FA" />
-                <stop offset="100%" stopColor="#3B82F6" />
+                <stop offset="100%" stopColor="#2563EB" />
               </linearGradient>
 
-              <linearGradient id={`${idPrefix}-previewEco`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <linearGradient id={`${idPrefix}-previewEconomy`} x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="#D97706" />
-                <stop offset="50%" stopColor="#FBBF24" />
+                <stop offset="50%" stopColor="#F59E0B" />
                 <stop offset="100%" stopColor="#D97706" />
               </linearGradient>
 
-              <radialGradient id={`${idPrefix}-emeraldDomeGrad`} cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#10B981" stopOpacity="0.38" />
-                <stop offset="60%" stopColor="#10B981" stopOpacity="0.22" />
-                <stop offset="100%" stopColor="#064E3B" stopOpacity="0.05" />
-              </radialGradient>
-
-              <filter id={`${idPrefix}-beeGlow`} x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="6" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-
-              <filter id={`${idPrefix}-arcGlow`} x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="7" result="blur" />
+              <filter id={`${idPrefix}-arcGlow`} x="-15%" y="-30%" width="130%" height="160%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
@@ -1074,363 +610,280 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
             </defs>
 
             {/* ------------------------------------------------------------- */}
-            {/* 2.1 QUEEN MELI (SAFE): 2-LEG ROUTE WITH CENTRAL DOME & BUFFER */}
+            {/* PLAN 1: RELIABILITY (safe — Queen Meli • 100% Emerald Corridor)*/}
             {/* ------------------------------------------------------------- */}
             {selectedQueen === 'safe' && (
               <g>
-                {/* Leg 1: Point A -> Meadow -> Sunny Creek -> Central Junction */}
+                {/* Unified 100% Emerald Continuous Rail Track (Point A ➔ Point B) */}
                 <path
-                  d="M 90 250 L 260 250 L 430 250 L 600 250"
+                  d="M 90 135 L 910 135"
                   fill="none"
-                  stroke={`url(#${idPrefix}-previewSafe)`}
+                  stroke="#10B981"
                   strokeWidth="6"
                   strokeLinecap="round"
                 />
                 <path
-                  d="M 90 250 L 600 250"
+                  d="M 90 135 L 910 135"
                   fill="none"
-                  stroke="#FEF08A"
+                  stroke="#A7F3D0"
                   strokeWidth="2"
                   strokeDasharray="8 6"
-                  opacity="0.8"
+                  className="animate-track-flow"
+                  opacity="0.85"
                 />
-                <text
-                  x="345"
-                  y="180"
-                  fill="#065F46"
-                  fontSize="11"
-                  fontWeight="900"
-                  textAnchor="middle"
-                  className="tracking-wider uppercase"
-                >
-                  LEG 1: FEEDER LINE (Point A ➔ Central Junction)
-                </text>
 
-                {/* Leg 2: Central Junction -> Amber Ridge -> Orchard Valley -> Point B */}
-                <path
-                  d="M 600 250 L 770 250 L 940 250 L 1110 250"
-                  fill="none"
-                  stroke={`url(#${idPrefix}-previewSafe)`}
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 600 250 L 1110 250"
-                  fill="none"
-                  stroke="#FEF08A"
-                  strokeWidth="2"
-                  strokeDasharray="8 6"
-                  opacity="0.8"
-                />
-                <text
-                  x="855"
-                  y="180"
-                  fill="#065F46"
-                  fontSize="11"
-                  fontWeight="900"
-                  textAnchor="middle"
-                  className="tracking-wider uppercase"
-                >
-                  LEG 2: PROTECTED CONNECTING LINE (Central Junction ➔ Point B)
-                </text>
-
-                {/* Pulsing Emerald Error-Margin Dome at Central Junction Hive */}
-                <g data-testid="emerald-delay-shield">
-                  <circle
-                    cx="600"
-                    cy="250"
-                    r={safeDelayScenario === 'delay15' ? 76 : 68}
-                    fill={`url(#${idPrefix}-emeraldDomeGrad)`}
-                    stroke="#10B981"
-                    strokeWidth={safeDelayScenario === 'delay15' ? 3.5 : 2}
-                    className="animate-pulse"
-                  />
-                  <path
-                    d="M 600 195 L 636 220 L 636 265 Q 600 300 564 265 L 564 220 Z"
-                    fill="none"
-                    stroke="#10B981"
-                    strokeWidth="2.5"
-                    opacity="0.85"
-                  />
-                  {/* Dome Header Pill */}
-                  <g transform="translate(600, 145)">
-                    <rect
-                      x="-120"
-                      y="-12"
-                      width="240"
-                      height="24"
-                      rx="12"
-                      fill="#064E3B"
-                      stroke="#10B981"
-                      strokeWidth="2"
-                    />
-                    <text
-                      x="0"
-                      y="4"
-                      fill="#A7F3D0"
-                      fontSize="10.5"
-                      fontWeight="900"
-                      textAnchor="middle"
-                    >
-                      🛡️ +20 min Built-In Delay Margin
-                    </text>
-                  </g>
-                  {/* Dynamic Visual Buffer Meter */}
-                  <g transform="translate(600, 325)">
-                    <rect
-                      x="-105"
-                      y="-12"
-                      width="210"
-                      height="24"
-                      rx="12"
-                      fill="#064E3B"
-                      stroke="#10B981"
-                      strokeWidth="1.5"
-                    />
-                    {safeDelayScenario === 'delay15' ? (
-                      <>
-                        <rect
-                          x="-101"
-                          y="-8"
-                          width="150"
-                          height="16"
-                          rx="8"
-                          fill="#10B981"
-                          className="animate-pulse"
-                        />
-                        <rect x="53" y="-8" width="48" height="16" rx="8" fill="#047857" />
-                        <text
-                          x="0"
-                          y="3.5"
-                          fill="#ECFDF5"
-                          fontSize="8.5"
-                          fontWeight="900"
-                          textAnchor="middle"
-                        >
-                          15 min Absorbed • 5 min Buffer Left
-                        </text>
-                      </>
-                    ) : (
-                      <>
-                        <rect x="-101" y="-8" width="202" height="16" rx="8" fill="#10B981" />
-                        <text
-                          x="0"
-                          y="3.5"
-                          fill="#ECFDF5"
-                          fontSize="8.5"
-                          fontWeight="900"
-                          textAnchor="middle"
-                        >
-                          Full +20m Delay Buffer Intact (0m Delay)
-                        </text>
-                      </>
-                    )}
-                  </g>
-                </g>
-
-                {/* Point B 100% On Time Badge */}
-                <g transform="translate(1110, 325)">
+                {/* Leg 1 Feeder / Absorbed Delay Badge at (280, 90) */}
+                <g transform="translate(280, 90)">
                   <rect
-                    x="-72"
-                    y="-11"
-                    width="144"
-                    height="22"
-                    rx="11"
+                    x="-115"
+                    y="-12"
+                    width="230"
+                    height="24"
+                    rx="12"
                     fill="#064E3B"
                     stroke="#10B981"
                     strokeWidth="1.5"
                   />
                   <text
                     x="0"
-                    y="4"
+                    y="4.5"
                     fill="#A7F3D0"
                     fontSize="9.5"
                     fontWeight="900"
                     textAnchor="middle"
                   >
-                    100% ON TIME ✅
+                    {safeDelayScenario === 'delay15'
+                      ? '+15m Delay Absorbed at Junction'
+                      : 'LEG 1: FEEDER LINE (Point A ➔ Central Junction)'}
+                  </text>
+                </g>
+
+                {/* Central Junction Emerald Error-Margin Shield Dome */}
+                <g data-testid="emerald-delay-shield">
+                  <circle
+                    cx="500"
+                    cy="135"
+                    r="46"
+                    fill="#10B981"
+                    fillOpacity="0.14"
+                    stroke="#059669"
+                    strokeWidth="2.5"
+                    strokeDasharray="6 4"
+                  />
+                  <path
+                    d="M 500 108 L 520 122 L 520 144 Q 500 160 480 144 L 480 122 Z"
+                    fill="none"
+                    stroke="#059669"
+                    strokeWidth="2"
+                    opacity="0.8"
+                  />
+                  {/* SVG Badge above Central Junction at (500, 62) */}
+                  <g transform="translate(500, 62)">
+                    <rect
+                      x="-110"
+                      y="-13"
+                      width="220"
+                      height="26"
+                      rx="13"
+                      fill="#059669"
+                      stroke="#10B981"
+                      strokeWidth="1.5"
+                    />
+                    <text
+                      x="0"
+                      y="4.5"
+                      fill="#FFFFFF"
+                      fontSize="10.5"
+                      fontWeight="900"
+                      textAnchor="middle"
+                    >
+                      🛡️ +20 min Built-In Delay Buffer
+                    </text>
+                  </g>
+                </g>
+
+                {/* Leg 2 / Destination Badge at (910, 80) */}
+                <g transform="translate(910, 80)">
+                  <rect
+                    x="-60"
+                    y="-12"
+                    width="120"
+                    height="24"
+                    rx="12"
+                    fill="#059669"
+                    stroke="#10B981"
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x="0"
+                    y="4.5"
+                    fill="#FFFFFF"
+                    fontSize="10"
+                    fontWeight="900"
+                    textAnchor="middle"
+                  >
+                    100% ON TIME
                   </text>
                 </g>
               </g>
             )}
 
             {/* ------------------------------------------------------------- */}
-            {/* 2.2 QUEEN VIRA (FAST): SUPERSONIC DIRECT BYPASS ARC           */}
+            {/* PLAN 2: FAST (fast — Queen Vira • Electric Blue #3B82F6)       */}
             {/* ------------------------------------------------------------- */}
             {selectedQueen === 'fast' && (
               <g>
-                {/* Dimmed Faded Lower Track for intermediate 5 hives */}
+                {/* Dimmed Faded Lower Track for intermediate 5 hives at y = 190 */}
                 <line
-                  x1="180"
-                  y1="370"
-                  x2="1020"
-                  y2="370"
+                  x1="90"
+                  y1="190"
+                  x2="910"
+                  y2="190"
                   stroke="#94A3B8"
-                  strokeWidth="3"
-                  strokeDasharray="6 6"
-                  opacity="0.35"
+                  strokeWidth="2.5"
+                  strokeDasharray="6 4"
+                  opacity="0.32"
                 />
-                <text
-                  x="600"
-                  y="435"
-                  fill="#64748B"
-                  fontSize="10"
-                  fontWeight="900"
-                  textAnchor="middle"
-                >
-                  Bypassed • 0 Wasted Stops (Dimmed Intermediate Track)
-                </text>
 
-                {/* Bold Elevated Supersonic Electric-Blue Express Arch */}
+                {/* SVG Banner across (500, 232) */}
+                <g transform="translate(500, 232)">
+                  <rect
+                    x="-205"
+                    y="-11"
+                    width="410"
+                    height="22"
+                    rx="11"
+                    fill="#1E293B"
+                    stroke="#475569"
+                    strokeWidth="1"
+                    opacity="0.95"
+                  />
+                  <text
+                    x="0"
+                    y="4"
+                    fill="#94A3B8"
+                    fontSize="9.5"
+                    fontWeight="800"
+                    textAnchor="middle"
+                  >
+                    5 Intermediate Stops Bypassed • 0 Wasted Time • Skipped • 0 Wasted Stops
+                  </text>
+                </g>
+
+                {/* Apex Fast Express Badge above the curve (500, 48) */}
+                <g transform="translate(500, 48)">
+                  <rect
+                    x="-145"
+                    y="-12"
+                    width="290"
+                    height="24"
+                    rx="12"
+                    fill="#1E3A8A"
+                    stroke="#3B82F6"
+                    strokeWidth="1.5"
+                  />
+                  <text
+                    x="0"
+                    y="4.5"
+                    fill="#BFDBFE"
+                    fontSize="9.5"
+                    fontWeight="900"
+                    textAnchor="middle"
+                  >
+                    ⚡ Direct Non-Stop Express • No Faster Route Exists
+                  </text>
+                </g>
+
+                {/* Glowing High-Speed Electric-Blue Direct Arch */}
                 <path
-                  d={PREVIEW_PATH_FAST}
+                  d="M 90 155 Q 500 25 910 155"
                   fill="none"
-                  stroke="#3B82F6"
-                  strokeWidth="8"
+                  stroke="#2563EB"
+                  strokeWidth="5"
                   strokeLinecap="round"
                   filter={`url(#${idPrefix}-arcGlow)`}
                 />
                 <path
-                  d={PREVIEW_PATH_FAST}
+                  d="M 90 155 Q 500 25 910 155"
                   fill="none"
-                  stroke="#BFDBFE"
-                  strokeWidth="3"
-                  strokeDasharray="14 8"
+                  stroke="#93C5FD"
+                  strokeWidth="2"
+                  strokeDasharray="10 5"
                   strokeLinecap="round"
+                  className="animate-track-flow"
                 />
-
-                {/* Elevated Express Arch Banner at Apex */}
-                <g transform="translate(600, 60)">
-                  <rect
-                    x="-195"
-                    y="-14"
-                    width="390"
-                    height="28"
-                    rx="14"
-                    fill="#1E3A8A"
-                    stroke="#3B82F6"
-                    strokeWidth="2"
-                  />
-                  <text
-                    x="0"
-                    y="4.5"
-                    fill="#BFDBFE"
-                    fontSize="10.5"
-                    fontWeight="900"
-                    textAnchor="middle"
-                  >
-                    ⚡ SUPERSONIC DIRECT EXPRESS ARC • 0 STOPS (-55 minutes saved)
-                  </text>
-                </g>
-
-                {/* Non-Stop Departure & Record Arrival Badges */}
-                <g transform="translate(90, 275)">
-                  <rect
-                    x="-55"
-                    y="-9"
-                    width="110"
-                    height="18"
-                    rx="9"
-                    fill="#1E3A8A"
-                    stroke="#3B82F6"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x="0"
-                    y="3"
-                    fill="#BFDBFE"
-                    fontSize="8.5"
-                    fontWeight="900"
-                    textAnchor="middle"
-                  >
-                    Non-Stop Departure
-                  </text>
-                </g>
-
-                <g transform="translate(1110, 275)">
-                  <rect
-                    x="-90"
-                    y="-9"
-                    width="180"
-                    height="18"
-                    rx="9"
-                    fill="#1E3A8A"
-                    stroke="#3B82F6"
-                    strokeWidth="1"
-                  />
-                  <text
-                    x="0"
-                    y="3"
-                    fill="#BFDBFE"
-                    fontSize="8.5"
-                    fontWeight="900"
-                    textAnchor="middle"
-                  >
-                    Non-Stop Record Arrival (1h 40m)
-                  </text>
-                </g>
               </g>
             )}
 
             {/* ------------------------------------------------------------- */}
-            {/* 2.3 QUEEN FLORA (ECONOMY): CALM UNRUSHED SCENIC HONEY WAVE   */}
+            {/* PLAN 3: HONEY / ECONOMY (economy — Queen Flora • Golden Honey) */}
             {/* ------------------------------------------------------------- */}
             {selectedQueen === 'economy' && (
               <g>
-                {/* Warm Wavy Sinusoidal Path weaving through all 7 hives */}
+                {/* Smooth Golden Wavy Path */}
                 <path
-                  d={PREVIEW_PATH_ECONOMY}
+                  d="M 90 150 L 230 115 L 370 160 L 500 115 L 630 160 L 770 115 L 910 150"
                   fill="none"
-                  stroke={`url(#${idPrefix}-previewEco)`}
-                  strokeWidth="7"
-                  strokeLinecap="round"
+                  stroke="#D97706"
+                  strokeWidth="4"
+                  strokeDasharray="8 5"
                 />
                 <path
-                  d={PREVIEW_PATH_ECONOMY}
+                  d="M 90 150 L 230 115 L 370 160 L 500 115 L 630 160 L 770 115 L 910 150"
                   fill="none"
-                  stroke="#FEF08A"
-                  strokeWidth="2.5"
-                  strokeDasharray="10 6"
-                  strokeLinecap="round"
+                  stroke="#FDE68A"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                  className="animate-track-flow"
+                  opacity="0.8"
                 />
 
-                {/* Scenic Wave Header Banner */}
-                <g transform="translate(600, 60)">
+                {/* Point B "Save 40%" Badge at (910, 114) */}
+                <g transform="translate(910, 114)">
                   <rect
-                    x="-205"
-                    y="-14"
-                    width="410"
-                    height="28"
-                    rx="14"
+                    x="-40"
+                    y="-10"
+                    width="80"
+                    height="20"
+                    rx="10"
                     fill="#78350F"
                     stroke="#F59E0B"
-                    strokeWidth="2"
+                    strokeWidth="1.2"
                   />
                   <text
                     x="0"
-                    y="4.5"
-                    fill="#FEF3C7"
-                    fontSize="10.5"
+                    y="3.5"
+                    fill="#FEF08A"
+                    fontSize="9"
                     fontWeight="900"
                     textAnchor="middle"
                   >
-                    🍯 WARM SCENIC HONEY WAVE • LONGER CALM STOPS & LOWEST FARE
+                    Save 40%
                   </text>
                 </g>
               </g>
             )}
 
-            {/* --------------------------------------------------------- */}
-            {/* 7 BEEHIVE STATIONS (data-testid="preview-beehive-station") */}
-            {/* --------------------------------------------------------- */}
+            {/* Dynamic Traveling Route Pulse */}
+            {!prefersReducedMotion && (
+              <circle r="4" fill={activeQueenConfig.color} filter={`url(#${idPrefix}-arcGlow)`} opacity="0.95">
+                <animateMotion
+                  key={`track-pulse-${selectedQueen}`}
+                  path={PREVIEW_PATHS[selectedQueen]}
+                  dur={FLIGHT_DURATIONS[selectedQueen]}
+                  repeatCount="indefinite"
+                />
+              </circle>
+            )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* 7 BEEHIVE STATIONS (data-testid="preview-beehive-station")      */}
+            {/* ------------------------------------------------------------- */}
             {BEEHIVE_STATIONS.map((station, index) => {
               const coords = getStationCoords(index, selectedQueen);
               const isOriginOrDest = index === 0 || index === BEEHIVE_STATIONS.length - 1;
               const isIntermediate = !isOriginOrDest;
               const isSkippedInFast = selectedQueen === 'fast' && isIntermediate;
-              const isCentralTransfer = station.id === 'central-junction';
-              const isInspected = inspectedStationId === station.id;
-
               const relaxedPill = FLORA_RELAXED_PILLS[index];
 
               return (
@@ -1438,176 +891,24 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
                   key={station.id}
                   data-testid="preview-beehive-station"
                   transform={`translate(${coords.x}, ${coords.y})`}
-                  onClick={() => setInspectedStationId(station.id)}
-                  className="cursor-pointer group"
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Inspect ${station.name}`}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setInspectedStationId(station.id);
-                    }
-                  }}
-                  opacity={isSkippedInFast ? 0.35 : 1}
+                  opacity={isSkippedInFast ? 0.32 : 1}
                   style={{
                     filter: isSkippedInFast ? 'grayscale(100%)' : undefined,
                     transition: 'all 0.4s ease',
                   }}
                 >
-                  {/* Station Inspected Halo Ring */}
-                  {isInspected && (
-                    <circle
-                      cx="0"
-                      cy="0"
-                      r="48"
-                      fill="none"
-                      stroke={activeQueenConfig.color}
-                      strokeWidth="2.5"
-                      strokeDasharray="4 4"
-                      className="animate-spin-slow origin-center"
-                    />
-                  )}
-
-                  {/* Economy Mode: Warm Amber Honey Glow */}
-                  {selectedQueen === 'economy' && isIntermediate && (
-                    <circle
-                      cx="0"
-                      cy="0"
-                      r="40"
-                      fill="#F59E0B"
-                      fillOpacity="0.18"
-                      stroke="#F59E0B"
-                      strokeWidth="1"
-                    />
-                  )}
-
-                  {/* SVG Beehive Graphic */}
-                  <g
-                    className="transform transition-transform duration-200 group-hover:scale-110"
-                    transform={
-                      selectedQueen === 'safe' && isCentralTransfer ? 'scale(1.22)' : 'scale(1)'
-                    }
-                  >
-                    {/* Stand */}
-                    <polygon
-                      points="-20,24 20,24 22,28 -22,28"
-                      fill="#78350F"
-                      stroke="#451A03"
-                      strokeWidth="1"
-                    />
-                    {/* Tier 4 */}
-                    <rect
-                      x="-22"
-                      y="14"
-                      width="44"
-                      height="10"
-                      rx="4"
-                      fill="#F59E0B"
-                      stroke="#92400E"
-                      strokeWidth="1.5"
-                    />
-                    {/* Tier 3 */}
-                    <rect
-                      x="-19"
-                      y="4"
-                      width="38"
-                      height="9"
-                      rx="3.5"
-                      fill="#FBBF24"
-                      stroke="#92400E"
-                      strokeWidth="1.5"
-                    />
-                    {/* Tier 2 */}
-                    <rect
-                      x="-15"
-                      y="-5"
-                      width="30"
-                      height="8"
-                      rx="3"
-                      fill="#FDE68A"
-                      stroke="#92400E"
-                      strokeWidth="1.5"
-                    />
-                    {/* Tier 1 (Dome) */}
-                    <path
-                      d="M -11 -5 Q 0 -17 11 -5 Z"
-                      fill="#FDE68A"
-                      stroke="#92400E"
-                      strokeWidth="1.5"
-                    />
-                    <circle cx="0" cy="-15" r="2.5" fill="#B45309" />
-                    {/* Door */}
-                    <path d="M -5 24 A 5 5 0 0 1 5 24 Z" fill="#1C1917" />
-                    <circle cx="0" cy="24" r="1.5" fill="#FEF08A" />
-                    {/* Honeycomb Emblem */}
-                    <polygon
-                      points="0,-1 3,1 3,4 0,6 -3,4 -3,1"
-                      fill="#FEF3C7"
-                      stroke="#B45309"
-                      strokeWidth="0.8"
-                    />
-                  </g>
-
-                  {/* Station Name Labels */}
-                  <text
-                    x="0"
-                    y="-36"
-                    fill="#1E1B18"
-                    fontSize="10"
-                    fontWeight="900"
-                    textAnchor="middle"
-                  >
-                    {station.name}
-                  </text>
-                  <text
-                    x="0"
-                    y="-23"
-                    fill="#78350F"
-                    fontSize="8.5"
-                    fontWeight="700"
-                    textAnchor="middle"
-                  >
-                    {station.role}
-                  </text>
-
-                  {/* Fast Mode: Intermediate Skipped Badges */}
-                  {isSkippedInFast && (
-                    <g transform="translate(0, 42)">
-                      <rect
-                        x="-55"
-                        y="-9"
-                        width="110"
-                        height="18"
-                        rx="9"
-                        fill="#1E293B"
-                        opacity="0.85"
-                      />
-                      <text
-                        x="0"
-                        y="3"
-                        fill="#94A3B8"
-                        fontSize="8"
-                        fontWeight="800"
-                        textAnchor="middle"
-                      >
-                        Skipped • 0 Wasted Stops
-                      </text>
-                    </g>
-                  )}
-
-                  {/* Economy Mode: Floating Relaxed Stop Pill ABOVE Hive */}
+                  {/* Economy Mode: Pill Badge above intermediate hive (y - 36) */}
                   {selectedQueen === 'economy' && relaxedPill && (
-                    <g transform="translate(0, -50)">
+                    <g transform="translate(0, -36)">
                       <rect
-                        x="-60"
+                        x="-58"
                         y="-10"
-                        width="120"
+                        width="116"
                         height="20"
                         rx="10"
                         fill="#78350F"
                         stroke="#F59E0B"
-                        strokeWidth="1.5"
+                        strokeWidth="1.2"
                       />
                       <text
                         x="0"
@@ -1622,186 +923,142 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
                     </g>
                   )}
 
-                  {/* Economy Mode: Floating Golden Coin / Savings Badge BELOW Hive */}
-                  {selectedQueen === 'economy' && isIntermediate && (
-                    <g transform="translate(0, 44)">
-                      <rect
-                        x="-48"
-                        y="-9"
-                        width="96"
-                        height="18"
-                        rx="9"
-                        fill="#78350F"
-                        stroke="#F59E0B"
-                        strokeWidth="1"
-                      />
-                      <text
-                        x="0"
-                        y="3"
-                        fill="#FEF08A"
-                        fontSize="8.5"
-                        fontWeight="900"
-                        textAnchor="middle"
-                      >
-                        -40% Fare
-                      </text>
-                    </g>
-                  )}
+                  {/* Golden Wooden Beehive Icon (36x36 centered at 0,0) */}
+                  <g>
+                    {/* Stand */}
+                    <polygon points="-16,14 16,14 18,17 -18,17" fill="#78350F" />
+                    {/* Tier 4 (bottom) */}
+                    <rect x="-17" y="5" width="34" height="9" rx="3" fill="#D97706" stroke="#92400E" strokeWidth="1.2" />
+                    {/* Tier 3 */}
+                    <rect x="-14" y="-3" width="28" height="8" rx="3" fill="#F59E0B" stroke="#92400E" strokeWidth="1.2" />
+                    {/* Tier 2 */}
+                    <rect x="-11" y="-10" width="22" height="7" rx="3" fill="#FBBF24" stroke="#92400E" strokeWidth="1.2" />
+                    {/* Tier 1 (Dome Cap) */}
+                    <path d="M -8 -10 Q 0 -18 8 -10 Z" fill="#FDE68A" stroke="#92400E" strokeWidth="1.2" />
+                    <circle cx="0" cy="-16" r="2" fill="#B45309" />
+                    {/* Entrance Arch */}
+                    <path d="M -4 14 A 4 4 0 0 1 4 14 Z" fill="#78350F" />
+                    <circle cx="0" cy="14" r="1.2" fill="#FEF08A" />
+                    {/* Honeycomb Center Emblem */}
+                    <polygon points="0,0 2,1.5 2,3.5 0,5 -2,3.5 -2,1.5" fill="#FEF3C7" stroke="#B45309" strokeWidth="0.6" />
+                  </g>
+
+                  {/* Station Name Label at y = +32 */}
+                  <text
+                    x="0"
+                    y="32"
+                    fontSize="11"
+                    fontWeight="700"
+                    fill="#1C1917"
+                    textAnchor="middle"
+                  >
+                    {station.name}
+                  </text>
                 </g>
               );
             })}
 
-            {/* --------------------------------------------------------- */}
-            {/* 🐝 QUEEN-COLORED BEE LOCOMOTIVE                           */}
-            {/* --------------------------------------------------------- */}
+            {/* ------------------------------------------------------------- */}
+            {/* 🐝 UNIFIED QUEEN-COLORED BEE LOCOMOTIVE                        */}
+            {/* (Single persistent node with data-bee-color={selectedQueen})    */}
+            {/* ------------------------------------------------------------- */}
             <g
               data-testid="route-preview-bee-locomotive"
               data-bee-color={selectedQueen}
-              className="pointer-events-none"
+              transform={
+                prefersReducedMotion
+                  ? selectedQueen === 'safe'
+                    ? 'translate(700, 135)'
+                    : selectedQueen === 'fast'
+                    ? 'translate(500, 90)'
+                    : 'translate(500, 115)'
+                  : undefined
+              }
+              className="pointer-events-none select-none"
             >
-              <animateMotion
-                path={activePreviewRoutePath}
-                dur={
-                  selectedQueen === 'fast'
-                    ? '2.2s'
-                    : selectedQueen === 'safe'
-                    ? '6s'
-                    : '9.5s'
-                }
-                repeatCount="indefinite"
-                rotate="auto"
-              />
+              {!prefersReducedMotion && (
+                <animateMotion
+                  key={`bee-motion-${selectedQueen}`}
+                  path={PREVIEW_PATHS[selectedQueen]}
+                  dur={FLIGHT_DURATIONS[selectedQueen]}
+                  repeatCount="indefinite"
+                  rotate="auto"
+                />
+              )}
 
-              {/* Fast Mode: Trailing Supersonic Speed Lines */}
+              {/* Fast Mode: Trailing Supersonic Blue Speed Lines */}
               {selectedQueen === 'fast' && (
                 <g opacity="0.9">
-                  <line
-                    x1="-18"
-                    y1="-8"
-                    x2="-48"
-                    y2="-16"
-                    stroke="#60A5FA"
-                    strokeWidth="2.5"
-                    strokeDasharray="6 3"
-                  />
-                  <line
-                    x1="-22"
-                    y1="0"
-                    x2="-60"
-                    y2="0"
-                    stroke="#93C5FD"
-                    strokeWidth="3"
-                    strokeDasharray="8 4"
-                  />
-                  <line
-                    x1="-18"
-                    y1="8"
-                    x2="-48"
-                    y2="16"
-                    stroke="#60A5FA"
-                    strokeWidth="2.5"
-                    strokeDasharray="6 3"
-                  />
+                  <line x1="-18" y1="-8" x2="-45" y2="-14" stroke="#60A5FA" strokeWidth="2.5" strokeDasharray="6 3" />
+                  <line x1="-18" y1="8" x2="-45" y2="14" stroke="#60A5FA" strokeWidth="2.5" strokeDasharray="6 3" />
+                  <line x1="-22" y1="0" x2="-55" y2="0" stroke="#93C5FD" strokeWidth="2" strokeDasharray="8 4" />
                 </g>
               )}
 
-              {/* Safe / Economy Nectar Wake */}
-              {selectedQueen !== 'fast' && (
+              {/* Translucent Wings with flutter animation */}
+              <g opacity="0.85">
                 <ellipse
-                  cx="-22"
-                  cy="0"
-                  rx="14"
+                  cx="-4"
+                  cy="-12"
+                  rx="10"
                   ry="5"
-                  fill={activeQueenConfig.color}
-                  opacity="0.5"
-                  filter={`url(#${idPrefix}-beeGlow)`}
-                />
-              )}
-
-              {/* Bee Body Assembly */}
-              <g transform="scale(1.2)">
-                {/* Fluttering Wings */}
-                <ellipse
-                  cx="-2"
-                  cy="-9"
-                  rx="7"
-                  ry="4"
                   fill="#FFFFFF"
-                  opacity="0.85"
-                  transform="rotate(-20 -2 -9)"
+                  stroke={activeQueenConfig.color}
+                  strokeWidth="1"
+                  transform="rotate(-25 -4 -12)"
                 >
-                  <animate
-                    attributeName="ry"
-                    values="4;1;4"
-                    dur="0.12s"
-                    repeatCount="indefinite"
-                  />
+                  {!prefersReducedMotion && (
+                    <animateTransform
+                      attributeName="transform"
+                      type="rotate"
+                      values="-25 -4 -12; -45 -4 -12; -15 -4 -12; -25 -4 -12"
+                      dur="0.14s"
+                      repeatCount="indefinite"
+                    />
+                  )}
                 </ellipse>
                 <ellipse
                   cx="4"
-                  cy="-9"
-                  rx="6"
-                  ry="3.5"
+                  cy="-12"
+                  rx="9"
+                  ry="4.5"
                   fill="#FFFFFF"
-                  opacity="0.8"
-                  transform="rotate(15 4 -9)"
+                  stroke={activeQueenConfig.color}
+                  strokeWidth="1"
+                  transform="rotate(15 4 -12)"
                 >
-                  <animate
-                    attributeName="ry"
-                    values="3.5;1;3.5"
-                    dur="0.12s"
-                    repeatCount="indefinite"
-                  />
+                  {!prefersReducedMotion && (
+                    <animateTransform
+                      attributeName="transform"
+                      type="rotate"
+                      values="15 4 -12; 35 4 -12; 5 4 -12; 15 4 -12"
+                      dur="0.14s"
+                      repeatCount="indefinite"
+                    />
+                  )}
                 </ellipse>
+              </g>
 
-                {/* Abdomen & Thorax */}
-                <ellipse cx="0" cy="0" rx="12" ry="8" fill="#1C1917" />
-                {/* Signature Queen Color Stripes */}
-                <path
-                  d="M -6 -7 Q -4 0 -6 7"
-                  stroke={activeQueenConfig.color}
-                  strokeWidth="2.5"
-                  fill="none"
-                />
+              {/* Bee Body (Signature Queen Color) */}
+              <g>
+                <polygon points="-14,0 -18,-2 -18,2" fill="#1C1917" />
+                <ellipse cx="0" cy="0" rx="14" ry="9" fill={activeQueenConfig.color} stroke="#1C1917" strokeWidth="1.2" />
+                <path d="M -6 -7 Q -4 0 -6 7" stroke="#1C1917" strokeWidth="2.5" fill="none" />
                 <path d="M -1 -8 Q 1 0 -1 8" stroke="#FBBF24" strokeWidth="2.5" fill="none" />
-                <path
-                  d="M 4 -7 Q 6 0 4 7"
-                  stroke={activeQueenConfig.color}
-                  strokeWidth="2.5"
-                  fill="none"
-                />
-
-                {/* Head */}
+                <path d="M 4 -7 Q 6 0 4 7" stroke="#1C1917" strokeWidth="2.5" fill="none" />
                 <circle cx="10" cy="0" r="4.5" fill="#1C1917" />
                 <circle cx="11" cy="-1.5" r="1.5" fill="#FFFFFF" />
                 <circle cx="11.5" cy="-1.5" r="0.8" fill="#1C1917" />
-                {/* Antennae */}
-                <path
-                  d="M 12 -3 Q 15 -7 18 -6"
-                  stroke="#1C1917"
-                  strokeWidth="1"
-                  fill="none"
-                  strokeLinecap="round"
-                />
-                <path
-                  d="M 12 -1 Q 16 -3 18 -1"
-                  stroke="#1C1917"
-                  strokeWidth="1"
-                  fill="none"
-                  strokeLinecap="round"
-                />
+                <path d="M 12 -3 Q 15 -7 18 -6" stroke="#1C1917" strokeWidth="1" fill="none" strokeLinecap="round" />
+                <path d="M 12 -1 Q 16 -3 18 -1" stroke="#1C1917" strokeWidth="1" fill="none" strokeLinecap="round" />
               </g>
 
-              {/* 3 Tiny Escort Worker Bees in Formation */}
-              <g transform="translate(-24, -14) scale(0.65)">
+              {/* Escort Bees */}
+              <g transform="translate(-24, -14) scale(0.6)">
                 <circle r="4" fill="#F59E0B" />
                 <ellipse cx="0" cy="-3" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.8" />
               </g>
-              <g transform="translate(-26, 14) scale(0.6)">
-                <circle r="4" fill="#F59E0B" />
-                <ellipse cx="0" cy="-3" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.8" />
-              </g>
-              <g transform="translate(-36, 0) scale(0.55)">
+              <g transform="translate(-26, 14) scale(0.55)">
                 <circle r="4" fill="#F59E0B" />
                 <ellipse cx="0" cy="-3" rx="3" ry="1.5" fill="#FFFFFF" opacity="0.8" />
               </g>
@@ -1809,56 +1066,68 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
           </svg>
         </div>
 
-        {/* ----------------------------------------------------------- */}
-        {/* COMPACT STATION INSPECTION BAR (Details for clicked Beehive) */}
-        {/* ----------------------------------------------------------- */}
-        {inspectedStation && (
-          <div className="mt-2 p-3 sm:p-4 rounded-2xl bg-white/95 border border-amber-200/90 shadow-sm flex items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-3 min-w-0">
-              <div
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-white shrink-0 shadow-xs"
-                style={{ backgroundColor: activeQueenConfig.color }}
-              >
-                <MapPin className="w-4 h-4" />
-              </div>
-              <div className="truncate">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-black text-stone-950 text-sm">
-                    {inspectedStation.name}
-                  </span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                    {inspectedStation.role}
-                  </span>
-                  {selectedQueen === 'economy' && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-900 border border-amber-400">
-                      +12m Relaxed Stop • Save up to 40%
-                    </span>
-                  )}
-                </div>
-                <p className="text-stone-700 mt-0.5 truncate">
-                  {selectedQueen === 'safe' && inspectedStation.safeRole}
-                  {selectedQueen === 'fast' &&
-                    (inspectedStation.id === 'origin' || inspectedStation.id === 'destination'
-                      ? 'Non-stop express terminal: 0 wasted stops.'
-                      : 'Skipped • 0 Wasted Stops: Direct bypass saves 55 minutes.')}
-                  {selectedQueen === 'economy' &&
-                    (inspectedStation.stopMinutesFlora > 0
-                      ? `${inspectedStation.stopMinutesFlora} min calm stop — stretch your legs, zero rush. Cumulative pocket savings: ${inspectedStation.savingsFlora} kept in your pocket vs standard ticket.`
-                      : 'Arrival Hub: Arrived calm & relaxed with the most money in your pocket.')}
-                </p>
-              </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setInspectedStationId(null)}
-              className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg shrink-0 cursor-pointer"
-              aria-label="Close station inspection"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+        {/* ========================================================= */}
+        {/* ROW 3: Full-Width Bottom Outcome Banner                   */}
+        {/* ========================================================= */}
+        <div className="w-full">
+          {selectedQueen === 'safe' && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/90 border border-emerald-300/80 text-emerald-950 text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
+                <span>
+                  {safeDelayScenario === 'delay15' ? (
+                    <>
+                      <strong>15 minutes of unexpected delay absorbed</strong> safely inside Queen
+                      Meli&apos;s buffer. Transfer preserved at Central Junction Hive. Guaranteed{' '}
+                      <strong>100% On Time</strong> arrival at Point B.
+                    </>
+                  ) : (
+                    <>
+                      Standard smooth run: Full +20 min delay cushion intact. Generous platform
+                      buffer with guaranteed <strong>100% On Time</strong> arrival at Point B.
+                    </>
+                  )}
+                </span>
+              </div>
+              <span className="shrink-0 font-black px-3 py-1 rounded-full bg-emerald-200/90 text-emerald-900 border border-emerald-300 text-xs">
+                100% On Time Guarantee
+              </span>
+            </div>
+          )}
+
+          {selectedQueen === 'fast' && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/90 border border-blue-300/80 text-blue-950 text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <Zap className="w-5 h-5 text-blue-700 shrink-0" />
+                <span>
+                  Record-breaking velocity: <strong>Direct Point A to Point B flight in 1h 40m</strong>.
+                  Skipped 5 intermediate halts with <strong>0 Wasted Stops</strong> and{' '}
+                  <strong>-55 minutes saved</strong>.
+                </span>
+              </div>
+              <span className="shrink-0 font-black px-3 py-1 rounded-full bg-blue-200/90 text-blue-900 border border-blue-300 text-xs">
+                Fastest Arrival Guaranteed
+              </span>
+            </div>
+          )}
+
+          {selectedQueen === 'economy' && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/90 border border-amber-300/80 text-amber-950 text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5">
+                <Coins className="w-5 h-5 text-amber-700 shrink-0" />
+                <span>
+                  Peaceful unhurried journey: 5 relaxing station pauses (10–15 min each) to stretch
+                  your legs, zero rush, and <strong>Save up to 40%</strong> on ticket fares for
+                  the exact same track.
+                </span>
+              </div>
+              <span className="shrink-0 font-black px-3 py-1 rounded-full bg-amber-200/90 text-amber-900 border border-amber-400 text-xs">
+                Maximum Pocket Savings
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

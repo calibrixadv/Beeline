@@ -119,50 +119,59 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-        # Migrations / column checks for backward compatibility
-        for table_name, col_def in [
-            ("users", "username VARCHAR(255)"),
-            ("users", "role VARCHAR(32) DEFAULT 'TRAVELER'"),
-            ("users", "preferences TEXT DEFAULT '{}'"),
-            ("users", "phone_number VARCHAR(32)"),
-            ("users", "avatar_url VARCHAR(512)"),
-            ("users", "account_status VARCHAR(32) DEFAULT 'ACTIVE'"),
-            ("users", "frozen_at TIMESTAMP"),
-            ("users", "deletion_scheduled_at TIMESTAMP"),
-            ("users", "deletion_reminder_15d_sent BOOLEAN DEFAULT FALSE"),
-            ("saved_routes", "notes VARCHAR(500)"),
-            ("bookings", "passenger_count INTEGER DEFAULT 1"),
-            ("bookings", "seat_preference VARCHAR(32) DEFAULT 'WINDOW'"),
-            ("user_sessions", "device_fingerprint VARCHAR(128)"),
-            ("user_sessions", "device_name VARCHAR(255)"),
-            ("user_sessions", "user_agent VARCHAR(500)"),
-            ("user_sessions", "remember_me BOOLEAN DEFAULT FALSE"),
-        ]:
-            try:
-                await conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_def}"))
-            except Exception:
-                pass
+    # Migrations / column checks for backward compatibility (run each alteration in its own transaction)
+    is_postgres = "postgresql" in settings.DATABASE_URL
+    add_col_prefix = "ADD COLUMN IF NOT EXISTS" if is_postgres else "ADD COLUMN"
+
+    for table_name, col_def in [
+        ("users", "username VARCHAR(255)"),
+        ("users", "role VARCHAR(32) DEFAULT 'TRAVELER'"),
+        ("users", "preferences TEXT DEFAULT '{}'"),
+        ("users", "phone_number VARCHAR(32)"),
+        ("users", "avatar_url VARCHAR(512)"),
+        ("users", "account_status VARCHAR(32) DEFAULT 'ACTIVE'"),
+        ("users", "frozen_at TIMESTAMPTZ" if is_postgres else "frozen_at TIMESTAMP"),
+        ("users", "deletion_scheduled_at TIMESTAMPTZ" if is_postgres else "deletion_scheduled_at TIMESTAMP"),
+        ("users", "deletion_reminder_15d_sent BOOLEAN DEFAULT FALSE"),
+        ("saved_routes", "notes VARCHAR(500)"),
+        ("bookings", "passenger_count INTEGER DEFAULT 1"),
+        ("bookings", "seat_preference VARCHAR(32) DEFAULT 'WINDOW'"),
+        ("user_sessions", "device_fingerprint VARCHAR(128)"),
+        ("user_sessions", "device_name VARCHAR(255)"),
+        ("user_sessions", "user_agent VARCHAR(500)"),
+        ("user_sessions", "remember_me BOOLEAN DEFAULT FALSE"),
+    ]:
         try:
-            await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users(username)"))
-        except Exception:
-            pass
-        try:
-            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_account_status ON users(account_status)"))
+            async with engine.begin() as col_conn:
+                await col_conn.execute(text(f"ALTER TABLE {table_name} {add_col_prefix} {col_def}"))
         except Exception:
             pass
 
-        # Check if database is empty and requires fixtures
-        backend_dir = Path(__file__).resolve().parent.parent.parent
-        seed_sql_file = backend_dir / "seed.sql"
-
+    async with engine.begin() as idx_conn:
         try:
-            res = await conn.execute(text("SELECT count(*) FROM users"))
+            await idx_conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users(username)"))
+        except Exception:
+            pass
+        try:
+            await idx_conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_account_status ON users(account_status)"))
+        except Exception:
+            pass
+
+    # Check if database is empty and requires fixtures
+    backend_dir = Path(__file__).resolve().parent.parent.parent
+    seed_sql_file = backend_dir / "seed.sql"
+
+    user_count = 0
+    try:
+        async with engine.begin() as count_conn:
+            res = await count_conn.execute(text("SELECT count(*) FROM users"))
             user_count = res.scalar() or 0
-        except Exception:
-            user_count = 0
+    except Exception:
+        user_count = 0
 
-        if user_count == 0 and seed_sql_file.exists():
-            logger.info("Database empty on startup. Applying automatic fixtures from seed.sql...")
-            seed_content = seed_sql_file.read_text(encoding="utf-8")
-            await apply_sql_script(conn, seed_content)
-            logger.info("Automatic fixtures applied successfully.")
+    if user_count == 0 and seed_sql_file.exists():
+        logger.info("Database empty on startup. Applying automatic fixtures from seed.sql...")
+        seed_content = seed_sql_file.read_text(encoding="utf-8")
+        async with engine.begin() as seed_conn:
+            await apply_sql_script(seed_conn, seed_content)
+        logger.info("Automatic fixtures applied successfully.")

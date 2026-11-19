@@ -79,7 +79,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
   };
 
   return (
-    <BaseCard variant="elevated" className="p-6 md:p-8 max-w-2xl mx-auto shadow-xl border border-amber-200/80">
+    <BaseCard variant="elevated" className={`p-6 md:p-8 max-w-2xl mx-auto shadow-xl border border-amber-200/80 ${className || ''}`.trim()}>
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-amber-100 text-amber-800">
