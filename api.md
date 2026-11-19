@@ -124,69 +124,124 @@ Idempotency-Key: book:v1:usr-001:trip-gl-buc-fastest-01:2026-10-21
 
 Base path: `/api/v1/auth` and `/api/v1/users`
 
+### 5.0 Authentication & Session Security Architecture
+
+Beeline VoyageRail implements an enterprise-grade defense-in-depth security model across all authentication and user lifecycle operations:
+
+1. **Encrypted `HttpOnly` Dual-Cookie Architecture:**
+   - `beeline_auth_token`: Encrypted session token containing session ID (`sid`), client device fingerprint (`dfp`), issue timestamp (`iat`), rotation threshold (`rot_exp`), and expiration (`exp`). Encrypted at rest and in transit via Fernet (AES-128-CBC + HMAC-SHA256 authenticated encryption).
+   - `beeline_device_proof`: Cryptographic HMAC-SHA256 signature binding the session ID to the client device fingerprint (`dfp`), verifying that the HTTP client presenting the session token matches the device context that originated the session.
+   - Both cookies enforce `HttpOnly=True`, `SameSite=Lax`, and `Path=/`.
+2. **Anti-Hijack Device Binding & Instant Redis Revocation (< 0.5ms):**
+   - Every request presenting a session cookie undergoes context verification against the client's `User-Agent` and device fingerprint.
+   - If a stolen cookie is replayed from a differing device or missing proof, the request is immediately rejected with `401 Unauthorized` and the session is atomically revoked across PostgreSQL and Redis (`session:revoked:{session_id}`).
+3. **Backend-Only Refresh Token Vault:**
+   - Raw refresh tokens are never persisted in plaintext. Only SHA-256 digests (`UserSession.refresh_token_hash`) and server-side session vaults (`session:vault:{session_id}`) are retained.
+   - Rotating a refresh token immediately burns the previous token. Token reuse triggers an instant replay alarm, revoking all tokens in the compromised family.
+4. **Transparent 15-Minute Auto-Rotation:**
+   - Sessions have an active rotation lifespan (`rot_exp = iat + 15m`). When a valid request arrives after this threshold, the server transparently issues a fresh `beeline_auth_token` in response headers without interrupting client navigation or API workflows.
+5. **Session Lifetimes & Durations:**
+   - **Standard Session:** 1 Day (24 hours / 86,400s) for public or shared devices (`remember_me=False`).
+   - **Extended Remember-Me Session:** 30 Days (2,592,000s) for personal trusted devices (`remember_me=True`).
+6. **Global Auth Sliding-Window Rate-Limiter Middleware:**
+   - Covers all `/api/v1/auth/*` mutation routes (`POST`).
+   - Backed by Redis sliding-window sorted sets (`ratelimit:auth:{client_ip}:{path}`) with graceful in-memory fallback.
+   - Configurable burst ceiling (`AUTH_RATE_LIMIT_MAX_REQUESTS: 30` per `AUTH_RATE_LIMIT_WINDOW_SECONDS: 60`).
+   - Rate-limited responses return `429 Too Many Requests` with a compliant `Retry-After: <seconds>` header.
+   - Automated testing and internal service meshes may supply the `X-Test-Rate-Limit-Bypass: true` header.
+
+---
+
 ### 5.1 Traveler Sign Up
 ```http
 POST /api/v1/auth/signup
 ```
-Registers a permanent traveler account and returns immediate authentication tokens.
+Registers a permanent traveler account, automatically generates exactly 3 high-entropy emergency recovery codes (`BEE-XXXX-XXXX`), stores salted SHA-256 hashes in `mfa_credentials`, dispatches the welcome onboarding email, establishes a 1-day session, and sets secure `HttpOnly` session cookies.
 
 - **Request Body:**
 ```json
 {
   "email": "traveler@beeline.io",
-  "password": "StrongPassword123!",
+  "username": "traveler_bee",
+  "password": "SecurePassword123!",
   "full_name": "Andrei Popescu",
-  "device_info": "Next.js Web / Chrome macOS"
+  "device_info": "MacBook Pro M2",
+  "remember_me": false
 }
 ```
 - **Response `201 Created`:**
 ```json
 {
-  "access_token": "eyJhbGciOi...",
+  "access_token": "gAAAAABn...",
   "refresh_token": "eyJhbGciOi...",
   "token_type": "bearer",
-  "expires_in": 3600,
+  "expires_in": 86400,
+  "recovery_codes": [
+    "BEE-9A4F-2C81",
+    "BEE-5E1D-7B03",
+    "BEE-3F8C-6A92"
+  ],
   "user": {
     "id": "usr-uuid-001",
     "email": "traveler@beeline.io",
+    "username": "traveler_bee",
     "full_name": "Andrei Popescu",
+    "role": "TRAVELER",
     "is_guest": false,
     "is_active": true,
     "mfa_enabled": false,
-    "created_at": "2026-11-01T10:00:00Z"
+    "account_status": "ACTIVE",
+    "created_at": "2026-11-18T12:00:00Z"
   }
 }
 ```
+- **Set-Cookie Headers:**
+  - `beeline_auth_token=<encrypted_token>; Max-Age=86400; HttpOnly; SameSite=Lax; Path=/`
+  - `beeline_device_proof=<hmac_proof>; Max-Age=86400; HttpOnly; SameSite=Lax; Path=/`
+
+---
 
 ### 5.2 Traveler Login
 ```http
 POST /api/v1/auth/login
 ```
-Authenticates user. If 2FA is active, returns an MFA challenge instead of access tokens.
+Authenticates traveler credentials. If MFA is enabled, returns a 5-minute MFA session token challenge. If the account is frozen pending deletion, returns `403 Forbidden` with `ACCOUNT_FROZEN_UNFREEZE_EMAIL_SENT` and sends an unfreeze link. Supports `remember_me=True` for 30-day extended sessions.
 
 - **Request Body:**
 ```json
 {
   "email": "traveler@beeline.io",
-  "password": "StrongPassword123!",
-  "device_info": "Next.js Web / Safari iOS"
+  "password": "SecurePassword123!",
+  "remember_me": true,
+  "device_info": "iPhone 15 Safari"
 }
 ```
-- **Response `200 OK` (Standard):** Returns `TokenResponse` as in `5.1`.
+- **Response `200 OK` (Standard):** Returns `TokenResponse` with 30-day cookie expiration.
 - **Response `200 OK` (MFA Challenge Required):**
 ```json
 {
   "mfa_required": true,
-  "mfa_session_token": "mfa-challenge-jwt-token...",
+  "mfa_session_token": "eyJhbGciOi...",
   "message": "Enter your 6-digit TOTP verification code"
 }
 ```
+- **Response `403 Forbidden` (Account Frozen):**
+```json
+{
+  "error": {
+    "code": "ACCOUNT_FROZEN_UNFREEZE_EMAIL_SENT",
+    "message": "This account is scheduled for deletion. An unfreeze link has been sent to your email."
+  }
+}
+```
+
+---
 
 ### 5.3 Ephemeral Guest Session
 ```http
 POST /api/v1/auth/guest
 ```
-Enables instantaneous frictionless booking and route exploration without signup.
+Enables instantaneous frictionless booking and route exploration without upfront registration.
 
 - **Request Body:**
 ```json
@@ -196,27 +251,31 @@ Enables instantaneous frictionless booking and route exploration without signup.
 ```
 - **Response `201 Created`:** Returns `TokenResponse` with `is_guest: true`.
 
+---
+
 ### 5.4 Convert Guest to Registered Traveler
 ```http
 POST /api/v1/auth/guest/convert
 ```
-**Auth:** Bearer Token (Guest Session). Promotes the guest to a permanent user while preserving all saved routes and wallet bookings.
+**Auth:** Bearer Token or Cookie (Guest Session). Promotes the guest to a permanent user while preserving all saved routes and wallet bookings.
 
 - **Request Body:**
 ```json
 {
   "email": "converted@beeline.io",
-  "password": "NewPermanentPassword123!",
+  "password": "PermanentSecret2026!",
   "full_name": "Andrei Popescu"
 }
 ```
 - **Response `200 OK`:** Returns updated `UserProfile`.
 
+---
+
 ### 5.5 Token Refresh & Rotation
 ```http
 POST /api/v1/auth/refresh
 ```
-Exchanges a valid refresh token for a newly issued access token and rotating refresh token. Old refresh token is revoked atomically.
+Exchanges a valid refresh token for a newly issued access token and rotating refresh token. Old refresh token is revoked atomically in PostgreSQL and Redis.
 
 - **Request Body:**
 ```json
@@ -226,31 +285,430 @@ Exchanges a valid refresh token for a newly issued access token and rotating ref
 ```
 - **Response `200 OK`:** Returns fresh `TokenResponse`.
 
+---
+
 ### 5.6 Traveler Logout
 ```http
 POST /api/v1/auth/logout
 ```
-**Auth:** Bearer Token. Revokes current device session.
+**Auth:** Bearer Token or Cookie. Revokes the active session instantly in Redis and PostgreSQL and clears session cookies.
 
 - **Response `200 OK`:**
 ```json
-{ "message": "Successfully logged out" }
+{
+  "message": "Successfully logged out"
+}
 ```
 
-### 5.7 Two-Factor Authentication (TOTP)
-- `POST /api/v1/auth/mfa/setup`: Generates RFC 6238 TOTP secret, otpauth URI, and QR code SVG.
-- `POST /api/v1/auth/mfa/verify`: Confirms TOTP setup with 6-digit test code; generates 8 emergency recovery backup codes.
-- `POST /api/v1/auth/mfa/challenge`: Validates challenge token + TOTP or backup code during login.
-- `POST /api/v1/auth/mfa/disable`: Disables MFA with password confirmation.
+---
 
-### 5.8 Current User & Device Sessions
-- `GET /api/v1/users/me`: Retrieves authenticated traveler profile.
-- `PATCH /api/v1/users/me`: Partial updates to name or preferences.
-- `DELETE /api/v1/users/me`: Permanently deletes current user account and cascading relations. Returns `200 OK`.
-- `GET /api/v1/users/me/sessions`: Lists all active logged-in device sessions (IP, device name, last active).
-- `DELETE /api/v1/users/me/sessions/{sessionId}`: Revokes a specific session remotely.
-- `DELETE /api/v1/users/me/sessions`: Revokes all other sessions except current.
-- `DELETE /api/v1/users/me/sessions`: Revokes all other sessions except current.
+### 5.7 Password & Email Breach Check
+```http
+POST /api/v1/auth/check-breach
+```
+Performs privacy-preserving breach detection using k-Anonymity (first 5 SHA-1 characters sent to HIBP API, never sending the full password) with fallback to offline compromised passwords. Also inspects simulated domain compromise histories for traveler emails.
+
+- **Request Body:**
+```json
+{
+  "password": "password123",
+  "email": "traveler@adobe.com"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "is_compromised": true,
+  "breach_count": 3824018,
+  "email_compromised": true,
+  "email_breaches": [
+    "Adobe Systems (153M records, 2013)"
+  ],
+  "recommendation": "CRITICAL: This password has been exposed in 3,824,018 known breaches. Choose a stronger, unique password."
+}
+```
+
+---
+
+### 5.8 Forgot Password Request
+```http
+POST /api/v1/auth/forgot-password
+```
+Generates a cryptographically secure single-use password reset token (15-minute TTL) and dispatches the reset link via `EmailService`. Always returns a constant-time success message to prevent user enumeration. Protected by a strict 3-strike / 15-minute brute-force shield.
+
+- **Request Body:**
+```json
+{
+  "email": "traveler@beeline.io"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "If this email is registered, password reset instructions have been sent."
+}
+```
+
+---
+
+### 5.9 Reset Password
+```http
+POST /api/v1/auth/reset-password
+```
+Consumes the single-use reset token, evaluates the new password against structural entropy rules and breach blocklists, updates the password hash, atomically revokes all active sessions across devices, and dispatches a security alert email.
+
+- **Request Body:**
+```json
+{
+  "token": "4a7c8b2e1f...",
+  "new_password": "NewSecurePassword2026!"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "Password reset successfully. Please log in with your new password."
+}
+```
+
+---
+
+### 5.10 Emergency Recovery Login
+```http
+POST /api/v1/auth/recovery-login
+```
+Allows lost-phone authentication using 1 of the 3 obfuscated post-signup recovery codes (`BEE-XXXX-XXXX`). Verifies salted hashes in constant time, burns the consumed code, decrements the remaining recovery codes count, and establishes an authenticated session. Protected by a 3-strike / 15-minute lockout shield.
+
+- **Request Body:**
+```json
+{
+  "email": "traveler@beeline.io",
+  "recovery_code": "BEE-9A4F-2C81",
+  "device_info": "Emergency Replacement Phone"
+}
+```
+- **Response `200 OK`:** Returns `TokenResponse` with authenticated session cookies.
+
+---
+
+### 5.11 Account Unfreeze
+```http
+POST /api/v1/auth/unfreeze
+```
+Consumes the single-use unfreeze token dispatched upon attempted login to a frozen account. Restores `account_status` to `ACTIVE`, clears deletion schedules, dispatches an account restoration confirmation email, and logs the traveler back in.
+
+- **Request Body:**
+```json
+{
+  "token": "d7e9f1a2...",
+  "remember_me": false
+}
+```
+- **Response `200 OK`:** Returns `TokenResponse` with `account_status: "ACTIVE"`.
+
+---
+
+### 5.12 Two-Factor Authentication Setup
+```http
+POST /api/v1/auth/mfa/setup
+```
+**Auth:** Bearer Token or Cookie. Generates an RFC 6238 TOTP secret, encrypts it at rest using Fernet, and returns deep links for 1-tap authenticator app enrollment.
+
+- **Response `200 OK`:**
+```json
+{
+  "secret": "JBSWY3DPEHPK3PXP",
+  "otpauth_uri": "otpauth://totp/Beeline:traveler%40beeline.io?secret=JBSWY3DPEHPK3PXP&issuer=Beeline&algorithm=SHA1&digits=6&period=30",
+  "apple_passwords_uri": "apple-otpauth://totp/Beeline:traveler%40beeline.io?secret=JBSWY3DPEHPK3PXP&issuer=Beeline&algorithm=SHA1&digits=6&period=30",
+  "qr_code_svg": "data:image/svg+xml;base64,...",
+  "qr_code_base64": "data:image/png;base64,...",
+  "supported_authenticators": [
+    "Proton Pass",
+    "Apple iPhone Passwords",
+    "Google Authenticator",
+    "Microsoft Authenticator",
+    "1Password",
+    "Bitwarden"
+  ]
+}
+```
+
+---
+
+### 5.13 Two-Factor Authentication Verification & Activation
+```http
+POST /api/v1/auth/mfa/verify
+```
+**Auth:** Bearer Token or Cookie. Verifies a 6-digit TOTP code against the pending secret (with clock drift allowance $\pm 1$ step), marks MFA as confirmed, activates `mfa_enabled = True`, and dispatches a security alert email. Protected by a 3-strike brute-force shield.
+
+- **Request Body:**
+```json
+{
+  "code": "482910"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "Multi-Factor Authentication enabled successfully"
+}
+```
+
+---
+
+### 5.14 Two-Factor Authentication Challenge
+```http
+POST /api/v1/auth/mfa/challenge
+```
+Completes the second factor of a 2-step login. Validates the 5-minute challenge token and verifies either a 6-digit TOTP code (enforcing anti-replay within the same 60-second window) or an emergency recovery backup code. Issues full session tokens and encrypted cookies.
+
+- **Request Body:**
+```json
+{
+  "mfa_session_token": "eyJhbGciOi...",
+  "code": "482910"
+}
+```
+- **Response `200 OK`:** Returns `TokenResponse` with authenticated session cookies.
+
+---
+
+### 5.15 Two-Factor Authentication Status
+```http
+GET /api/v1/auth/mfa/status
+```
+**Auth:** Bearer Token or Cookie. Returns current MFA configuration state, confirmation status, and count of remaining recovery codes.
+
+- **Response `200 OK`:**
+```json
+{
+  "mfa_enabled": true,
+  "is_confirmed": true,
+  "remaining_recovery_codes": 2
+}
+```
+
+---
+
+### 5.16 Two-Factor Authentication Disable
+```http
+POST /api/v1/auth/mfa/disable
+```
+**Auth:** Bearer Token or Cookie. Disables MFA after verifying the traveler's current password. Clears stored TOTP credentials.
+
+- **Request Body:**
+```json
+{
+  "password": "SecurePassword123!"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "Two-factor authentication disabled successfully"
+}
+```
+
+---
+
+### 5.17 Current User Profile
+```http
+GET /api/v1/users/me
+```
+**Auth:** Bearer Token or Cookie. Retrieves full profile details of the currently authenticated traveler.
+
+- **Response `200 OK`:**
+```json
+{
+  "id": "usr-uuid-001",
+  "email": "traveler@beeline.io",
+  "username": "traveler_bee",
+  "full_name": "Andrei Popescu",
+  "phone_number": "+40722334455",
+  "avatar_url": "https://beeline.voyagerail.com/avatars/bee.png",
+  "role": "TRAVELER",
+  "preferences": "{\"default_pillar\": \"safe\", \"home_station_code\": \"GLT\"}",
+  "is_guest": false,
+  "is_active": true,
+  "mfa_enabled": true,
+  "account_status": "ACTIVE",
+  "created_at": "2026-11-18T12:00:00Z",
+  "updated_at": "2026-11-18T12:30:00Z"
+}
+```
+
+---
+
+### 5.18 Self-Service Profile Update
+```http
+PATCH /api/v1/users/me
+```
+**Auth:** Bearer Token or Cookie. Updates full name, phone number, avatar URL, or username/email. Enforces case-insensitive username and email uniqueness, returning `409 Conflict` if taken by another user.
+
+- **Request Body:**
+```json
+{
+  "full_name": "Andrei I. Popescu",
+  "phone_number": "+40722334455",
+  "avatar_url": "https://beeline.voyagerail.com/avatars/new.png"
+}
+```
+- **Response `200 OK`:** Returns updated `UserProfile`.
+
+---
+
+### 5.19 In-Account Password Change
+```http
+POST /api/v1/users/me/password
+```
+**Auth:** Bearer Token or Cookie. Verifies current password (401 on mismatch), validates new password with unified entropy + breach detection (400 on weak/breached), updates the password hash, revokes all other active sessions (preserving the current session), and sends a security confirmation alert email.
+
+- **Request Body:**
+```json
+{
+  "current_password": "OldPassword123!",
+  "new_password": "NewSecretPassword2026!"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "Password changed successfully. All other active sessions have been revoked."
+}
+```
+
+---
+
+### 5.20 Get Travel Preferences
+```http
+GET /api/v1/users/me/preferences
+```
+**Auth:** Bearer Token or Cookie. Retrieves validated travel, station, and notification preferences.
+
+- **Response `200 OK`:**
+```json
+{
+  "default_pillar": "safe",
+  "home_station_code": "GLT",
+  "min_transfer_buffer_minutes": 25,
+  "preferred_operators": [
+    "CFR Călători",
+    "Transferoviar Călători"
+  ],
+  "email_security_alerts": true,
+  "email_delay_alerts": true,
+  "theme": "cozy_hive"
+}
+```
+
+---
+
+### 5.21 Update Travel Preferences
+```http
+PATCH /api/v1/users/me/preferences
+```
+**Auth:** Bearer Token or Cookie. Performs clean partial updates to travel and UI preferences with schema range validation (`min_transfer_buffer_minutes` between 5 and 120, `default_pillar` in `safe`/`fast`/`economy`).
+
+- **Request Body:**
+```json
+{
+  "default_pillar": "fast",
+  "min_transfer_buffer_minutes": 30,
+  "theme": "high_contrast"
+}
+```
+- **Response `200 OK`:** Returns updated `UserPreferencesSchema`.
+
+---
+
+### 5.22 List Active Device Sessions
+```http
+GET /api/v1/users/me/sessions
+```
+**Auth:** Bearer Token or Cookie. Lists all active logged-in device sessions with live activity status, IP address, device name, and `is_current` indicator.
+
+- **Response `200 OK`:**
+```json
+[
+  {
+    "id": "sess-uuid-001",
+    "device_info": "MacBook Pro M2",
+    "ip_address": "82.77.100.12",
+    "last_active_at": "2026-11-18T12:45:00Z",
+    "created_at": "2026-11-18T12:00:00Z",
+    "is_current": true
+  },
+  {
+    "id": "sess-uuid-002",
+    "device_info": "iPhone 15 Safari",
+    "ip_address": "82.77.100.12",
+    "last_active_at": "2026-11-18T11:30:00Z",
+    "created_at": "2026-11-17T09:15:00Z",
+    "is_current": false
+  }
+]
+```
+
+---
+
+### 5.23 Revoke Remote Device Session
+```http
+DELETE /api/v1/users/me/sessions/{sessionId}
+```
+**Auth:** Bearer Token or Cookie. Remotely terminates a specific device session in PostgreSQL and Redis.
+
+- **Response `200 OK`:**
+```json
+{
+  "message": "Session revoked successfully"
+}
+```
+
+---
+
+### 5.24 Revoke All Other Device Sessions
+```http
+DELETE /api/v1/users/me/sessions
+```
+**Auth:** Bearer Token or Cookie. Terminates all other active sessions for the user across PostgreSQL and Redis while maintaining the caller's active session.
+
+- **Response `200 OK`:**
+```json
+{
+  "message": "Revoked 2 other active session(s)"
+}
+```
+
+---
+
+### 5.25 30-Day Account Deletion Freeze
+```http
+DELETE /api/v1/users/me
+```
+**Auth:** Bearer Token or Cookie. Initiates the 30-day account deletion freeze lifecycle. Verifies password (and TOTP code if MFA is enabled), transitions `account_status` to `FROZEN_PENDING_DELETION`, sets `is_active=False`, records `frozen_at` and `deletion_scheduled_at` (+30 days), revokes all active sessions in Redis and PostgreSQL, clears auth cookies, and dispatches the 30-Day Notice email.
+
+- **Request Body (Optional / Required if MFA Active):**
+```json
+{
+  "password": "SecurePassword123!",
+  "mfa_code": "482910",
+  "reason": "Relocating abroad"
+}
+```
+- **Response `200 OK`:**
+```json
+{
+  "message": "Account frozen and scheduled to be permanently deleted in 30 days. You may cancel this by logging in before the scheduled date.",
+  "status": "FROZEN_PENDING_DELETION",
+  "deletion_scheduled_at": "2026-12-18T12:00:00Z",
+  "days_remaining": 30
+}
+```
+
+**Automated Lifecycle Background Sweeps:**
+- **Day 0 to 14:** Account remains frozen. Login triggers `403` and sends unfreeze link.
+- **Day 15 (15 days remaining):** Background worker dispatches the 15-Day Reminder Warning email once (`account_deletion_reminder_15d`).
+- **Day 30 (0 days remaining):** Background worker dispatches the Final Deletion Notice (`account_permanently_deleted_0d`) and executes an atomic CASCADE hard delete removing the user, sessions, credentials, and preferences from PostgreSQL.
 
 ---
 
@@ -958,23 +1416,31 @@ Archives or removes a resolved transit disruption incident.
 
 | Module | Route | HTTP Method | Status | Frontend Consumer |
 |---|---|:---:|:---:|---|
-| **Auth** | `/auth/signup` | `POST` | ✅ Implemented | `AuthContext.signup()` |
-| **Auth** | `/auth/login` | `POST` | ✅ Implemented | `AuthContext.login()` |
+| **Auth** | `/auth/signup` | `POST` | ✅ Implemented | `AuthContext.signup()` (3 recovery codes, cookies) |
+| **Auth** | `/auth/login` | `POST` | ✅ Implemented | `AuthContext.login()` (remember_me, unfreeze check) |
 | **Auth** | `/auth/guest` | `POST` | ✅ Implemented | `AuthContext.continueAsGuest()` |
 | **Auth** | `/auth/guest/convert` | `POST` | ✅ Implemented | `AuthContext.convertGuest()` |
 | **Auth** | `/auth/refresh` | `POST` | ✅ Implemented | `apiClient.refreshToken()` |
-| **Auth** | `/auth/logout` | `POST` | ✅ Implemented | `AuthContext.logout()` |
-| **Auth** | `/auth/forgot-password` | `POST` | ✅ Implemented | `apiClient.forgotPassword()` |
-| **Auth** | `/auth/reset-password` | `POST` | ✅ Implemented | `apiClient.resetPassword()` |
-| **MFA** | `/auth/mfa/setup` | `POST` | ✅ Implemented | `apiClient.setupMFA()` |
+| **Auth** | `/auth/logout` | `POST` | ✅ Implemented | `AuthContext.logout()` (Redis instant revocation) |
+| **Auth** | `/auth/check-breach` | `POST` | ✅ Implemented | `apiClient.checkBreach()` (k-anonymity HIBP) |
+| **Auth** | `/auth/forgot-password` | `POST` | ✅ Implemented | `apiClient.forgotPassword()` (3-strike shield) |
+| **Auth** | `/auth/reset-password` | `POST` | ✅ Implemented | `apiClient.resetPassword()` (session invalidation) |
+| **Auth** | `/auth/recovery-login` | `POST` | ✅ Implemented | Emergency login via 1-time recovery code |
+| **Auth** | `/auth/unfreeze` | `POST` | ✅ Implemented | Restore account from 30-day deletion freeze |
+| **MFA** | `/auth/mfa/setup` | `POST` | ✅ Implemented | `apiClient.setupMFA()` (Fernet encrypted secret) |
 | **MFA** | `/auth/mfa/verify` | `POST` | ✅ Implemented | `AuthContext.verifyMFA()` |
-| **MFA** | `/auth/mfa/challenge` | `POST` | ✅ Implemented | `apiClient.verifyMFAChallenge()` |
+| **MFA** | `/auth/mfa/challenge` | `POST` | ✅ Implemented | `apiClient.verifyMFAChallenge()` (anti-replay) |
+| **MFA** | `/auth/mfa/status` | `GET` | ✅ Implemented | MFA enrollment & recovery codes query |
 | **MFA** | `/auth/mfa/disable` | `POST` | ✅ Implemented | `apiClient.disableMFA()` |
 | **Users** | `/users/me` | `GET` | ✅ Implemented | `AuthContext.refreshUser()` |
-| **Users** | `/users/me` | `PATCH` | ✅ Implemented | Profile settings modal |
-| **Users** | `/users/me/sessions` | `GET` | ✅ Implemented | Security settings |
-| **Users** | `/users/me/sessions/{id}` | `DELETE` | ✅ Implemented | Security settings |
-| **Users** | `/users/me` | `DELETE` | ✅ Implemented | Account self-deletion |
+| **Users** | `/users/me` | `PATCH` | ✅ Implemented | Profile settings modal (409 conflict checks) |
+| **Users** | `/users/me/password` | `POST` | ✅ Implemented | Password change & revoke other sessions |
+| **Users** | `/users/me/preferences` | `GET` | ✅ Implemented | Travel & notification preferences query |
+| **Users** | `/users/me/preferences` | `PATCH` | ✅ Implemented | Travel & notification preferences update |
+| **Users** | `/users/me/sessions` | `GET` | ✅ Implemented | Security settings (active session registry) |
+| **Users** | `/users/me/sessions/{id}` | `DELETE` | ✅ Implemented | Security settings (remote session revocation) |
+| **Users** | `/users/me/sessions` | `DELETE` | ✅ Implemented | Security settings (revoke all other sessions) |
+| **Users** | `/users/me` | `DELETE` | ✅ Implemented | 30-day freeze + Day-15/Day-30 hard delete sweep |
 | **Routes** | `/routes/plan` | `POST` | ✅ Implemented | HomePage (`/`), TripsPage (`/trips`) |
 | **Routes** | `/routes/corridors/popular` | `GET` | ✅ Implemented | HomePage Corridor Pills |
 | **Routes** | `/routes/saved` | `POST` | ✅ Implemented | `apiClient.saveRoute()` |

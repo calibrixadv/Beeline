@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import List, Literal, Optional, Tuple, Union
-from pydantic import AliasChoices, BaseModel, ConfigDict, Field
+from typing import Any, List, Literal, Optional, Tuple, Union
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class TransitMode(str, Enum):
@@ -98,11 +98,53 @@ class TransitDisruption(BaseModel):
 
 
 class LegRiskProfile(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     legRiskScore: float
     historicalPunctualityPercent: float
     transferBufferAfterMinutes: Optional[int] = None
     isShieldedBuffer: bool = False
     disruptions: List[TransitDisruption] = Field(default_factory=list)
+    expectedDelayMinutes: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("expectedDelayMinutes", "expected_delay_minutes"),
+        serialization_alias="expectedDelayMinutes",
+    )
+    expectedMeanDelayMinutes: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("expectedMeanDelayMinutes", "expected_mean_delay_minutes"),
+        serialization_alias="expectedMeanDelayMinutes",
+    )
+    p90DelayMinutes: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("p90DelayMinutes", "p90_delay_minutes"),
+        serialization_alias="p90DelayMinutes",
+    )
+    missedConnectionProbability: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("missedConnectionProbability", "missed_connection_probability"),
+        serialization_alias="missedConnectionProbability",
+    )
+    reliabilityScorePct: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("reliabilityScorePct", "reliability_score_pct"),
+        serialization_alias="reliabilityScorePct",
+    )
+    riskScore: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("riskScore", "risk_score", "legRiskScore", "leg_risk_score"),
+        serialization_alias="riskScore",
+    )
+    riskLevel: Optional[Union[RiskLevel, str]] = Field(
+        default=None,
+        validation_alias=AliasChoices("riskLevel", "risk_level"),
+        serialization_alias="riskLevel",
+    )
+    riskFactors: List[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("riskFactors", "risk_factors"),
+        serialization_alias="riskFactors",
+    )
 
 
 class LegFare(BaseModel):
@@ -203,11 +245,29 @@ class RouteRiskAnalysis(BaseModel):
         serialization_alias="expectedDelayMinutes",
         description="Predicted delay in minutes from ML regressor"
     )
+    expectedMeanDelayMinutes: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("expectedMeanDelayMinutes", "expected_mean_delay_minutes"),
+        serialization_alias="expectedMeanDelayMinutes",
+        description="Expected mean delay in minutes from Head 2 L2 expectation"
+    )
+    p90DelayMinutes: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("p90DelayMinutes", "p90_delay_minutes"),
+        serialization_alias="p90DelayMinutes",
+        description="90th percentile delay bound"
+    )
     missedConnectionProbability: float = Field(
         default=0.0,
         validation_alias=AliasChoices("missedConnectionProbability", "missed_connection_probability"),
         serialization_alias="missedConnectionProbability",
         description="Calibrated probability of missing a transfer"
+    )
+    reliabilityScorePct: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("reliabilityScorePct", "reliability_score_pct"),
+        serialization_alias="reliabilityScorePct",
+        description="Calibrated reliability percentage (0.0..100.0)"
     )
     riskFactors: List[str] = Field(
         default_factory=list,
@@ -221,6 +281,25 @@ class RouteRiskAnalysis(BaseModel):
         serialization_alias="isMlComputed",
         description="True if ONNX engine inferred, False if fallback"
     )
+
+    @field_validator("riskLevel", mode="before")
+    @classmethod
+    def _normalize_risk_level(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v_upper = v.upper()
+            if v_upper == "MEDIUM":
+                return RiskLevel.MODERATE
+            if v_upper in RiskLevel.__members__:
+                return RiskLevel(v_upper)
+        return v
+
+    @property
+    def risk_score(self) -> float:
+        return self.overallRiskScore
+
+    @property
+    def risk_level(self) -> RiskLevel:
+        return self.riskLevel
 
 
 class EcoBenchmark(BaseModel):

@@ -36,6 +36,19 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False,
 )
 
+_custom_session_maker = None
+
+
+def get_async_session_maker():
+    if _custom_session_maker is not None:
+        return _custom_session_maker
+    return AsyncSessionLocal
+
+
+def set_custom_session_maker(maker):
+    global _custom_session_maker
+    _custom_session_maker = maker
+
 Base = declarative_base()
 
 
@@ -111,9 +124,19 @@ async def init_db() -> None:
             ("users", "username VARCHAR(255)"),
             ("users", "role VARCHAR(32) DEFAULT 'TRAVELER'"),
             ("users", "preferences TEXT DEFAULT '{}'"),
+            ("users", "phone_number VARCHAR(32)"),
+            ("users", "avatar_url VARCHAR(512)"),
+            ("users", "account_status VARCHAR(32) DEFAULT 'ACTIVE'"),
+            ("users", "frozen_at TIMESTAMP"),
+            ("users", "deletion_scheduled_at TIMESTAMP"),
+            ("users", "deletion_reminder_15d_sent BOOLEAN DEFAULT FALSE"),
             ("saved_routes", "notes VARCHAR(500)"),
             ("bookings", "passenger_count INTEGER DEFAULT 1"),
             ("bookings", "seat_preference VARCHAR(32) DEFAULT 'WINDOW'"),
+            ("user_sessions", "device_fingerprint VARCHAR(128)"),
+            ("user_sessions", "device_name VARCHAR(255)"),
+            ("user_sessions", "user_agent VARCHAR(500)"),
+            ("user_sessions", "remember_me BOOLEAN DEFAULT FALSE"),
         ]:
             try:
                 await conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_def}"))
@@ -121,6 +144,10 @@ async def init_db() -> None:
                 pass
         try:
             await conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users(username)"))
+        except Exception:
+            pass
+        try:
+            await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_account_status ON users(account_status)"))
         except Exception:
             pass
 

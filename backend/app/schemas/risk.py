@@ -87,13 +87,25 @@ class RiskFeatureVector(BaseModel):
 class RiskPrediction(BaseModel):
     """
     Prediction output schema representing the calibrated inference output of the
-    dual-target ONNX model along with natural language explainability.
+    multi-head production engine along with natural language explainability.
     """
     expected_delay_minutes: int = Field(
         default=0,
         validation_alias=AliasChoices("expected_delay_minutes", "expectedDelayMinutes"),
         serialization_alias="expectedDelayMinutes",
         description="Predicted delay in minutes from ML regressor"
+    )
+    expected_mean_delay_minutes: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("expected_mean_delay_minutes", "expectedMeanDelayMinutes"),
+        serialization_alias="expectedMeanDelayMinutes",
+        description="Predicted mean delay in minutes from Head 2 L2 expectation"
+    )
+    p90_delay_minutes: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("p90_delay_minutes", "p90DelayMinutes"),
+        serialization_alias="p90DelayMinutes",
+        description="90th percentile delay bound"
     )
     missed_connection_probability: float = Field(
         default=0.0,
@@ -102,6 +114,14 @@ class RiskPrediction(BaseModel):
         validation_alias=AliasChoices("missed_connection_probability", "missedConnectionProbability"),
         serialization_alias="missedConnectionProbability",
         description="Calibrated probability of missing a transfer connection"
+    )
+    reliability_score_pct: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=100.0,
+        validation_alias=AliasChoices("reliability_score_pct", "reliabilityScorePct"),
+        serialization_alias="reliabilityScorePct",
+        description="Drift-purged reliability percentage (0.0..100.0)"
     )
     overall_risk_score: float = Field(
         default=0.0,
@@ -131,7 +151,11 @@ class RiskPrediction(BaseModel):
         default=False,
         validation_alias=AliasChoices("is_ml_computed", "isMlComputed"),
         serialization_alias="isMlComputed",
-        description="True if predicted by in-process ONNX model, False if deterministic fallback"
+        description="True if predicted by ML engine, False if deterministic fallback"
     )
 
     model_config = ConfigDict(populate_by_name=True)
+
+    @property
+    def risk_score(self) -> float:
+        return self.overall_risk_score

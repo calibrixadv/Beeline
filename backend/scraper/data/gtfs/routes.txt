@@ -1,0 +1,10 @@
+route_id,agency_id,route_short_name,route_long_name,route_type
+R_GLT_BCT,CFR,M700,Galați - București Nord,2
+R_BCT_BSV,CFR,M300,București Nord - Brașov,2
+R_BCT_CTA,CFR,M800,București Nord - Constanța,2
+R_BSV_CJN,CFR,M300,Brașov - Cluj-Napoca,2
+R_TIM_ARD,REGIO,M200,Timișoara Nord - Arad,2
+R_BCT_IAS,CFR,M500,București Nord - Iași,2
+R_BCT_BSV_ASTRA,ASTRA,M300,București Nord - Brașov,2
+R_GLT_BCT_TFC,TFC,M700,Galați - București Nord,2
+R_BCT_CTA_SOFTRANS,SOFTRANS,M800,București Nord - Constanța,2

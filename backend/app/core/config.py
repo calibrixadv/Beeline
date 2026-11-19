@@ -17,8 +17,23 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     MFA_TEMP_TOKEN_EXPIRE_MINUTES: int = 5
-    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 60
+    PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
     MFA_ISSUER_NAME: str = "Beeline VoyageRail"
+
+    # Auth Rate Limiting (Step 5)
+    AUTH_RATE_LIMIT_ENABLED: bool = True
+    AUTH_RATE_LIMIT_WINDOW_SECONDS: int = 60
+    AUTH_RATE_LIMIT_MAX_REQUESTS: int = 30
+
+    # Email & SMTP Engine
+    EMAIL_MODE: str = "dev_sink"
+    SMTP_HOST: str = "localhost"
+    SMTP_PORT: int = 1025
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "noreply@beeline.voyagerail.com"
+    EMAIL_RATE_LIMIT_PER_SEC: int = 500
+    FRONTEND_URL: str = "http://localhost:3000"
 
     # Database
     DATABASE_URL: str = f"sqlite+aiosqlite:///{BASE_DIR}/beeline.db"

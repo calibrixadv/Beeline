@@ -3,7 +3,18 @@
 import React from 'react';
 
 export type MascotGear = 'default' | 'fast' | 'safe' | 'economy';
-export type MascotName = MascotGear | 'barnaby' | 'honey' | 'bumble';
+export type MascotName =
+  | MascotGear
+  | 'barnaby'
+  | 'honey'
+  | 'bumble'
+  | 'bumbi'
+  | 'meli'
+  | 'vira'
+  | 'flora'
+  | 'queen-meli'
+  | 'queen-vira'
+  | 'queen-flora';
 export type MascotSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl';
 
 export interface MascotBeeProps {
@@ -36,14 +47,21 @@ export function resolveGear(nameOrGear?: MascotName, explicitGear?: MascotGear):
   if (!nameOrGear) return 'default';
   switch (nameOrGear) {
     case 'barnaby':
+    case 'vira':
+    case 'queen-vira':
     case 'fast':
       return 'fast';
     case 'bumble':
+    case 'meli':
+    case 'queen-meli':
     case 'safe':
       return 'safe';
     case 'honey':
+    case 'flora':
+    case 'queen-flora':
     case 'economy':
       return 'economy';
+    case 'bumbi':
     case 'default':
     default:
       return 'default';
@@ -52,6 +70,8 @@ export function resolveGear(nameOrGear?: MascotName, explicitGear?: MascotGear):
 
 export interface GearMetadata {
   gear: MascotGear;
+  characterName: string;
+  romanianRole: string;
   title: string;
   badge: string;
   gearName: string;
@@ -67,6 +87,8 @@ export interface GearMetadata {
 export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
   default: {
     gear: 'default',
+    characterName: 'Bumbi',
+    romanianRole: 'Cercetașul Magistralei Feroviare',
     title: 'Beeline Explorer',
     badge: '🧭 EXPLORER',
     gearName: 'Aviator Goggles & Explorer Knot',
@@ -74,12 +96,14 @@ export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
     textColor: '#92400E',
     bgColor: '#FEF3C7',
     borderColor: '#FDE68A',
-    speechDefault: 'Ready to buzz across Romania! Pick your route.',
+    speechDefault: "Bumbi reporting! Ready to scout Romania's railway corridors. Pick your train route!",
     accessoryIcon: '🧭',
-    description: 'Equipped with brass aviator goggles for navigating multi-modal Romanian journeys.',
+    description: 'Bumbi the Beeline Explorer wears brass aviator goggles for scouting Romania\'s rail network, mainline junctions, and InterRegio corridors.',
   },
   fast: {
     gear: 'fast',
+    characterName: 'Queen Vira',
+    romanianRole: 'Matca Vitezei InterCity',
     title: 'Express Scout',
     badge: '⚡ FAST ROUTE',
     gearName: 'Supersonic Speed Visor & Scarf',
@@ -87,12 +111,14 @@ export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
     textColor: '#1E40AF',
     bgColor: '#DBEAFE',
     borderColor: '#BFDBFE',
-    speechDefault: 'Supersonic mode! Zero stopovers, maximum speed.',
+    speechDefault: 'Queen Vira in supersonic mode! Direct InterCity rail links with zero stopovers.',
     accessoryIcon: '⚡',
-    description: 'Equipped with streamlined aero-helmet and lightning scarf for express rail corridors.',
+    description: 'Queen Vira commands high-speed InterCity electric runs and direct mainline rail corridors with a supersonic speed visor.',
   },
   safe: {
     gear: 'safe',
+    characterName: 'Queen Meli',
+    romanianRole: 'Matca Scutului de Transfer',
     title: 'Transfer Guard',
     badge: '🛡️ SAFE ROUTE',
     gearName: 'Romanian Transfer Shield',
@@ -100,12 +126,14 @@ export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
     textColor: '#065F46',
     bgColor: '#D1FAE5',
     borderColor: '#A7F3D0',
-    speechDefault: 'Transfer Shield active: 100% connection guarantee!',
+    speechDefault: "Queen Meli's Transfer Shield active: 100% connection guarantee across rail junctions!",
     accessoryIcon: '🛡️',
-    description: 'Equipped with hexagonal golden shield protecting CFR and Metrorex transfers.',
+    description: 'Queen Meli wields a golden hexagonal shield protecting tight train-to-train transfers across CFR and private rail junctions.',
   },
   economy: {
     gear: 'economy',
+    characterName: 'Queen Flora',
+    romanianRole: 'Matca Economiei Feroviare',
     title: 'Nectar Saver',
     badge: '💰 BEST VALUE',
     gearName: 'Nectar Jar & Bargain Specs',
@@ -113,58 +141,93 @@ export const GEAR_CONFIG: Record<MascotGear, GearMetadata> = {
     textColor: '#78350F',
     bgColor: '#FEF3C7',
     borderColor: '#FDE68A',
-    speechDefault: 'Sweetest fare found! Pocket the leftover nectar.',
+    speechDefault: 'Queen Flora found the sweetest fare! Smart multi-operator rail combinations to save your LEI.',
     accessoryIcon: '🍯',
-    description: 'Equipped with golden honey jar and wire-rim spectacles for budget-optimal travel.',
+    description: 'Queen Flora compares multi-operator train fares (CFR Călători, Regio Călători, TFC, Softrans) with wire-rim spectacles for budget-optimal rail travel.',
   },
 };
 
 // Retain backwards compatibility for legacy imports
 export const PERSONA_CONFIG: Record<
   string,
-  { label: string; badge: string; color: string; accessory: string }
+  { label: string; badge: string; color: string; accessory: string; characterName?: string }
 > = {
   barnaby: {
     label: GEAR_CONFIG.fast.title,
     badge: GEAR_CONFIG.fast.badge,
     color: GEAR_CONFIG.fast.color,
     accessory: '⚡',
+    characterName: GEAR_CONFIG.fast.characterName,
   },
   honey: {
     label: GEAR_CONFIG.economy.title,
     badge: GEAR_CONFIG.economy.badge,
     color: GEAR_CONFIG.economy.color,
     accessory: '🍯',
+    characterName: GEAR_CONFIG.economy.characterName,
   },
   bumble: {
     label: GEAR_CONFIG.safe.title,
     badge: GEAR_CONFIG.safe.badge,
     color: GEAR_CONFIG.safe.color,
     accessory: '🛡️',
+    characterName: GEAR_CONFIG.safe.characterName,
   },
   default: {
     label: GEAR_CONFIG.default.title,
     badge: GEAR_CONFIG.default.badge,
     color: GEAR_CONFIG.default.color,
     accessory: '🧭',
+    characterName: GEAR_CONFIG.default.characterName,
+  },
+  bumbi: {
+    label: GEAR_CONFIG.default.title,
+    badge: GEAR_CONFIG.default.badge,
+    color: GEAR_CONFIG.default.color,
+    accessory: '🧭',
+    characterName: GEAR_CONFIG.default.characterName,
+  },
+  vira: {
+    label: GEAR_CONFIG.fast.title,
+    badge: GEAR_CONFIG.fast.badge,
+    color: GEAR_CONFIG.fast.color,
+    accessory: '⚡',
+    characterName: GEAR_CONFIG.fast.characterName,
+  },
+  meli: {
+    label: GEAR_CONFIG.safe.title,
+    badge: GEAR_CONFIG.safe.badge,
+    color: GEAR_CONFIG.safe.color,
+    accessory: '🛡️',
+    characterName: GEAR_CONFIG.safe.characterName,
+  },
+  flora: {
+    label: GEAR_CONFIG.economy.title,
+    badge: GEAR_CONFIG.economy.badge,
+    color: GEAR_CONFIG.economy.color,
+    accessory: '🍯',
+    characterName: GEAR_CONFIG.economy.characterName,
   },
   fast: {
     label: GEAR_CONFIG.fast.title,
     badge: GEAR_CONFIG.fast.badge,
     color: GEAR_CONFIG.fast.color,
     accessory: '⚡',
+    characterName: GEAR_CONFIG.fast.characterName,
   },
   safe: {
     label: GEAR_CONFIG.safe.title,
     badge: GEAR_CONFIG.safe.badge,
     color: GEAR_CONFIG.safe.color,
     accessory: '🛡️',
+    characterName: GEAR_CONFIG.safe.characterName,
   },
   economy: {
     label: GEAR_CONFIG.economy.title,
     badge: GEAR_CONFIG.economy.badge,
     color: GEAR_CONFIG.economy.color,
     accessory: '🍯',
+    characterName: GEAR_CONFIG.economy.characterName,
   },
 };
 
@@ -196,6 +259,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
       prevTargetRef.current = targetGear;
 
       if (!animated) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setDisplayGear(targetGear);
         setExitingGear(null);
         setIsTransitioning(false);
@@ -661,7 +725,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
     <div
       onClick={onClick}
       role={onClick ? 'button' : 'img'}
-      aria-label={accessibilityLabel || `${config.title} - ${config.gearName}`}
+      aria-label={accessibilityLabel || `${config.characterName} • ${config.title} - ${config.gearName}`}
       tabIndex={onClick ? 0 : undefined}
       data-gear={displayGear}
       data-exiting-gear={exitingGear || undefined}
@@ -714,8 +778,8 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
             </linearGradient>
 
             <linearGradient id={wingGradId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
-              <stop offset="100%" stopColor="#BAE6FD" stopOpacity="0.75" />
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.88" />
+              <stop offset="100%" stopColor="#BAE6FD" stopOpacity="0.78" />
             </linearGradient>
 
             <linearGradient id={shieldGradId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -750,10 +814,11 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
               rx="21"
               ry="13"
               fill={`url(#${wingGradId})`}
+              fillOpacity="0.78"
               stroke="#38BDF8"
               strokeWidth="2"
             />
-            <path d="M 38 34 Q 28 30 22 32" stroke="#7DD3FC" strokeWidth="1.5" fill="none" />
+            <path d="M 38 34 Q 28 30 22 32" stroke="#7DD3FC" strokeWidth="1.5" fill="none" opacity="0.78" />
           </g>
           <g className={animated ? 'animate-wing-right' : ''}>
             <ellipse
@@ -762,10 +827,11 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
               rx="21"
               ry="13"
               fill={`url(#${wingGradId})`}
+              fillOpacity="0.78"
               stroke="#38BDF8"
               strokeWidth="2"
             />
-            <path d="M 82 34 Q 92 30 98 32" stroke="#7DD3FC" strokeWidth="1.5" fill="none" />
+            <path d="M 82 34 Q 92 30 98 32" stroke="#7DD3FC" strokeWidth="1.5" fill="none" opacity="0.78" />
           </g>
 
           {/* STINGER (Cute rounded triangle) */}
