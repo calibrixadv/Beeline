@@ -19,6 +19,7 @@ import MascotDebugModal from '../components/MascotDebugModal';
 import BaseButton from '../components/BaseButton';
 import BaseInput from '../components/BaseInput';
 import BaseCard from '../components/BaseCard';
+import StationAutocompleteInput from '../components/StationAutocompleteInput';
 import { generateTripsForCorridor, selectTrifectaPlans } from '../services/tripBookingService';
 import { TransitRoutePlan } from '../types/routePlan';
 import {
@@ -418,13 +419,14 @@ export default function HomePage() {
                 <form onSubmit={handleSearch} className="space-y-3">
                   <div className="relative flex flex-col sm:flex-row items-center gap-2">
                     <div className="w-full">
-                      <BaseInput
+                      <StationAutocompleteInput
                         id="hero-origin-input"
                         label="DEPARTURE ORIGIN"
                         placeholder="e.g. Galați, București Nord..."
                         value={origin}
                         onChange={(e) => setOrigin(e.target.value)}
                         onClear={() => setOrigin('')}
+                        excludeStationName={destination}
                         leftIcon={<MapPin className="w-4 h-4 text-amber-500" />}
                       />
                     </div>
@@ -440,12 +442,14 @@ export default function HomePage() {
                     </button>
 
                     <div className="w-full">
-                      <BaseInput
+                      <StationAutocompleteInput
+                        id="hero-destination-input"
                         label="ARRIVAL DESTINATION"
                         placeholder="e.g. Brașov, Cluj-Napoca..."
                         value={destination}
                         onChange={(e) => setDestination(e.target.value)}
                         onClear={() => setDestination('')}
+                        excludeStationName={origin}
                         leftIcon={<MapPin className="w-4 h-4 text-amber-600" />}
                       />
                     </div>

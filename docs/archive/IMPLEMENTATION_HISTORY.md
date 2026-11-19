@@ -16,6 +16,7 @@ flowchart TD
     M2 --> M3["Milestone 3: Production ML Serving & Feature Store\n(ONNX Runtime, Redis 7 Store, Dual Boosters)"]
     M3 --> M4["Milestone 4: Enterprise Auth, MFA & Security Lifecycle\n(Fernet Tokens, RFC 6238 TOTP, Breach Defense, 30-Day Freeze)"]
     M4 --> M5["Milestone 5: Live 2026-2027 Timetables & Full Itinerary\n(CKAN Sync, All-Day Multi-Badge Routing, Stop Timelines)"]
+    M5 --> M6["Milestone 6: Weekly Station Catalog & Autocomplete\n(StationCatalogService, Monday 00:05 RO Scheduler, Smart Search)"]
 ```
 
 ---
@@ -83,6 +84,19 @@ flowchart TD
 - **Stop-by-Stop Route Itinerary & Full Train Path UI:**
   - Endpoint `GET /api/v1/trains/{train_number}/itinerary` returning complete commercial stop sequences, scheduled arrival/departure times, dwell minutes, cumulative km, and stop types (`BOARDING`, `INTERMEDIATE`, `TRANSFER`, `ALIGHTING`).
   - Declarative components (`RouteItineraryTimeline.tsx`, `TrainItineraryModal.tsx`, `BookingTripCard.tsx`) rendering collapsible intermediate stops, overnight rollover flags (`+1d`), transfer buffer indicators, and Transfer Shield connection metrics.
+
+### 2.6 Milestone 6: Weekly-Synced Full Station Catalog & Smart Autocomplete
+- **Weekly-Synced Full Station Catalog (`StationCatalogService`):**
+  - High-performance catalog extraction parsing all commercial passenger stops (`TipOprire='C'`) from active and archived XML timetables across all 7 Romanian passenger operators (CFR Călători, Regio Călători, Transferoviar Călători, Astra Trans Carpatic, Softrans, Interregional Călători, Ferotrafic TFI), indexing 1,669 distinct stations.
+  - Non-colliding canonical 3-to-4 letter station code generation, preserving primary hub codes (`BCT`, `BCO`, `GLT`, `BSV`, `CTA`, `CJN`, `TIM`, `IAS`, `CRA`) while eliminating secondary station collision.
+  - Background weekly scheduler recurring every Monday at 00:05 `Europe/Bucharest` (`WEEKLY_MONDAY_00_05_RO`), with multi-tier storage (memory index, local JSON file cache, and Redis 8-day sliding cache).
+  - API endpoints:
+    - `GET /api/v1/stations/autocomplete-catalog`: Returns full searchable station catalog and ISO week synchronization metadata (`isoWeek`, `lastSyncedAt`, `nextWeeklySyncAt`, `totalStations`, `source`, `schedule`).
+    - `POST /api/v1/stations/sync-weekly`: Triggers on-demand or forced weekly sync.
+- **Frontend Accessible Autocomplete Input (`StationAutocompleteInput`):**
+  - Integrated on both the Hero search card (`/`) and Trips schedule search (`/trips`).
+  - Implements full WAI-ARIA combobox patterns: full keyboard navigation (`ArrowDown`, `ArrowUp`, `Enter`, `Escape`), station swapping (`1-tap swap`), diacritic-insensitive Romanian fuzzy search, recent search local persistence, and click-outside dismissal.
+  - Strictly 0 external map dependencies, 0 `<canvas>`, and 0 bundle bloat.
 
 ---
 

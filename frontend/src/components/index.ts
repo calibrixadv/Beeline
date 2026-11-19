@@ -14,3 +14,4 @@ export * from './TrainDetailModal';
 export * from './MascotDebugModal';
 export * from './RouteItineraryTimeline';
 export * from './TrainItineraryModal';
+export * from './StationAutocompleteInput';

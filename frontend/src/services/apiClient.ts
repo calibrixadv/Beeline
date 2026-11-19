@@ -11,6 +11,10 @@ import {
 import { TransitRoutePlan, TransitRouteQuery, BookingWindow, CuratedPillar, TrainItineraryResponse } from '../types/routePlan';
 import { TrainJourney } from '../types/train';
 import { TransitLineSchedule, ScheduleFilterParams } from '../types/schedule';
+import {
+  StationAutocompleteCatalogResponse,
+  StationSearchResponse,
+} from '../types/station';
 
 export interface RoutePlanResponse {
   plans: TransitRoutePlan[];
@@ -508,9 +512,33 @@ export class ApiClient {
     if (!res.ok) throw new Error('Failed to delete saved route');
     return res.json();
   }
+
+  async fetchStationAutocompleteCatalog(): Promise<StationAutocompleteCatalogResponse> {
+    const res = await this.fetchWithAuth('/stations/autocomplete-catalog');
+    if (!res.ok) throw new Error('Failed to fetch station autocomplete catalog');
+    return res.json();
+  }
+
+  async searchStations(query: string, limit: number = 10): Promise<StationSearchResponse> {
+    const params = new URLSearchParams();
+    if (query !== undefined) params.append('query', query);
+    params.append('limit', String(limit));
+    params.append('min_length', '1');
+    const res = await this.fetchWithAuth(`/stations/search?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to search stations');
+    return res.json();
+  }
 }
 
 export const apiClient = new ApiClient();
+
+export async function fetchStationAutocompleteCatalog(): Promise<StationAutocompleteCatalogResponse> {
+  return apiClient.fetchStationAutocompleteCatalog();
+}
+
+export async function searchStations(query: string, limit?: number): Promise<StationSearchResponse> {
+  return apiClient.searchStations(query, limit);
+}
 
 /**
  * Formats expected delay minutes into human-readable label.

@@ -13,6 +13,7 @@ from app.schemas.station import (
     StationCreate,
     StationUpdate,
 )
+from app.services.station_catalog_service import station_catalog_service
 from app.services.train_service import TRAINS_DATA
 
 STATIONS_DATA: List[StationSearchResult] = [
@@ -126,26 +127,21 @@ STATIONS_DATA: List[StationSearchResult] = [
 
 class StationService:
     @staticmethod
-    def search_stations(query: str, limit: int = 10, city: Optional[str] = None) -> List[StationSearchResult]:
-        if not query or len(query.strip()) < 2:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Search query must contain at least 2 characters."
-            )
-
-        q = query.lower().strip()
-        results = []
-        for s in STATIONS_DATA:
-            if city and city.lower().strip() not in s.city.lower():
-                continue
-            if q in s.name.lower() or q in s.code.lower() or q in s.city.lower():
-                results.append(s)
-
-        limit = max(1, min(50, limit))
-        return results[:limit]
+    def search_stations(
+        query: str = "",
+        limit: int = 10,
+        city: Optional[str] = None,
+        min_length: int = 2,
+    ) -> List[StationSearchResult]:
+        return station_catalog_service.search_stations(
+            query=query, limit=limit, city=city, min_length=min_length
+        )
 
     @staticmethod
     def get_station_by_code(code: str) -> Optional[StationSearchResult]:
+        st = station_catalog_service.get_station_by_code(code)
+        if st:
+            return st
         for s in STATIONS_DATA:
             if s.code.upper() == code.upper():
                 return s
@@ -267,9 +263,16 @@ class StationService:
         mode: Optional[TransitMode] = None,
         limit: Optional[int] = None
     ) -> List[StationSearchResult]:
-        results = STATIONS_DATA
+        catalog, _ = station_catalog_service.get_catalog_and_meta()
+        seen_codes = {s.code for s in catalog}
+        merged = list(catalog)
+        for s in STATIONS_DATA:
+            if s.code not in seen_codes:
+                merged.append(s)
+                seen_codes.add(s.code)
+        results = merged
         if city:
-            results = [s for s in results if s.city.lower() == city.lower()]
+            results = [s for s in results if city.lower() in s.city.lower()]
         if mode:
             results = [s for s in results if mode in s.modes]
         if limit and limit > 0:
@@ -278,6 +281,9 @@ class StationService:
 
     @staticmethod
     def get_station_by_code(station_code: str) -> Optional[StationSearchResult]:
+        st = station_catalog_service.get_station_by_code(station_code)
+        if st:
+            return st
         for s in STATIONS_DATA:
             if s.code.upper() == station_code.upper():
                 return s
@@ -316,9 +322,14 @@ class StationService:
             name=data.name.strip(),
             city=data.city.strip(),
             modes=data.modes,
-            coordinates=data.coordinates
+            coordinates=data.coordinates,
+            dailyTrainCount=data.dailyTrainCount,
+            operators=data.operators,
+            isMajorHub=data.isMajorHub,
         )
         STATIONS_DATA.append(new_station)
+        station_catalog_service._stations_by_code[code_upper] = new_station
+        station_catalog_service._stations.insert(0, new_station)
         return new_station
 
     async def update_station(self, station_code: str, data: StationUpdate, db: Optional[AsyncSession] = None) -> StationSearchResult:
@@ -352,6 +363,12 @@ class StationService:
             st.modes = data.modes
         if data.coordinates is not None:
             st.coordinates = data.coordinates
+        if data.dailyTrainCount is not None:
+            st.dailyTrainCount = data.dailyTrainCount
+        if data.operators is not None:
+            st.operators = data.operators
+        if data.isMajorHub is not None:
+            st.isMajorHub = data.isMajorHub
         return st
 
     async def delete_station(self, station_code: str, db: Optional[AsyncSession] = None) -> bool:
@@ -385,7 +402,13 @@ class StationService:
                 await db.delete(db_st)
                 await db.commit()
 
-        STATIONS_DATA.remove(st)
+        if st in STATIONS_DATA:
+            STATIONS_DATA.remove(st)
+        if code_upper in station_catalog_service._stations_by_code:
+            del station_catalog_service._stations_by_code[code_upper]
+        station_catalog_service._stations = [
+            s for s in station_catalog_service._stations if s.code != code_upper
+        ]
         return True
 
 

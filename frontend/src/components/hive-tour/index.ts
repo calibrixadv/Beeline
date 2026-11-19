@@ -6,4 +6,3 @@ export * from './QueenBeesSection';
 export * from './TransitHoneycombSection';
 export * from './CozyHiveSection';
 export * from './ScrollCompanionMascot';
-export * from './chapter1-mockups';

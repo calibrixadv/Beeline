@@ -2,7 +2,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import logging
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,8 +23,12 @@ from app.core.security import (
 )
 from app.services.account_lifecycle_service import AccountLifecycleService
 from app.services.auth_service import AuthService
-from app.services.feature_store_service import corridor_feature_sync_worker
+from app.services.feature_store_service import (
+    corridor_feature_sync_worker,
+    stop_corridor_feature_sync_worker,
+)
 from app.services.risk_service import risk_service
+from app.services.station_catalog_service import station_catalog_service
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +44,20 @@ STATUS_CODE_MAP = {
     500: "INTERNAL_SERVER_ERROR",
 }
 
+_lifecycle_stop_event: Optional[asyncio.Event] = None
+
+
+def stop_account_lifecycle_worker() -> None:
+    global _lifecycle_stop_event
+    if _lifecycle_stop_event is not None:
+        _lifecycle_stop_event.set()
+
 
 async def account_lifecycle_worker():
     """Periodic background worker checking for 15-day reminders and Day-0 permanent account deletions."""
-    while True:
+    global _lifecycle_stop_event
+    _lifecycle_stop_event = asyncio.Event()
+    while not _lifecycle_stop_event.is_set():
         try:
             async with AsyncSessionLocal() as db:
                 await AccountLifecycleService.run_lifecycle_sweep(db)
@@ -52,8 +66,14 @@ async def account_lifecycle_worker():
         except Exception as exc:
             logger.debug(f"Account lifecycle background worker note: {exc}")
 
+        if _lifecycle_stop_event.is_set():
+            break
+
         try:
-            await asyncio.sleep(3600)  # Sweep once an hour
+            await asyncio.wait_for(_lifecycle_stop_event.wait(), timeout=3600.0)
+            break
+        except asyncio.TimeoutError:
+            pass
         except asyncio.CancelledError:
             break
 
@@ -80,9 +100,23 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     lifecycle_task = asyncio.create_task(account_lifecycle_worker())
     app.state.account_lifecycle_task = lifecycle_task
 
+    # Start non-blocking weekly station catalog sync scheduler
+    station_scheduler_task = asyncio.create_task(station_catalog_service.start_weekly_station_scheduler())
+    app.state.station_catalog_task = station_scheduler_task
+
     yield
 
     # Shutdown: cleanly cancel background tasks
+    station_catalog_service.stop_weekly_station_scheduler()
+    station_scheduler_task.cancel()
+    try:
+        await station_scheduler_task
+    except asyncio.CancelledError:
+        pass
+    except Exception:
+        pass
+
+    stop_corridor_feature_sync_worker()
     sync_task.cancel()
     try:
         await sync_task
@@ -91,6 +125,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         pass
 
+    stop_account_lifecycle_worker()
     lifecycle_task.cancel()
     try:
         await lifecycle_task

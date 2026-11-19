@@ -37,6 +37,8 @@ catboost_info/
 # Scraper Caches & Scratch Data (Preserving locally, ignored from git)
 backend/scraper/.cache/*.parquet
 backend/scraper/.cache/*.csv
+backend/scraper/.cache/*.json
+backend/scraper/.cache/weekly_stations_catalog.json
 backend/scraper/.cache/trains/
 
 # Local Databases & Secrets
