@@ -2,9 +2,6 @@
 
 import React, { useState, useEffect, useRef, useId } from 'react';
 import {
-  ShieldCheck,
-  Zap,
-  Coins,
   Check,
   Sparkles,
   ArrowRight,
@@ -473,112 +470,81 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
         id="queen-route-preview"
         data-testid="queen-route-preview"
         ref={previewRef}
-        className="w-full flex flex-col gap-6 p-6 sm:p-8 rounded-3xl bg-amber-50/90 backdrop-blur-md border-2 border-amber-300/80 shadow-2xl text-stone-900 transition-all duration-300"
+        className="relative w-full py-6 sm:py-8 px-1 sm:px-2 flex flex-col gap-6 transition-all duration-300"
       >
         {/* ========================================================= */}
-        {/* ROW 1: Full-Width Top Header & Interactive Scenario Switcher */}
+        {/* Clean Open Typography Header                              */}
         {/* ========================================================= */}
-        <div className="w-full flex flex-col gap-4 border-b border-amber-200/70 pb-5">
-          {/* Row 1A (Badges Row) */}
-          <div className="w-full flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-100 text-amber-950 border border-amber-300/80 shadow-xs">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              POINT A TO POINT B • INTERACTIVE ROUTE PREVIEW
-            </span>
-            <span
-              className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full shadow-xs"
-              style={{
-                backgroundColor: `${activeQueenConfig.color}20`,
-                color: activeQueenConfig.color,
-                border: `1px solid ${activeQueenConfig.color}50`,
-              }}
-            >
-              {selectedQueen === 'economy' ? 'HONEY ROUTE' : `${selectedQueen.toUpperCase()} ROUTE`}
-            </span>
-          </div>
+        <div className="w-full max-w-2xl">
+          {/* Delay scenario testing hooks */}
+          {selectedQueen === 'safe' && (
+            <>
+              <button
+                type="button"
+                data-testid="safe-delay-btn"
+                onClick={() => setSafeDelayScenario('delay15')}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              >
+                Simulate Delay
+              </button>
+              <button
+                type="button"
+                data-testid="safe-ontime-btn"
+                onClick={() => setSafeDelayScenario('ontime')}
+                className="sr-only"
+                tabIndex={-1}
+                aria-hidden="true"
+              >
+                Normal On-Time
+              </button>
+            </>
+          )}
 
-          {/* Row 1B (Full-Width Headline & Description) */}
-          <div className="w-full block">
-            <h3 className="text-2xl sm:text-3xl font-black text-stone-900 w-full leading-tight">
-              {selectedQueen === 'safe' &&
-                'Always Arrive On Time. Built-In Cushion for Any Delay.'}
-              {selectedQueen === 'fast' &&
-                'There Is Simply No Faster Route From A to B.'}
-              {selectedQueen === 'economy' &&
-                'Calm, Unrushed Journey with Longer Stops When You Have No Deadline.'}
-            </h3>
-            <p className="text-sm sm:text-base text-stone-600 w-full max-w-4xl mt-1 leading-relaxed">
-              {selectedQueen === 'safe' &&
-                'You always arrive on time at Point B—our built-in margin of error automatically accounts for extra buffer time in case another train runs late.'}
-              {selectedQueen === 'fast' &&
-                'There is simply no faster route from Point A to Point B—fly nonstop past every slow intermediate halt.'}
-              {selectedQueen === 'economy' &&
-                "A calm, unhurried route with longer stops along the way—built for when you are not in a rush, don't need to arrive by a strict time, and want to pay the lowest price."}
-            </p>
-          </div>
-
-          {/* Row 1C (Portal Status & Guaranteed Benefits) */}
-          <div className="w-full flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-amber-200/60">
-            <div className="flex items-center gap-2">
-              {selectedQueen === 'safe' && (
-                <>
-                  <button
-                    type="button"
-                    data-testid="safe-delay-btn"
-                    onClick={() => setSafeDelayScenario('delay15')}
-                    className="sr-only"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  >
-                    Simulate Delay
-                  </button>
-                  <button
-                    type="button"
-                    data-testid="safe-ontime-btn"
-                    onClick={() => setSafeDelayScenario('ontime')}
-                    className="sr-only"
-                    tabIndex={-1}
-                    aria-hidden="true"
-                  >
-                    Normal On-Time
-                  </button>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 shadow-xs">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>Emerald Error-Margin Shield (+20 min Built-In Delay Buffer) Active</span>
-                  </div>
-                </>
-              )}
-              {selectedQueen === 'fast' && (
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-blue-600 text-white shadow-xs">
-                  <Zap className="w-3.5 h-3.5 text-yellow-300" />
-                  <span>-55 minutes saved • Direct Non-Stop Express</span>
-                </div>
-              )}
-              {selectedQueen === 'economy' && (
-                <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-black bg-amber-500 text-stone-950 shadow-xs border border-amber-600/30">
-                  <Coins className="w-3.5 h-3.5" />
-                  <span>Save up to 40% • Calm Scenic Route</span>
-                </div>
-              )}
-            </div>
-
-            <div className="text-xs font-bold text-stone-500 font-mono">
-              {selectedQueen === 'safe' && 'Corridor: Point A ➔ Central Junction ➔ Point B'}
-              {selectedQueen === 'fast' && 'Corridor: Point A ⚡ Direct Supersonic Arc ➔ Point B'}
-              {selectedQueen === 'economy' && 'Corridor: Point A 🍯 Gentle Honey Route ➔ Point B'}
-            </div>
-          </div>
+          <h3 className="text-2xl sm:text-3xl font-black text-[#1E1B18] w-full leading-tight tracking-tight">
+            {selectedQueen === 'safe' &&
+              'Always Arrive On Time. Built-In Cushion for Any Delay.'}
+            {selectedQueen === 'fast' &&
+              'There Is Simply No Faster Route From A to B.'}
+            {selectedQueen === 'economy' &&
+              'Calm, Unrushed Journey with Longer Stops When You Have No Deadline.'}
+          </h3>
+          <p className="text-sm sm:text-base text-[#57534E] mt-2 leading-relaxed">
+            {selectedQueen === 'safe' &&
+              'You always arrive on time at Point B—our built-in margin of error automatically accounts for extra buffer time in case another train runs late.'}
+            {selectedQueen === 'fast' &&
+              'There is simply no faster route from Point A to Point B—fly nonstop past every slow intermediate halt.'}
+            {selectedQueen === 'economy' &&
+              "A calm, unhurried route with longer stops along the way—built for when you are not in a rush, don't need to arrive by a strict time, and want to pay the lowest price."}
+          </p>
         </div>
 
         {/* ========================================================= */}
-        {/* ROW 2: Dedicated Full-Width SVG Route Map                 */}
+        {/* ROW 2: Dedicated Full-Width SVG Route Map with Radial Aura */}
         {/* ========================================================= */}
-        <div className="w-full rounded-2xl bg-amber-50/60 border border-amber-200/90 p-4 sm:p-6 overflow-hidden">
+        <div className="relative w-full">
+          {/* Pure CSS Radial Glow Aura directly behind the SVG track */}
+          <div
+            aria-hidden="true"
+            className={`pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-56 sm:h-64 rounded-full blur-2xl ${
+              prefersReducedMotion ? '' : 'transition-all duration-500'
+            }`}
+            style={{
+              background:
+                selectedQueen === 'safe'
+                  ? 'radial-gradient(ellipse 68% 58% at 50% 50%, rgba(16, 185, 129, 0.15) 0%, transparent 72%)'
+                  : selectedQueen === 'fast'
+                  ? 'radial-gradient(ellipse 68% 58% at 50% 50%, rgba(59, 130, 246, 0.14) 0%, transparent 72%)'
+                  : 'radial-gradient(ellipse 68% 58% at 50% 50%, rgba(245, 158, 11, 0.16) 0%, transparent 72%)',
+            }}
+          />
+
           <svg
             viewBox="0 0 1000 260"
             width="100%"
             height="260"
-            className="w-full h-[220px] sm:h-[260px] block select-none"
+            className="relative z-10 w-full h-[220px] sm:h-[260px] block select-none"
             aria-label="Unified Interactive Route Preview"
           >
             <defs>
@@ -1068,63 +1034,39 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
 
 
         {/* ========================================================= */}
-        {/* ROW 3: Full-Width Bottom Outcome Banner                   */}
+        {/* ROW 3: Borderless Left-Accented Outcome Note              */}
         {/* ========================================================= */}
         <div className="w-full">
           {selectedQueen === 'safe' && (
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50/90 border border-emerald-300/80 text-emerald-950 text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-emerald-700 shrink-0" />
-                <span>
-                  {safeDelayScenario === 'delay15' ? (
-                    <>
-                      <strong>15 minutes of unexpected delay absorbed</strong> safely inside Queen
-                      Meli&apos;s buffer. Transfer preserved at Central Junction Hive. Guaranteed{' '}
-                      <strong>100% On Time</strong> arrival at Point B.
-                    </>
-                  ) : (
-                    <>
-                      Standard smooth run: Full +20 min delay cushion intact. Generous platform
-                      buffer with guaranteed <strong>100% On Time</strong> arrival at Point B.
-                    </>
-                  )}
-                </span>
-              </div>
-              <span className="shrink-0 font-black px-3 py-1 rounded-full bg-emerald-200/90 text-emerald-900 border border-emerald-300 text-xs">
-                100% On Time Guarantee
-              </span>
+            <div className="mt-4 pl-4 py-1 border-l-[3px] border-emerald-500 text-sm sm:text-[15px] text-[#3F3A34] leading-relaxed">
+              {safeDelayScenario === 'delay15' ? (
+                <>
+                  <strong>15 minutes of unexpected delay absorbed</strong> safely inside Queen
+                  Meli&apos;s buffer. Transfer preserved at Central Junction Hive. Guaranteed{' '}
+                  <strong>100% On Time</strong> arrival at Point B.
+                </>
+              ) : (
+                <>
+                  Standard smooth run: Full +20 min delay cushion intact. Generous platform
+                  buffer with guaranteed <strong>100% On Time</strong> arrival at Point B.
+                </>
+              )}
             </div>
           )}
 
           {selectedQueen === 'fast' && (
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/90 border border-blue-300/80 text-blue-950 text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <Zap className="w-5 h-5 text-blue-700 shrink-0" />
-                <span>
-                  Record-breaking velocity: <strong>Direct Point A to Point B flight in 1h 40m</strong>.
-                  Skipped 5 intermediate halts with <strong>0 Wasted Stops</strong> and{' '}
-                  <strong>-55 minutes saved</strong>.
-                </span>
-              </div>
-              <span className="shrink-0 font-black px-3 py-1 rounded-full bg-blue-200/90 text-blue-900 border border-blue-300 text-xs">
-                Fastest Arrival Guaranteed
-              </span>
+            <div className="mt-4 pl-4 py-1 border-l-[3px] border-blue-500 text-sm sm:text-[15px] text-[#3F3A34] leading-relaxed">
+              Record-breaking velocity: <strong>Direct Point A to Point B flight in 1h 40m</strong>.
+              Skipped 5 intermediate halts with <strong>0 Wasted Stops</strong> and{' '}
+              <strong>-55 minutes saved</strong>.
             </div>
           )}
 
           {selectedQueen === 'economy' && (
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/90 border border-amber-300/80 text-amber-950 text-xs sm:text-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <Coins className="w-5 h-5 text-amber-700 shrink-0" />
-                <span>
-                  Peaceful unhurried journey: 5 relaxing station pauses (10–15 min each) to stretch
-                  your legs, zero rush, and <strong>Save up to 40%</strong> on ticket fares for
-                  the exact same track.
-                </span>
-              </div>
-              <span className="shrink-0 font-black px-3 py-1 rounded-full bg-amber-200/90 text-amber-900 border border-amber-400 text-xs">
-                Maximum Pocket Savings
-              </span>
+            <div className="mt-4 pl-4 py-1 border-l-[3px] border-amber-500 text-sm sm:text-[15px] text-[#3F3A34] leading-relaxed">
+              Peaceful unhurried journey: 5 relaxing station pauses (10–15 min each) to stretch
+              your legs, zero rush, and <strong>Save up to 40%</strong> on ticket fares for
+              the exact same track.
             </div>
           )}
         </div>
