@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useId } from 'react';
-import { X, Train, ChevronDown, Check } from 'lucide-react';
+import { X, Train, Check } from 'lucide-react';
 import { StationAutocompleteItem } from '../types/station';
 import { stationAutocompleteService } from '../services/stationAutocompleteService';
 

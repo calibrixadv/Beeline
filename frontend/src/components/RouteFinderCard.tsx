@@ -17,7 +17,6 @@ import {
   ArrowRight
 } from 'lucide-react';
 import BaseCard from './BaseCard';
-import BaseInput from './BaseInput';
 import BaseButton from './BaseButton';
 import MascotBee from './MascotBee';
 import StationAutocompleteInput from './StationAutocompleteInput';

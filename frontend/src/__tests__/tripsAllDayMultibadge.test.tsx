@@ -195,7 +195,7 @@ describe('Trips All-Day Routes & Multi-Badge Pillar Test Suite', () => {
     await waitFor(() => {
       const countHeader = screen.getByTestId('trips-count-header');
       expect(countHeader).toBeInTheDocument();
-      expect(countHeader).toHaveTextContent(/Showing 6 unique trains operating on 2026-11-20 • Zero duplicates/i);
+      expect(countHeader).toHaveTextContent(/Showing 6 unique trains operating on 2026-11-20/i);
     });
 
     // Assert that all 6 unique train cards are visible in the document

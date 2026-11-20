@@ -27,7 +27,6 @@ import { TransitRoutePlan, CuratedPillar } from '../../types/routePlan';
 import { StationAutocompleteItem } from '../../types/station';
 import { useTrip } from '../../context/TripContext';
 import BaseCard from '../../components/BaseCard';
-import BaseInput from '../../components/BaseInput';
 import BaseButton from '../../components/BaseButton';
 import StationAutocompleteInput from '../../components/StationAutocompleteInput';
 import BookingTripCard from '../../components/BookingTripCard';
@@ -343,18 +342,6 @@ function TripsContent() {
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-
-        {/* Timetable Period & Live Provider Metadata */}
-        <div className="flex items-center gap-2 text-right">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-white border border-amber-200 text-stone-700 shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>
-              {activeDate >= '2026-12-13' ? 'Timetable 2026-2027 (Official)' : 'Timetable 2025-2026 (Live InfoFer)'}
-            </span>
-            <span className="text-stone-300">•</span>
-            <span className="text-amber-800 font-bold">90-Day Pre-Sale Window</span>
-          </div>
-        </div>
       </div>
 
       {/* Provider Booking Window Out-of-Bounds Alert */}
@@ -576,7 +563,7 @@ function TripsContent() {
             </div>
           )}
 
-          {/* Trips Header with Total Count & Zero Duplicates Guarantee */}
+          {/* Trips Header with Total Count */}
           <div
             data-testid="trips-count-header"
             className="flex items-center justify-between pb-2 mb-2 px-1 flex-wrap gap-2 text-xs font-semibold text-stone-700"
@@ -584,7 +571,7 @@ function TripsContent() {
             <span className="flex items-center gap-1.5">
               <Train className="w-4 h-4 text-amber-600" />
               <span>
-                Showing <strong className="text-stone-900 font-black">{displayedTrips.length}</strong> unique train{displayedTrips.length === 1 ? '' : 's'} operating on <strong className="text-stone-900 font-black">{activeDate}</strong> • Zero duplicates
+                Showing <strong className="text-stone-900 font-black">{displayedTrips.length}</strong> unique train{displayedTrips.length === 1 ? '' : 's'} operating on <strong className="text-stone-900 font-black">{activeDate}</strong>
               </span>
             </span>
             {initialPillarParam && filters.pillar === 'ALL' && (
