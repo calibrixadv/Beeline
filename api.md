@@ -1071,6 +1071,32 @@ POST /api/v1/trains/sync-timetables
 ```
 Discovers, downloads, and archives the latest official open XML railway timetables from the Romanian Open Data portal (`data.gov.ro`), supporting seamless transitions between 2025-2026 and 2026-2027 seasons.
 
+### 7.3.3 Dynamic Real-Time Rail Operators Summary
+```http
+GET /api/v1/trains/operators-summary
+```
+Returns a dynamic factual summary of all Romanian rail operators parsed directly from the active official XML timetables (`backend/scraper/data/xml/*.xml`). Response is cached via dual-layer caching (in-memory + Redis `beeline:operators:summary:v1:{mtime_hash}`, TTL 900s) keyed on XML file modification fingerprints.
+
+- **Response `200 OK`:**
+```json
+{
+  "totalDailyTrains": 2103,
+  "totalRoutes": 709,
+  "operatorCount": 7,
+  "updatedAt": "2026-11-20T10:30:00+00:00",
+  "source": "OFFICIAL_XML_LIVE",
+  "operators": [
+    {
+      "id": "cfr",
+      "shortName": "CFR",
+      "name": "CFR Călători",
+      "dailyTrains": 1256,
+      "routes": 479
+    }
+  ]
+}
+```
+
 ### 7.4 Create Scheduled Train Journey
 ```http
 POST /api/v1/trains
@@ -1392,6 +1418,7 @@ Archives or removes a resolved transit disruption incident.
 | **Trains** | `/trains/{id}` | `PATCH` | ✅ Implemented | Train live status / delay dispatch |
 | **Trains** | `/trains/{id}` | `DELETE` | ✅ Implemented | Train cancellation / registry |
 | **Trains** | `/trains/operators` | `GET` | ✅ Implemented | `TrainsPage` operator filter |
+| **Trains** | `/trains/operators-summary` | `GET` | ✅ Implemented | `TransitHoneycombSection` Live Summary |
 | **Stations** | `/stations` | `GET` | ✅ Implemented | Station catalog / directory |
 | **Stations** | `/stations` | `POST` | ✅ Implemented | Station node creation |
 | **Stations** | `/stations/{code}` | `GET` | ✅ Implemented | Station details / GPS |

@@ -1,11 +1,11 @@
 import React from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
 import { TripsGhostSkeleton } from '../components/TripsGhostSkeleton';
 import { AuthGhostSkeleton } from '../components/AuthGhostSkeleton';
 import { TrainsGhostSkeleton } from '../components/TrainsGhostSkeleton';
 import { Navbar } from '../components/Navbar';
-import TrainsPage from '../app/trains/page';
+import TrainsPage, { normalizeTrainCode, isTrainCodeMatch } from '../app/trains/page';
 import TripsPage from '../app/trips/page';
 import { apiClient } from '../services/apiClient';
 import { SAMPLE_TRAINS } from '../data/sampleTrains';
@@ -15,6 +15,7 @@ import { TripProvider } from '../context/TripContext';
 // Mock next/navigation
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+let mockSearchParams = new URLSearchParams();
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -23,7 +24,7 @@ jest.mock('next/navigation', () => ({
     prefetch: jest.fn(),
   }),
   usePathname: () => '/',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => mockSearchParams,
 }));
 
 // Mock AuthContext
@@ -46,6 +47,7 @@ jest.mock('../context/AuthContext', () => ({
 describe('Glassy Ghost Layouts & Complete Schedules Removal Test Suite', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSearchParams = new URLSearchParams();
   });
 
   describe('1. TripsGhostSkeleton & /trips Integration', () => {
@@ -191,6 +193,55 @@ describe('Glassy Ghost Layouts & Complete Schedules Removal Test Suite', () => {
       expect(container.querySelectorAll('map').length).toBe(0);
     });
 
+    it('starts cleanly in ready state with zero network requests when loaded without search params', () => {
+      const getTrainsSpy = jest.spyOn(apiClient, 'getTrains');
+      mockSearchParams = new URLSearchParams();
+
+      const { container } = render(
+        <TripProvider>
+          <TrainsPage />
+        </TripProvider>
+      );
+
+      // Zero unrequested server calls on initial mount
+      expect(getTrainsSpy).not.toHaveBeenCalled();
+
+      // Ready state UI is rendered
+      expect(screen.getByTestId('trains-ready-state')).toBeInTheDocument();
+      expect(screen.queryByTestId('trains-ghost-skeleton')).not.toBeInTheDocument();
+
+      // Quick sample train code chips are present (IC 535, IR 1572, R 3029, RE 11631)
+      expect(screen.getByText(/IC 535/i)).toBeInTheDocument();
+      expect(screen.getByText(/IR 1572/i)).toBeInTheDocument();
+      expect(screen.getByText(/R 3029/i)).toBeInTheDocument();
+      expect(screen.getByText(/RE 11631/i)).toBeInTheDocument();
+
+      // Strictly ZERO canvas, leaflet, map
+      expect(container.querySelectorAll('canvas').length).toBe(0);
+      expect(container.querySelectorAll('.leaflet-container').length).toBe(0);
+      expect(container.querySelectorAll('map').length).toBe(0);
+    });
+
+    it('loads recent searches from localStorage with zero network requests', () => {
+      const getTrainsSpy = jest.spyOn(apiClient, 'getTrains');
+      mockSearchParams = new URLSearchParams();
+      window.localStorage.setItem(
+        'beeline_trains_recent_codes',
+        JSON.stringify(['IR 1572', 'R 3029'])
+      );
+
+      render(
+        <TripProvider>
+          <TrainsPage />
+        </TripProvider>
+      );
+
+      expect(getTrainsSpy).not.toHaveBeenCalled();
+      const recentStrip = screen.getByTestId('recent-searches-strip');
+      expect(recentStrip).toBeInTheDocument();
+      expect(within(recentStrip).getByText('IR 1572')).toBeInTheDocument();
+    });
+
     it('renders on /trains while backend fetch is pending, then disappears when trains load', async () => {
       let resolveTrains!: (data: any) => void;
       const pendingPromise = new Promise((resolve) => {
@@ -198,6 +249,7 @@ describe('Glassy Ghost Layouts & Complete Schedules Removal Test Suite', () => {
       });
 
       jest.spyOn(apiClient, 'getTrains').mockImplementation(() => pendingPromise as any);
+      mockSearchParams = new URLSearchParams('trainCode=IR+1572');
 
       render(
         <TripProvider>
@@ -227,6 +279,177 @@ describe('Glassy Ghost Layouts & Complete Schedules Removal Test Suite', () => {
 
       // Real train card is rendered
       expect(screen.getByText(SAMPLE_TRAINS[0].trainNumber)).toBeInTheDocument();
+    });
+
+    it('fires search immediately when clicking a quick sample train code chip and saves to recent searches', async () => {
+      const getTrainsSpy = jest.spyOn(apiClient, 'getTrains').mockResolvedValueOnce({
+        items: [SAMPLE_TRAINS[0]],
+        total: 1,
+      });
+
+      render(
+        <TripProvider>
+          <TrainsPage />
+        </TripProvider>
+      );
+
+      const chip = screen.getByRole('button', { name: /IC 535/i });
+      fireEvent.click(chip);
+
+      expect(getTrainsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          searchQuery: 'IC 535',
+        })
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(SAMPLE_TRAINS[0].trainNumber)).toBeInTheDocument();
+      });
+    });
+
+    it('supports whitespace and case-normalization like r3029 -> R 3029 on submit', async () => {
+      const getTrainsSpy = jest.spyOn(apiClient, 'getTrains').mockResolvedValueOnce({
+        items: [SAMPLE_TRAINS[0]],
+        total: 1,
+      });
+
+      render(
+        <TripProvider>
+          <TrainsPage />
+        </TripProvider>
+      );
+
+      const input = screen.getByTestId('trains-code-input');
+      fireEvent.change(input, { target: { value: 'r3029' } });
+
+      const searchBtn = screen.getByTestId('trains-search-btn');
+      fireEvent.click(searchBtn);
+
+      expect(getTrainsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          searchQuery: 'R 3029',
+        })
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText(SAMPLE_TRAINS[0].trainNumber)).toBeInTheDocument();
+      });
+    });
+
+    it('displays factual no-trains empty state when search returns 0 trains without mock data', async () => {
+      jest.spyOn(apiClient, 'getTrains').mockResolvedValueOnce({
+        items: [],
+        total: 0,
+      });
+
+      render(
+        <TripProvider>
+          <TrainsPage />
+        </TripProvider>
+      );
+
+      const searchBtn = screen.getByTestId('trains-search-btn');
+      fireEvent.click(searchBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('no-trains-empty-state')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/No trains found/i)).toBeInTheDocument();
+      // Zero mock train cards
+      expect(screen.queryByText(SAMPLE_TRAINS[0].trainNumber)).not.toBeInTheDocument();
+    });
+
+    it('normalizes IC queries and matches IC trains correctly in isTrainCodeMatch and normalizeTrainCode', () => {
+      expect(normalizeTrainCode('ic535')).toBe('IC 535');
+      expect(normalizeTrainCode('IC 535')).toBe('IC 535');
+      expect(normalizeTrainCode('ic')).toBe('IC');
+      expect(normalizeTrainCode('r3029')).toBe('R 3029');
+      expect(normalizeTrainCode('re11631')).toBe('RE 11631');
+
+      expect(isTrainCodeMatch('IC 535', 'IC')).toBe(true);
+      expect(isTrainCodeMatch('IC 535', 'ic')).toBe(true);
+      expect(isTrainCodeMatch('IC 535', 'ic535')).toBe(true);
+      expect(isTrainCodeMatch('IC 535', 'IC 535')).toBe(true);
+      expect(isTrainCodeMatch('IC 535', '535')).toBe(true);
+      expect(isTrainCodeMatch('IR 1572', 'IC')).toBe(false);
+      expect(isTrainCodeMatch('IR 15531', 'IC')).toBe(false);
+    });
+
+    it('searches by ic535 and displays matching IC train with normalized code', async () => {
+      const icTrain = {
+        ...SAMPLE_TRAINS[0],
+        id: 'tr-ic-535-20261120',
+        trainNumber: 'IC 535',
+        operator: 'CFR Călători',
+      };
+      const getTrainsSpy = jest.spyOn(apiClient, 'getTrains').mockResolvedValueOnce({
+        items: [icTrain],
+        data: [icTrain],
+        total: 1,
+      });
+
+      render(
+        <TripProvider>
+          <TrainsPage />
+        </TripProvider>
+      );
+
+      const input = screen.getByTestId('trains-code-input');
+      fireEvent.change(input, { target: { value: 'ic535' } });
+
+      const searchBtn = screen.getByTestId('trains-search-btn');
+      fireEvent.click(searchBtn);
+
+      expect(getTrainsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          searchQuery: 'IC 535',
+        })
+      );
+
+      await waitFor(() => {
+        const matches = screen.getAllByText('IC 535');
+        expect(matches.length).toBeGreaterThan(0);
+        expect(matches.some((el) => el.tagName === 'SPAN')).toBe(true);
+      });
+    });
+
+    it('handles search by category prefix IC and renders matching IC trains', async () => {
+      const icTrain = {
+        ...SAMPLE_TRAINS[0],
+        id: 'tr-ic-535-20261120',
+        trainNumber: 'IC 535',
+        operator: 'CFR Călători',
+      };
+      const getTrainsSpy = jest.spyOn(apiClient, 'getTrains').mockResolvedValueOnce({
+        items: [icTrain],
+        data: [icTrain],
+        total: 1,
+      });
+
+      render(
+        <TripProvider>
+          <TrainsPage />
+        </TripProvider>
+      );
+
+      const input = screen.getByTestId('trains-code-input');
+      fireEvent.change(input, { target: { value: 'IC' } });
+
+      const searchBtn = screen.getByTestId('trains-search-btn');
+      fireEvent.click(searchBtn);
+
+      expect(getTrainsSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          searchQuery: 'IC',
+        })
+      );
+
+      await waitFor(() => {
+        const matches = screen.getAllByText('IC 535');
+        expect(matches.length).toBeGreaterThan(0);
+        expect(matches.some((el) => el.tagName === 'SPAN')).toBe(true);
+      });
     });
   });
 

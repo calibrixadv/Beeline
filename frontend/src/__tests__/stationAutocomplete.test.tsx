@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import StationAutocompleteInput from '../components/StationAutocompleteInput';
 import HomePage from '../app/page';
 import TripsPage from '../app/trips/page';
 import { TripProvider } from '../context/TripContext';
-import { stationAutocompleteService } from '../services/stationAutocompleteService';
 import * as tripBookingService from '../services/tripBookingService';
 
 const mockPush = jest.fn();

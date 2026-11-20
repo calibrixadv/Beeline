@@ -498,96 +498,53 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
 
     // Chapter 2 heading exists
     expect(
-      screen.getByRole('heading', { level: 3, name: /The Synchronized Transit Honeycomb/i })
+      screen.getByRole('heading', { level: 2, name: /Romanian Rail Network/i })
     ).toBeInTheDocument();
 
     // Core DOM test ID and section id are preserved
     expect(container.querySelector('#tour-providers')).toBeInTheDocument();
     expect(container.querySelector('[data-testid="svg-honeycomb"]')).toBeInTheDocument();
 
-    // Concept 9: Live Day-in-the-Hive Scoreboard totals
-    expect(screen.getByText('1,521,651')).toBeInTheDocument();
-    expect(screen.getByText('2,103')).toBeInTheDocument();
-    expect(screen.getByText('709')).toBeInTheDocument();
+    // Clean stat line totals
+    expect(screen.getByText(/2,103 trains\/day/i)).toBeInTheDocument();
+    expect(screen.getByText(/709 routes/i)).toBeInTheDocument();
 
-    // Concept 9: Simple 2-Way Lens Switcher exists and toggles active lens
-    const metricToggle = screen.getByTestId('honeycomb-metric-toggle');
-    expect(metricToggle).toBeInTheDocument();
+    // All 7 Romanian railway operators are rendered in the honeycomb and ledger
+    expect(screen.getAllByText('CFR Călători').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Transferoviar Călători').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Regio Călători').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Interregional Călători').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Astra Trans Carpatic').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Ferotrafic TFI').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Softrans').length).toBeGreaterThan(0);
 
-    const dailyTrainsBtn = screen.getByRole('button', { name: /Daily Trains & Routes/i });
-    const tripsLearnedBtn = screen.getByRole('button', { name: /Trips Learned by Our Bees/i });
+    // Confirm exact verified train numbers in the DOM
+    expect(screen.getAllByText(/1,256 \/ day/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/303 \/ day/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/273 \/ day/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/216 \/ day/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/21 \/ day/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/18 \/ day/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/16 \/ day/i).length).toBeGreaterThan(0);
 
-    expect(dailyTrainsBtn).toBeInTheDocument();
-    expect(tripsLearnedBtn).toBeInTheDocument();
-    expect(dailyTrainsBtn).toHaveAttribute('aria-pressed', 'true');
+    // Default active operator is CFR Călători
+    expect(screen.getByText(/479 routes/i)).toBeInTheDocument();
 
-    fireEvent.click(tripsLearnedBtn);
-    expect(tripsLearnedBtn).toHaveAttribute('aria-pressed', 'true');
-    expect(dailyTrainsBtn).toHaveAttribute('aria-pressed', 'false');
+    // Bidirectional sync: clicking Transferoviar Călători hexagon activates it
+    const tfcHex = container.querySelector('[data-testid="svg-honeycomb"] [aria-label="Transferoviar Călători"]');
+    expect(tfcHex).toBeInTheDocument();
+    if (tfcHex) {
+      fireEvent.click(tfcHex);
+      expect(tfcHex).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByText(/62 routes/i)).toBeInTheDocument();
+    }
 
-    fireEvent.click(dailyTrainsBtn);
-    expect(dailyTrainsBtn).toHaveAttribute('aria-pressed', 'true');
-
-    // All 7 Romanian railway operators and 2 hubs are rendered in the size-weighted beehive
-    expect(screen.getByRole('button', { name: /Inspect CFR Călători/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Inspect Astra Trans Carpatic/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Inspect Softrans/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Inspect Transferoviar Călători/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Inspect Regio Călători/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Inspect Interregional Călători/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Inspect Ferotrafic TFI/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Inspect București Nord Hub/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Inspect Carpathian & Danube Hubs/i })).toBeInTheDocument();
-
-    // Confirm exact verified codebase numbers in the DOM
-    expect(screen.getAllByText(/985,705/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/332,514/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/176,053/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/103,647/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/15,219/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/12,160/i).length).toBeGreaterThan(0);
-
-    expect(screen.getAllByText(/1,256/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/303/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/273/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/216/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/21/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/18/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/16/i).length).toBeGreaterThan(0);
-
-    // Concept 2: Playful Floating Story Card exists
-    const storyCard = screen.getByTestId('provider-story-card');
-    expect(storyCard).toBeInTheDocument();
-
-    // Test clicking Transferoviar Călători updates the Story Card
-    const tfcBtn = screen.getByRole('button', { name: /Inspect Transferoviar Călători/i });
-    fireEvent.click(tfcBtn);
-
-    expect(screen.getAllByText(/Fast Regional Shortcuts/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Transferoviar Călători/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/303/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/62/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/176,053/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText(/Bucharest ⇄ Buzău/i)).toBeInTheDocument();
-
-    // Test clicking București Nord Hub updates the Story Card
-    const bnrHubBtn = screen.getByRole('button', { name: /Inspect București Nord Hub/i });
-    fireEvent.click(bnrHubBtn);
-
-    expect(screen.getAllByText(/Main National Meeting Point/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/327,609/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/601/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/75/i).length).toBeGreaterThanOrEqual(2);
-
-    // Test clicking CFR Călători updates the Story Card
-    const cfrBtn = screen.getByRole('button', { name: /Inspect CFR Călători/i });
-    fireEvent.click(cfrBtn);
-
-    expect(screen.getAllByText(/Everywhere in Romania/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/985,705/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/1,256/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText(/479/i).length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText(/Bucharest ⇄ Brașov/i)).toBeInTheDocument();
+    // Bidirectional sync: clicking Softrans row in ledger activates it
+    const softransButtons = screen.getAllByRole('button', { name: /Softrans/i });
+    const softransLedger = softransButtons[softransButtons.length - 1];
+    fireEvent.click(softransLedger);
+    expect(softransLedger).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/6 routes/i)).toBeInTheDocument();
 
     // Strict Invariant 1: Strictly zero map canvases, Leaflet, or <map> elements
     expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
@@ -650,7 +607,7 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     }
   });
 
-  it('updates companion mascot state on scroll, supports Jump Back CTA, and enforces strict invariants (Test 19)', () => {
+  it('supports Jump Back CTA and enforces strict invariants (Test 19)', () => {
     // Mock window.scrollTo
     const originalScrollTo = window.scrollTo;
     window.scrollTo = jest.fn();
@@ -660,20 +617,16 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     // Strict Invariant 1: Strictly contains ZERO map or canvas elements across the whole page
     expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
 
+    // Scroll companion guide is completely removed
+    expect(container.querySelector('[data-testid="scroll-companion-guide"]')).toBeNull();
+
     // Simulate window scroll into queens chapter
     Object.defineProperty(window, 'scrollY', { value: 500, writable: true, configurable: true });
     fireEvent.scroll(window);
 
-    // Scroll companion guide becomes visible
-    const companionGuide = container.querySelector('[data-testid="scroll-companion-guide"]');
-    expect(companionGuide).toBeInTheDocument();
-    expect(companionGuide).toHaveAttribute('data-chapter', 'queens');
-    expect(companionGuide?.querySelector('[aria-live="polite"]')).toBeInTheDocument();
-
     // Simulate window scroll into providers chapter
     Object.defineProperty(window, 'scrollY', { value: 1200, writable: true, configurable: true });
     fireEvent.scroll(window);
-    expect(companionGuide).toHaveAttribute('data-chapter', 'providers');
 
     // Click "Plan Your Route Now" CTA button and verify focus on origin input
     const ctaBtn = screen.getByRole('button', { name: /Plan Your Route Now/i });
@@ -694,12 +647,11 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
 
     const { container } = render(<HomePage />);
 
-    // Scroll into providers chapter so scroll companion guide renders Bumbi alongside Chapter 1 Queens
+    // Scroll into providers chapter
     Object.defineProperty(window, 'scrollY', { value: 1200, writable: true, configurable: true });
     fireEvent.scroll(window);
 
-    // Assert that Bumbi, Queen Meli, Queen Vira, and Queen Flora are rendered in the DOM
-    expect(screen.getAllByText(/Bumbi/i).length).toBeGreaterThan(0);
+    // Assert that Queen Meli, Queen Vira, and Queen Flora are rendered in the DOM
     expect(screen.getAllByText(/Queen Meli/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Queen Vira/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Queen Flora/i).length).toBeGreaterThan(0);
@@ -764,7 +716,6 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     // 5. Assert Consumer Story 1: Reliability (Safe - Queen Meli)
     // Story: Always arrive on time, built-in cushion/margin of error accounts for extra time in case another train is delayed
     expect(screen.getAllByText(/Always Arrive On Time\. Built-In Cushion for Any Delay\./i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Emerald Error-Margin Shield/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/\+20 min Built-In Delay Buffer/i).length).toBeGreaterThan(0);
 
     // Click delay stress test button (+15 min unexpected delay on leg 1)

@@ -29,6 +29,23 @@ export interface RoutePlanResponse {
   totalDayRoutes?: number;
 }
 
+export interface RailOperatorSummary {
+  id: string;
+  shortName: string;
+  name: string;
+  dailyTrains: number;
+  routes: number;
+}
+
+export interface OperatorsSummaryResponse {
+  totalDailyTrains: number;
+  totalRoutes: number;
+  operatorCount: number;
+  updatedAt: string;
+  source: string;
+  operators: RailOperatorSummary[];
+}
+
 class TokenStorage {
   private inMemoryAccess: string | null = null;
   private inMemoryRefresh: string | null = null;
@@ -458,18 +475,34 @@ export class ApiClient {
   async getTrains(params?: {
     origin?: string;
     destination?: string;
+    date?: string;
     travel_date?: string;
     operator?: string;
+    status?: string;
     page?: number;
     page_size?: number;
-  }): Promise<{ items: TrainJourney[]; total: number; bookingWindow?: BookingWindow }> {
+    pageSize?: number;
+    searchQuery?: string;
+    trainNumber?: string;
+    trainCode?: string;
+    q?: string;
+  }): Promise<{ items: TrainJourney[]; data?: TrainJourney[]; total: number; bookingWindow?: BookingWindow; pagination?: any }> {
     const urlParams = new URLSearchParams();
     if (params?.origin) urlParams.append('origin', params.origin);
     if (params?.destination) urlParams.append('destination', params.destination);
     if (params?.travel_date) urlParams.append('travel_date', params.travel_date);
+    else if (params?.date) urlParams.append('date', params.date);
     if (params?.operator) urlParams.append('operator', params.operator);
-    if (params?.page) urlParams.append('page', String(params.page));
-    if (params?.page_size) urlParams.append('page_size', String(params.page_size));
+    if (params?.status) urlParams.append('status', params.status);
+
+    const queryVal = params?.searchQuery || params?.trainNumber || params?.trainCode || params?.q;
+    if (queryVal) {
+      urlParams.append('searchQuery', queryVal);
+    }
+    const pageVal = params?.page;
+    if (pageVal) urlParams.append('page', String(pageVal));
+    const pageSizeVal = params?.pageSize || params?.page_size;
+    if (pageSizeVal) urlParams.append('pageSize', String(pageSizeVal));
 
     const qs = urlParams.toString();
     const endpoint = `/trains${qs ? `?${qs}` : ''}`;
@@ -485,7 +518,27 @@ export class ApiClient {
       (e as any).status = res.status;
       throw e;
     }
-    return res.json();
+
+    const raw = await res.json();
+    const items: TrainJourney[] = Array.isArray(raw?.data)
+      ? raw.data
+      : Array.isArray(raw?.items)
+      ? raw.items
+      : [];
+    const total: number =
+      typeof raw?.pagination?.totalItems === 'number'
+        ? raw.pagination.totalItems
+        : typeof raw?.total === 'number'
+        ? raw.total
+        : items.length;
+
+    return {
+      items,
+      data: items,
+      total,
+      pagination: raw?.pagination,
+      bookingWindow: raw?.bookingWindow,
+    };
   }
 
   async fetchTrainItinerary(
@@ -560,9 +613,19 @@ export class ApiClient {
     if (!res.ok) throw new Error('Failed to search stations');
     return res.json();
   }
+
+  async getOperatorsSummary(): Promise<OperatorsSummaryResponse> {
+    const res = await this.fetchWithAuth('/trains/operators-summary');
+    if (!res.ok) throw new Error('Failed to fetch operators summary');
+    return res.json();
+  }
 }
 
 export const apiClient = new ApiClient();
+
+export async function getOperatorsSummary(): Promise<OperatorsSummaryResponse> {
+  return apiClient.getOperatorsSummary();
+}
 
 export async function fetchStationAutocompleteCatalog(): Promise<StationAutocompleteCatalogResponse> {
   return apiClient.fetchStationAutocompleteCatalog();

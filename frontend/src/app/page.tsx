@@ -5,9 +5,6 @@ import { useRouter } from 'next/navigation';
 import { 
   ArrowLeftRight, 
   Search, 
-  Zap, 
-  ShieldCheck, 
-  Coins, 
   MapPin, 
   Calendar,
   ArrowUp
@@ -15,7 +12,6 @@ import {
 import MascotBee, { MascotGear } from '../components/MascotBee';
 import MascotDebugModal from '../components/MascotDebugModal';
 import BaseButton from '../components/BaseButton';
-import BaseInput from '../components/BaseInput';
 import BaseCard from '../components/BaseCard';
 import StationAutocompleteInput from '../components/StationAutocompleteInput';
 import HomePageGhostSkeleton from '../components/HomePageGhostSkeleton';
@@ -24,7 +20,6 @@ import {
   useScrollHiveTour,
   QueenBeesSection,
   TransitHoneycombSection,
-  ScrollCompanionMascot,
 } from '../components/hive-tour';
 
 export const POPULAR_CORRIDORS = [
@@ -183,6 +178,118 @@ export function BackgroundBee({ gear }: BackgroundBeeProps) {
   );
 }
 
+interface PrefMiniBeeIconProps {
+  variant: 'safe' | 'fast' | 'economy';
+  isActive?: boolean;
+  className?: string;
+}
+
+/**
+ * Minimalist Flat Vector Mini-Bee Icon (Option 3: Mini-Bee Accent)
+ * Clean, calm, centered 20x20 inline SVG with soft translucent wings,
+ * tiny antennas, and cute striped bee body tinted to each pillar's Cozy Hive signature color.
+ */
+function PrefMiniBeeIcon({
+  variant,
+  isActive = false,
+  className = '',
+}: PrefMiniBeeIconProps) {
+  const palette = {
+    safe: {
+      body: '#10B981',
+      stripe: '#047857',
+      wing: '#A7F3D0',
+    },
+    fast: {
+      body: '#3B82F6',
+      stripe: '#1D4ED8',
+      wing: '#BFDBFE',
+    },
+    economy: {
+      body: '#D97706',
+      stripe: '#92400E',
+      wing: '#FDE68A',
+    },
+  }[variant];
+
+  const clipId = `pref-bee-clip-${variant}`;
+
+  return (
+    <svg
+      width={20}
+      height={20}
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`w-5 h-5 shrink-0 ${
+        isActive
+          ? 'opacity-100 scale-105 transition-transform duration-200'
+          : 'opacity-75 group-hover:opacity-100 transition-opacity duration-200'
+      } ${className}`}
+      aria-hidden="true"
+    >
+      <defs>
+        <clipPath id={clipId}>
+          <ellipse cx="10" cy="11.5" rx="5.2" ry="3.8" />
+        </clipPath>
+      </defs>
+
+      {/* 1. Soft Translucent Wings */}
+      <ellipse
+        cx="7.8"
+        cy="6"
+        rx="3.2"
+        ry="2"
+        fill={palette.wing}
+        fillOpacity="0.75"
+        transform="rotate(-26 7.8 6)"
+      />
+      <ellipse
+        cx="11.2"
+        cy="5.6"
+        rx="3.5"
+        ry="2.1"
+        fill={palette.wing}
+        fillOpacity="0.88"
+        transform="rotate(-8 11.2 5.6)"
+      />
+
+      {/* 2. Tiny Antennas */}
+      <path
+        d="M12.8 8 C13.4 6.2 14.8 5.6 15.6 5.8"
+        stroke={palette.stripe}
+        strokeWidth="0.9"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <circle cx="15.6" cy="5.8" r="0.6" fill={palette.stripe} />
+
+      {/* Tiny Stinger Accent */}
+      <path
+        d="M4.8 11.5 L3.2 10.9 L3.2 12.1 Z"
+        fill={palette.stripe}
+      />
+
+      {/* 3. Striped Bee Body */}
+      <ellipse
+        cx="10"
+        cy="11.5"
+        rx="5.2"
+        ry="3.8"
+        fill={palette.body}
+      />
+      <g clipPath={`url(#${clipId})`}>
+        <rect x="7.8" y="6.5" width="1.6" height="10" fill={palette.stripe} />
+        <rect x="10.8" y="6.5" width="1.6" height="10" fill={palette.stripe} />
+      </g>
+
+      {/* Cute Little Eye */}
+      <circle cx="13.4" cy="10.4" r="0.8" fill="#1E1B18" />
+      <circle cx="13.7" cy="10.1" r="0.28" fill="#FFFFFF" />
+    </svg>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
 
@@ -264,8 +371,7 @@ export default function HomePage() {
   const [isDebugModalOpen, setIsDebugModalOpen] = useState<boolean>(false);
 
   // Passive 60fps Scroll Tour Engine
-  const { scrollProgress, activeChapter, isCompanionVisible, prefersReducedMotion } =
-    useScrollHiveTour();
+  const { activeChapter, prefersReducedMotion } = useScrollHiveTour();
 
   // Pure derived gear: dynamically resolves gear for hero, queens, and transit without cascading renders
   const effectiveGear: MascotGear = isManualOverride
@@ -286,6 +392,36 @@ export default function HomePage() {
     setSelectedRouteType(type);
     setActiveGear(type);
     setIsManualOverride(false);
+  };
+
+  const handlePreferenceKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    currentType: 'safe' | 'fast' | 'economy'
+  ) => {
+    const preferences: Array<'safe' | 'fast' | 'economy'> = ['safe', 'fast', 'economy'];
+    const currentIndex = preferences.indexOf(currentType);
+    let targetIndex = -1;
+
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      targetIndex = (currentIndex + 1) % preferences.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      targetIndex = (currentIndex - 1 + preferences.length) % preferences.length;
+    }
+
+    if (targetIndex >= 0) {
+      const nextPref = preferences[targetIndex];
+      handleSelectPreference(nextPref);
+      const testId =
+        nextPref === 'safe'
+          ? 'pref-protected'
+          : nextPref === 'fast'
+          ? 'pref-fast'
+          : 'pref-eco';
+      const el = document.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`);
+      el?.focus();
+    }
   };
 
   const handlePrevDay = () => {
@@ -516,45 +652,56 @@ export default function HomePage() {
                     </label>
                     <div
                       data-testid="hero-preference-selector"
-                      className="grid grid-cols-3 gap-1.5 p-1 bg-stone-100 rounded-xl border border-stone-200"
+                      role="radiogroup"
+                      aria-label="Route preference"
+                      className="rounded-full p-1 grid grid-cols-3 gap-1 bg-[#FAF4E8]/85 border border-[#F3E8D2]/70"
                     >
                       <button
                         type="button"
+                        role="radio"
+                        aria-checked={selectedRouteType === 'safe'}
                         data-testid="pref-protected"
                         onClick={() => handleSelectPreference('safe')}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                        onKeyDown={(e) => handlePreferenceKeyDown(e, 'safe')}
+                        className={`group relative py-2 px-2.5 sm:px-3 rounded-full text-xs flex items-center justify-center gap-1.5 select-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-400/35 transition-all duration-200 ${
                           selectedRouteType === 'safe'
-                            ? 'bg-emerald-600 text-white shadow-xs'
-                            : 'text-stone-700 hover:bg-stone-200/70'
+                            ? 'bg-white text-[#1E1B18] font-semibold border border-transparent shadow-[0_2px_8px_-1px_rgba(120,82,25,0.10),0_1px_2px_rgba(120,82,25,0.05)]'
+                            : 'bg-transparent border border-transparent text-[#78716C] hover:text-[#1E1B18] hover:bg-white/45 font-medium'
                         }`}
                       >
-                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <PrefMiniBeeIcon variant="safe" isActive={selectedRouteType === 'safe'} />
                         <span>Protected</span>
                       </button>
                       <button
                         type="button"
+                        role="radio"
+                        aria-checked={selectedRouteType === 'fast'}
                         data-testid="pref-fast"
                         onClick={() => handleSelectPreference('fast')}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                        onKeyDown={(e) => handlePreferenceKeyDown(e, 'fast')}
+                        className={`group relative py-2 px-2.5 sm:px-3 rounded-full text-xs flex items-center justify-center gap-1.5 select-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400/35 transition-all duration-200 ${
                           selectedRouteType === 'fast'
-                            ? 'bg-blue-600 text-white shadow-xs'
-                            : 'text-stone-700 hover:bg-stone-200/70'
+                            ? 'bg-white text-[#1E1B18] font-semibold border border-transparent shadow-[0_2px_8px_-1px_rgba(120,82,25,0.10),0_1px_2px_rgba(120,82,25,0.05)]'
+                            : 'bg-transparent border border-transparent text-[#78716C] hover:text-[#1E1B18] hover:bg-white/45 font-medium'
                         }`}
                       >
-                        <Zap className="w-3.5 h-3.5" />
+                        <PrefMiniBeeIcon variant="fast" isActive={selectedRouteType === 'fast'} />
                         <span>Fast</span>
                       </button>
                       <button
                         type="button"
+                        role="radio"
+                        aria-checked={selectedRouteType === 'economy'}
                         data-testid="pref-eco"
                         onClick={() => handleSelectPreference('economy')}
-                        className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                        onKeyDown={(e) => handlePreferenceKeyDown(e, 'economy')}
+                        className={`group relative py-2 px-2.5 sm:px-3 rounded-full text-xs flex items-center justify-center gap-1.5 select-none outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/40 transition-all duration-200 ${
                           selectedRouteType === 'economy'
-                            ? 'bg-amber-500 text-stone-950 shadow-xs'
-                            : 'text-stone-700 hover:bg-stone-200/70'
+                            ? 'bg-white text-[#1E1B18] font-semibold border border-transparent shadow-[0_2px_8px_-1px_rgba(120,82,25,0.10),0_1px_2px_rgba(120,82,25,0.05)]'
+                            : 'bg-transparent border border-transparent text-[#78716C] hover:text-[#1E1B18] hover:bg-white/45 font-medium'
                         }`}
                       >
-                        <Coins className="w-3.5 h-3.5" />
+                        <PrefMiniBeeIcon variant="economy" isActive={selectedRouteType === 'economy'} />
                         <span>Eco</span>
                       </button>
                     </div>
@@ -660,19 +807,6 @@ export default function HomePage() {
       </div>
     </div>
   )}
-
-      {/* ========================================================= */}
-      {/* INTERACTIVE SCROLL COMPANION MASCOT & SPEECH BUBBLE       */}
-      {/* ========================================================= */}
-      {!showGhostLayout && (
-        <ScrollCompanionMascot
-          activeChapter={activeChapter}
-          companionGear={effectiveGear}
-          isVisible={isCompanionVisible}
-          scrollProgress={scrollProgress}
-          prefersReducedMotion={prefersReducedMotion}
-        />
-      )}
 
       {/* Discrete Testing/Debug Tools Trigger */}
       <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-40">
