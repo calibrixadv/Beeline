@@ -7,6 +7,7 @@ from app.schemas.auth import MessageResponse
 from app.schemas.common import PaginatedResponse
 from app.schemas.route_plan import TrainItineraryResponse
 from app.schemas.train import (
+    OperatorsSummaryResponse,
     RailwayOperatorsResponse,
     TimetableStatusResponse,
     TimetableSyncResponse,
@@ -14,6 +15,7 @@ from app.schemas.train import (
     TrainJourney,
     TrainUpdate,
 )
+from app.services.operator_summary_service import operator_summary_service
 from app.services.timetable_sync_service import timetable_sync_service
 from app.services.train_service import train_service
 
@@ -23,6 +25,12 @@ router = APIRouter()
 @router.get("", response_model=PaginatedResponse[TrainJourney])
 async def search_trains(
     searchQuery: Optional[str] = Query(None, description="Search by train number, origin, or destination"),
+    trainNumber: Optional[str] = Query(None, description="Search alias for train number"),
+    train_number: Optional[str] = Query(None, description="Search alias for train number"),
+    trainCode: Optional[str] = Query(None, description="Search alias for train code"),
+    train_code: Optional[str] = Query(None, description="Search alias for train code"),
+    q: Optional[str] = Query(None, description="General search query alias"),
+    code: Optional[str] = Query(None, description="Search alias for train code"),
     status: Optional[str] = Query(None, description="Filter by status (e.g. ALL, ON_TIME, DELAYED, CANCELLED, BOARDING)"),
     operator: Optional[str] = Query(None, description="Filter by railway operator"),
     originCode: Optional[str] = Query(None, description="Origin station code (e.g. GLT, BCT)"),
@@ -38,9 +46,10 @@ async def search_trains(
     pageSize: int = Query(20, ge=1, le=100, description="Items per page")
 ) -> Any:
     """Search Romanian rail journeys with status, tiered seat classes, amenities, and multi-operator fares."""
+    effective_query = searchQuery or trainNumber or train_number or trainCode or train_code or q or code
     effective_date = travel_date or date
     trains, pagination = train_service.get_trains(
-        search_query=searchQuery,
+        search_query=effective_query,
         status_filter=status,
         operator_filter=operator,
         origin_code=originCode,
@@ -84,6 +93,12 @@ async def list_railway_operators() -> Any:
     """Returns registered Romanian railway operators, live GTFS-RT feed health, and contact channels."""
     operators = train_service.list_operators()
     return RailwayOperatorsResponse(operators=operators)
+
+
+@router.get("/operators-summary", response_model=OperatorsSummaryResponse)
+async def get_operators_summary() -> Any:
+    """Returns dynamic real-time summary of Romanian railway operators with train counts and unique routes."""
+    return await operator_summary_service.get_live_operators_summary()
 
 
 @router.get("/{train_number}/itinerary", response_model=TrainItineraryResponse)

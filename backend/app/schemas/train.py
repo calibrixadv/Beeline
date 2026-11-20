@@ -111,6 +111,28 @@ class RailwayOperatorsResponse(BaseModel):
     operators: List[RailwayOperator]
 
 
+class RailOperatorSummary(BaseModel):
+    id: str
+    shortName: str
+    name: str
+    dailyTrains: int
+    routes: int
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class OperatorsSummaryResponse(BaseModel):
+    totalDailyTrains: int
+    totalRoutes: int
+    operatorCount: int
+    updatedAt: str
+    source: str = "OFFICIAL_XML_LIVE"
+    operators: List[RailOperatorSummary]
+
+    model_config = ConfigDict(extra="ignore")
+
+
+
 class TimetableBookingWindow(BaseModel):
     minDate: str
     maxDate: str

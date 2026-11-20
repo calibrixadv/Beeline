@@ -1,14 +1,16 @@
 import json
 import math
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.transit import Station, Train
 from app.schemas.common import PaginationMeta
 from app.schemas.train import (
+    OperatorsSummaryResponse,
     RailwayOperator,
     TrainCreate,
     TrainFare,
@@ -352,11 +354,86 @@ TRAINS_DATA: List[TrainJourney] = [
 ]
 
 
-def _scrape_record_to_train_journey(rec: Any, travel_date: str) -> TrainJourney:
+def normalize_code_str(val: str) -> str:
+    """Collapses whitespace and uppercases string."""
+    if not val:
+        return ""
+    return re.sub(r"\s+", " ", str(val).strip().upper())
+
+
+def compact_code_str(val: str) -> str:
+    """Removes all whitespace and non-alphanumeric chars, uppercased."""
+    if not val:
+        return ""
+    return re.sub(r"[^A-Z0-9]", "", str(val).strip().upper())
+
+
+def matches_train_code(train_number: str, query: str) -> bool:
+    """Robust train code matcher supporting:
+    - full codes: 'IC 535', 'ic535', 'IC535'
+    - prefix / category queries: 'IC', 'IR', 'RE', 'R'
+    - train number digits: '535', '1572'
+    """
+    if not query or not query.strip():
+        return True
+
+    clean_q = normalize_code_str(query)
+    compact_q = compact_code_str(clean_q)
+
+    clean_t = normalize_code_str(train_number)
+    compact_t = compact_code_str(clean_t)
+
+    # Exact or compact code match: 'IC 535' == 'IC 535', 'IC535' == 'IC535'
+    if clean_q == clean_t or compact_q == compact_t:
+        return True
+
+    # Category / prefix matching: 'IC' matches 'IC 535', 'IC 11785'
+    t_parts = clean_t.split(" ", 1)
+    t_category = t_parts[0] if len(t_parts) > 0 else ""
+    t_digits = t_parts[1] if len(t_parts) > 1 else ""
+
+    if clean_q in {"IC", "IR", "RE", "R"}:
+        return t_category == clean_q
+
+    # Pure digits: '535' matches 'IC 535'
+    if clean_q.isdigit():
+        return clean_q == t_digits or clean_q in t_digits
+
+    # Check if compact query expands to 'CAT NUMBER' e.g. 'IC535' -> 'IC 535'
+    match = re.match(r"^([A-Z]+)(\d+)$", compact_q)
+    if match:
+        expanded_q = f"{match.group(1)} {match.group(2)}"
+        if expanded_q == clean_t:
+            return True
+
+    if compact_q in compact_t:
+        return True
+
+    return False
+
+
+def _scrape_record_to_train_journey(
+    rec: Any,
+    travel_date: str,
+    route_info: Optional[Dict[str, Any]] = None
+) -> TrainJourney:
     t_num = rec.train_number
-    dep_sec = getattr(rec, "departure_seconds", 0)
+    raw_stops = getattr(rec, "route_stops", None) or (route_info.get("stops") if route_info else None)
     duration_min = max(10, int(round(rec.source_train_api.scheduled_duration_minutes)))
-    arr_sec = getattr(rec, "arrival_seconds", dep_sec + duration_min * 60)
+
+    dep_sec = getattr(rec, "departure_seconds", None)
+    if dep_sec is None:
+        if raw_stops and len(raw_stops) > 0 and raw_stops[0].get("dep_sec") is not None:
+            dep_sec = int(raw_stops[0]["dep_sec"])
+        else:
+            dep_sec = 0
+
+    arr_sec = getattr(rec, "arrival_seconds", None)
+    if arr_sec is None:
+        if raw_stops and len(raw_stops) > 0 and raw_stops[-1].get("arr_sec") is not None:
+            arr_sec = int(raw_stops[-1]["arr_sec"])
+        else:
+            arr_sec = dep_sec + duration_min * 60
 
     dep_hh = dep_sec // 3600
     dep_mm = (dep_sec % 3600) // 60
@@ -372,7 +449,7 @@ def _scrape_record_to_train_journey(rec: Any, travel_date: str) -> TrainJourney:
         arr_date = travel_date
     arr_time_iso = f"{arr_date}T{arr_hh:02d}:{arr_mm:02d}:00+02:00"
 
-    full_op = getattr(rec, "full_operator", None)
+    full_op = getattr(rec, "full_operator", None) or (route_info.get("full_operator") if route_info else None)
     if not full_op:
         op_map = {
             "CFR": "CFR Călători",
@@ -385,8 +462,8 @@ def _scrape_record_to_train_journey(rec: Any, travel_date: str) -> TrainJourney:
 
     orig_c = rec.source_train_api.origin_station_code
     dest_c = rec.source_train_api.destination_station_code
-    orig_name = STATION_DICTIONARY.get(orig_c, {}).get("name", orig_c)
-    dest_name = STATION_DICTIONARY.get(dest_c, {}).get("name", dest_c)
+    orig_name = (route_info.get("full_train_origin") if route_info else None) or STATION_DICTIONARY.get(orig_c, {}).get("name", orig_c)
+    dest_name = (route_info.get("full_train_destination") if route_info else None) or STATION_DICTIONARY.get(dest_c, {}).get("name", dest_c)
 
     dist = rec.source_train_api.distance_km
     cat = rec.source_train_api.train_category
@@ -414,7 +491,6 @@ def _scrape_record_to_train_journey(rec: Any, travel_date: str) -> TrainJourney:
         amenities.append("DINING_CAR")
 
     stops_data = []
-    raw_stops = getattr(rec, "route_stops", None)
     if raw_stops:
         for idx, s in enumerate(raw_stops):
             s_dep_sec = s.get("dep_sec", 0)
@@ -444,11 +520,12 @@ def _scrape_record_to_train_journey(rec: Any, travel_date: str) -> TrainJourney:
             )
         ]
 
-    delay = int(round(rec.target_labels.actual_delay_minutes))
+    delay = int(round(rec.target_labels.actual_delay_minutes)) if hasattr(rec, "target_labels") and rec.target_labels else 0
     status_str = "DELAYED" if delay > 5 else "ON_TIME"
 
     clean_num = t_num.lower().replace(" ", "-")
-    journey_id = f"tr-{clean_num}-{travel_date.replace('-', '')}"
+    d_clean = travel_date.replace("-", "")
+    journey_id = f"tr-{clean_num}-{d_clean}"
 
     return TrainJourney(
         id=journey_id,
@@ -470,8 +547,26 @@ def _scrape_record_to_train_journey(rec: Any, travel_date: str) -> TrainJourney:
 
 
 class TrainService:
-    @staticmethod
+    _cached_xml_journeys: Dict[str, List[TrainJourney]] = {}
+
+    @classmethod
+    def _get_xml_journeys_for_date(cls, date_str: str) -> List[TrainJourney]:
+        if date_str in cls._cached_xml_journeys:
+            return cls._cached_xml_journeys[date_str]
+        xml_adapter = DataGovXMLAdapter.get_shared_instance()
+        store = xml_adapter._get_store_for_date(date_str)
+        routes_map = store.get("train_routes", {})
+        journeys: List[TrainJourney] = []
+        for _, rinfo in routes_map.items():
+            rec = rinfo.get("record")
+            if rec:
+                journeys.append(_scrape_record_to_train_journey(rec, date_str, route_info=rinfo))
+        cls._cached_xml_journeys[date_str] = journeys
+        return journeys
+
+    @classmethod
     def get_trains(
+        cls,
         search_query: Optional[str] = None,
         status_filter: Optional[str] = None,
         operator_filter: Optional[str] = None,
@@ -487,10 +582,11 @@ class TrainService:
         page_size: int = 20
     ) -> Tuple[List[TrainJourney], PaginationMeta]:
         # 1. Booking window validation if travel_date specified
+        bw = timetable_sync_service.get_booking_window()
+        min_date = bw["minDate"]
+        max_date = bw["maxDate"]
+
         if travel_date:
-            bw = timetable_sync_service.get_booking_window()
-            min_date = bw["minDate"]
-            max_date = bw["maxDate"]
             if travel_date < min_date:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -501,71 +597,56 @@ class TrainService:
                     status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=f"Travel date '{travel_date}' is outside the booking window ({min_date} to {max_date}). Please choose a date within 90 days."
                 )
-
-            effective_orig = origin or origin_code
-            effective_dest = destination or destination_code
-            if effective_orig and effective_dest:
-                orig_match = resolve_known_station(effective_orig)
-                dest_match = resolve_known_station(effective_dest)
-                if not orig_match or not dest_match:
-                    return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
-                xml_adapter = DataGovXMLAdapter.get_shared_instance()
-                records = xml_adapter.fetch_itinerary_sync(effective_orig, effective_dest, date_str=travel_date)
-                if records:
-                    results = [_scrape_record_to_train_journey(r, travel_date) for r in records]
-                else:
-                    results = []
-            elif effective_orig or effective_dest:
-                if effective_orig and not resolve_known_station(effective_orig):
-                    return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
-                if effective_dest and not resolve_known_station(effective_dest):
-                    return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
-                date_trains = [t for t in TRAINS_DATA if t.departureTime.startswith(travel_date)]
-                if date_trains:
-                    results = date_trains
-                else:
-                    xml_adapter = DataGovXMLAdapter.get_shared_instance()
-                    store = xml_adapter._get_store_for_date(travel_date)
-                    routes_map = store.get("train_routes", {})
-                    results = [
-                        _scrape_record_to_train_journey(rinfo["record"], travel_date)
-                        for _, rinfo in list(routes_map.items())[:200]
-                        if rinfo.get("record")
-                    ]
-            else:
-                date_trains = [t for t in TRAINS_DATA if t.departureTime.startswith(travel_date)]
-                if date_trains:
-                    results = date_trains
-                else:
-                    xml_adapter = DataGovXMLAdapter.get_shared_instance()
-                    store = xml_adapter._get_store_for_date(travel_date)
-                    routes_map = store.get("train_routes", {})
-                    results = [
-                        _scrape_record_to_train_journey(rinfo["record"], travel_date)
-                        for _, rinfo in list(routes_map.items())[:200]
-                        if rinfo.get("record")
-                    ]
+            effective_date = travel_date
         else:
-            effective_orig = origin or origin_code
-            effective_dest = destination or destination_code
+            effective_date = min_date
+
+        effective_orig = origin or origin_code
+        effective_dest = destination or destination_code
+        if effective_orig and effective_dest:
+            orig_match = resolve_known_station(effective_orig)
+            dest_match = resolve_known_station(effective_dest)
+            if not orig_match or not dest_match:
+                return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
+            xml_adapter = DataGovXMLAdapter.get_shared_instance()
+            records = xml_adapter.fetch_itinerary_sync(effective_orig, effective_dest, date_str=effective_date)
+            results = [_scrape_record_to_train_journey(r, effective_date) for r in records] if records else []
+            for t in TRAINS_DATA:
+                if ((t.origin.code.upper() == orig_match.code.upper() or normalize_text(t.origin.name) == normalize_text(orig_match.name)) and
+                    (t.destination.code.upper() == dest_match.code.upper() or normalize_text(t.destination.name) == normalize_text(dest_match.name))):
+                    if not any(r.trainNumber == t.trainNumber for r in results):
+                        results.append(t)
+        else:
             if effective_orig and not resolve_known_station(effective_orig):
                 return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
             if effective_dest and not resolve_known_station(effective_dest):
                 return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
+
+            # Build full candidate pool combining TRAINS_DATA and active XML timetable
             results = list(TRAINS_DATA)
+            seen_numbers = {t.trainNumber.upper() for t in results}
+            xml_journeys = cls._get_xml_journeys_for_date(effective_date)
+            for j in xml_journeys:
+                if j.trainNumber.upper() not in seen_numbers:
+                    results.append(j)
+                    seen_numbers.add(j.trainNumber.upper())
 
         # Filters
         if search_query:
-            q = search_query.lower().strip()
-            results = [
-                t for t in results
-                if q in t.trainNumber.lower()
-                or q in t.origin.name.lower()
-                or q in t.origin.city.lower()
-                or q in t.destination.name.lower()
-                or q in t.destination.city.lower()
-                or q in t.operator.lower()
-            ]
+            clean_q = normalize_code_str(search_query)
+            if clean_q in {"IC", "IR", "RE", "R"}:
+                results = [t for t in results if matches_train_code(t.trainNumber, search_query)]
+            else:
+                q_low = search_query.lower().strip()
+                results = [
+                    t for t in results
+                    if matches_train_code(t.trainNumber, search_query)
+                    or q_low in t.origin.name.lower()
+                    or q_low in t.origin.city.lower()
+                    or q_low in t.destination.name.lower()
+                    or q_low in t.destination.city.lower()
+                    or q_low in t.operator.lower()
+                ]
 
         if status_filter and status_filter.upper() != "ALL":
             results = [t for t in results if t.status.upper() == status_filter.upper()]
@@ -666,7 +747,7 @@ class TrainService:
                 if target_norm == t_num or (train_number in t_num and train_category in t_num):
                     rec = rinfo.get("record")
                     if rec:
-                        return _scrape_record_to_train_journey(rec, date_str)
+                        return _scrape_record_to_train_journey(rec, date_str, route_info=rinfo)
         return None
 
     @staticmethod
@@ -897,6 +978,11 @@ class TrainService:
 
         TRAINS_DATA.remove(train)
         return True
+
+    @staticmethod
+    async def get_live_operators_summary() -> OperatorsSummaryResponse:
+        from app.services.operator_summary_service import operator_summary_service
+        return await operator_summary_service.get_live_operators_summary()
 
 
 train_service = TrainService()

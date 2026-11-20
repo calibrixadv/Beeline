@@ -126,3 +126,104 @@ async def test_list_railway_operators(client: AsyncClient):
     for op in data["operators"]:
         assert op["gtfsRtHealth"] in ["OPERATIONAL", "DEGRADED", "OFFLINE"]
         assert op["country"] == "Romania"
+
+
+@pytest.mark.asyncio
+async def test_get_operators_summary(client: AsyncClient):
+    resp = await client.get("/api/v1/trains/operators-summary")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["totalDailyTrains"] > 0
+    assert data["totalRoutes"] > 0
+    assert data["operatorCount"] > 0
+    assert data["source"] == "OFFICIAL_XML_LIVE"
+    assert "updatedAt" in data
+
+    operators = data["operators"]
+    assert len(operators) >= 7
+
+    # Verify descending sort order by dailyTrains
+    train_counts = [op["dailyTrains"] for op in operators]
+    assert train_counts == sorted(train_counts, reverse=True)
+
+    # Verify factual consistency and canonical operators
+    op_ids = [op["id"] for op in operators]
+    assert "cfr" in op_ids
+    assert "tfc" in op_ids
+    assert "regio" in op_ids
+    assert "interregional" in op_ids
+    assert "astra" in op_ids
+    assert "ferotrafic" in op_ids
+    assert "softrans" in op_ids
+
+    # Verify top operator is CFR Călători
+    cfr = operators[0]
+    assert cfr["id"] == "cfr"
+    assert cfr["shortName"] == "CFR"
+    assert cfr["name"] == "CFR Călători"
+    assert cfr["dailyTrains"] == 1256
+    assert cfr["routes"] == 479
+
+    # Verify exact timetable aggregations
+    assert data["totalDailyTrains"] == 2103
+    assert data["totalRoutes"] == 709
+    assert data["operatorCount"] == 7
+
+
+@pytest.mark.asyncio
+async def test_search_trains_by_ic_category(client: AsyncClient):
+    resp = await client.get("/api/v1/trains?searchQuery=IC")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "data" in data
+    assert len(data["data"]) > 0
+    # Every returned train must strictly have category IC
+    for t in data["data"]:
+        assert t["trainNumber"].startswith("IC ")
+    # Ensure IR 15531 (Astra Trans Carpatic) is NOT falsely returned
+    numbers = [t["trainNumber"] for t in data["data"]]
+    assert "IR 15531" not in numbers
+
+
+@pytest.mark.asyncio
+async def test_search_trains_by_full_code_ic_535(client: AsyncClient):
+    resp = await client.get("/api/v1/trains?searchQuery=IC+535")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "data" in data
+    assert len(data["data"]) >= 1
+    t = data["data"][0]
+    assert t["trainNumber"] == "IC 535"
+    assert t["operator"] == "CFR Călători"
+    assert len(t["stops"]) >= 2
+    assert len(t["fares"]) >= 2
+    assert "DINING_CAR" in t["amenities"]
+
+
+@pytest.mark.asyncio
+async def test_search_trains_by_compact_ic535_and_aliases(client: AsyncClient):
+    for endpoint in [
+        "/api/v1/trains?searchQuery=ic535",
+        "/api/v1/trains?searchQuery=IC535",
+        "/api/v1/trains?trainNumber=IC535",
+        "/api/v1/trains?trainCode=IC+535",
+        "/api/v1/trains?q=ic535",
+        "/api/v1/trains?code=535",
+    ]:
+        resp = await client.get(endpoint)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["data"]) >= 1
+        assert any(t["trainNumber"] == "IC 535" for t in data["data"])
+
+
+@pytest.mark.asyncio
+async def test_search_nonexistent_train_returns_empty(client: AsyncClient):
+    resp = await client.get("/api/v1/trains?searchQuery=IC99999")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["data"]) == 0
+    assert data["pagination"]["totalItems"] == 0
+
+
