@@ -21,6 +21,7 @@ import BaseButton from './BaseButton';
 import MascotBee from './MascotBee';
 import StationAutocompleteInput from './StationAutocompleteInput';
 import { TransitRoutePlan } from '../types/routePlan';
+import { formatPercent, formatCurrency } from '../utils/formatters';
 
 export const POPULAR_CORRIDORS = [
   { origin: 'București Nord', destination: 'Brașov', label: 'București ⇄ Brașov' },
@@ -230,7 +231,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                         {plan.fare && (
                           <>
                             <span>•</span>
-                            <span className="font-bold text-amber-700">{plan.fare.totalAmountLei.toFixed(2)} LEI</span>
+                            <span className="font-bold text-amber-700">{formatCurrency(plan.fare.totalAmountLei)} LEI</span>
                           </>
                         )}
                       </div>
@@ -253,7 +254,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                           </span>
                           {shield.missedConnectionProbability !== undefined && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              🛡️ {Math.max(0, Math.min(100, Math.round((1 - shield.missedConnectionProbability) * 100)))}% connection guarantee
+                              🛡️ {formatPercent((1 - shield.missedConnectionProbability) * 100)} connection guarantee
                             </span>
                           )}
                         </div>
@@ -261,7 +262,7 @@ export const RouteFinderCard: React.FC<RouteFinderCardProps> = ({
                         shield && (
                           <div className="mt-1.5 text-xs text-stone-500 flex items-center gap-1.5">
                             {isLowRisk ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> : <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />}
-                            <span>Shield: {Math.round(100 - shield.overallRiskScore)}% • {shield.riskSummaryText}</span>
+                            <span>Shield: {formatPercent(100 - shield.overallRiskScore)} • {shield.riskSummaryText}</span>
                           </div>
                         )
                       )}

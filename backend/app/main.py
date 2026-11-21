@@ -272,7 +272,7 @@ async def session_security_and_rotation_middleware(request: Request, call_next):
         path.startswith(f"{settings.API_V1_STR}/plan") or
         path.startswith("/plan") or
         (request.method == "DELETE" and path == f"{settings.API_V1_STR}/users/me/sessions") or
-        path in ("/", "/health", f"{settings.API_V1_STR}/docs", f"{settings.API_V1_STR}/redoc", f"{settings.API_V1_STR}/openapi.json")
+        path in ("/", "/health", f"{settings.API_V1_STR}/health", f"{settings.API_V1_STR}/docs", f"{settings.API_V1_STR}/redoc", f"{settings.API_V1_STR}/openapi.json")
     )
 
     if auth_cookie and not is_public_route:
@@ -418,6 +418,7 @@ async def root():
 
 
 @app.get("/health", tags=["Health"])
+@app.get(f"{settings.API_V1_STR}/health", tags=["Health"])
 async def health_check():
     return {"status": "ok"}
 

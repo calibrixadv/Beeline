@@ -21,6 +21,7 @@ import { useTrip } from '../../context/TripContext';
 import { useAuth } from '../../context/AuthContext';
 import { formatTimeOnly } from '../../utils/trainFilters';
 import { buildOfficialTicketUrl, buildLegTrainLinks } from '../../utils/officialTicketUrl';
+import { formatCurrency, roundPercent, formatPercent, formatKgCO2 } from '../../utils/formatters';
 import BaseCard from '../../components/BaseCard';
 import BaseButton from '../../components/BaseButton';
 import MascotBee from '../../components/MascotBee';
@@ -151,10 +152,10 @@ export default function MyTripPage() {
               Estimated Cost
             </span>
             <span className="text-xl font-bold tabular-nums text-[#1E1B18] block">
-              {totalCost.toFixed(2)} LEI
+              {formatCurrency(totalCost)} LEI
             </span>
             <span className="text-[11px] text-[#78716C] block">
-              approx. &euro;{(totalCost / 5.0).toFixed(2)}
+              approx. &euro;{formatCurrency(totalCost / 5.0)}
             </span>
           </div>
         </div>
@@ -183,7 +184,7 @@ export default function MyTripPage() {
               CO₂ Saved
             </span>
             <span className="text-xl font-bold tabular-nums text-[#1E1B18] block">
-              {Math.abs(totalCo2SavedKg)} kg CO₂
+              {formatKgCO2(totalCo2SavedKg)} kg CO₂
             </span>
             <span className="text-[11px] text-[#78716C] block">
               vs. driving / flight
@@ -220,7 +221,12 @@ export default function MyTripPage() {
             const fare = j.fares?.find((f) => f.classType === item.selectedClass);
             const price = fare?.price ?? j.fares?.[0]?.price ?? 0;
 
-            const rawPillars = item.curatedPillars || (item.curatedPillar ? [item.curatedPillar] : (j.curatedPillars || (j.curatedPillar ? [j.curatedPillar] : [])));
+            const rawPillars = [
+              ...(Array.isArray(item.curatedPillars) ? item.curatedPillars : []),
+              ...(item.curatedPillar ? [item.curatedPillar] : []),
+              ...(Array.isArray(j.curatedPillars) ? j.curatedPillars : []),
+              ...(j.curatedPillar ? [j.curatedPillar] : []),
+            ];
             const activePillarsSet = new Set(rawPillars);
 
             const hasTransfers =
@@ -356,8 +362,8 @@ export default function MyTripPage() {
                   {/* Pricing, External CTA, Per-Trip Alert Bell, Delete */}
                   <div className="flex items-center justify-between md:justify-end gap-3 pt-2 md:pt-0 border-t md:border-t-0 border-stone-100 flex-wrap">
                     <div className="text-left md:text-right mr-1">
-                      <span className="text-lg font-black text-amber-600 tabular-nums">{price.toFixed(2)} LEI</span>
-                      <span className="text-[11px] text-stone-400 block tabular-nums">&euro;{(price / 5.0).toFixed(2)}</span>
+                      <span className="text-lg font-black text-amber-600 tabular-nums">{formatCurrency(price)} LEI</span>
+                      <span className="text-[11px] text-stone-400 block tabular-nums">&euro;{formatCurrency(price / 5.0)}</span>
                     </div>
 
                     {isDirectRoute ? (
@@ -531,7 +537,7 @@ export default function MyTripPage() {
                           </>
                         ) : j.riskAnalysis.missedConnectionProbability !== undefined ? (
                           (() => {
-                            const pct = Math.max(0, Math.min(100, Math.round((1 - j.riskAnalysis.missedConnectionProbability) * 100)));
+                            const pct = roundPercent((1 - j.riskAnalysis.missedConnectionProbability) * 100);
                             if (pct >= 85) {
                               return (
                                 <>

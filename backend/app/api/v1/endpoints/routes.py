@@ -56,6 +56,7 @@ async def plan_route_get(
     origin: str = Query(..., description="Origin city or station name"),
     destination: str = Query(..., description="Destination city or station name"),
     date: Optional[str] = Query(None, description="Optional ISO travel date (YYYY-MM-DD)"),
+    maxTransfers: Optional[int] = Query(None, ge=0, description="Max allowed transfers (0=direct only, 1=max 1 transfer, etc.)"),
     current_user: User = Depends(get_optional_current_user)
 ) -> Any:
     """GET query variant of /plan for rapid browser navigation and prefetching."""
@@ -79,7 +80,8 @@ async def plan_route_get(
         origin=LocationQuery(name=origin, city=origin),
         destination=LocationQuery(name=destination, city=destination),
         departureTime=f"{travel_date}T08:00:00+02:00",
-        allowedModes=["TRAIN"]
+        allowedModes=["TRAIN"],
+        maxTransfers=maxTransfers,
     )
     return await plan_route(query=q, current_user=current_user)
 
@@ -115,6 +117,8 @@ async def plan_route(
         query.departureTime = f"{min_date}T08:00:00+02:00"
 
     plans = await routing_service.plan_routes(query)
+    if query.maxTransfers is not None:
+        plans = [p for p in plans if p.transfersCount <= query.maxTransfers]
     recommended_id = plans[0].id if plans else None
 
     orig_q = query.origin.name or query.origin.city or ""
@@ -129,24 +133,39 @@ async def plan_route(
         direct_recs = infofer_adapter.fetch_itinerary_sync(eff_orig, eff_dest, date_str=date_str) or []
         rec_map = {}
         for r in direct_recs:
-            rec_map[normalize_train_number(r.source_train_api.train_number)] = r
-            if getattr(r, "transfer_legs", None):
-                t_key = " + ".join(normalize_train_number(tl.source_train_api.train_number) for tl in r.transfer_legs)
-                rec_map[t_key] = r
+            is_r_multi = (
+                getattr(r, "is_multi_leg", False)
+                or (getattr(r, "transfer_legs", None) and len(r.transfer_legs) > 1)
+                or ("+" in r.source_train_api.train_number)
+                or ("->" in r.source_train_api.train_number)
+                or ("/" in r.source_train_api.train_number and any(c.isdigit() for c in r.source_train_api.train_number.split("/")[0]) and any(c.isdigit() for c in r.source_train_api.train_number.split("/")[1]))
+            )
+            if not is_r_multi:
+                rec_map[normalize_train_number(r.source_train_api.train_number)] = r
 
         all_day_deps = []
+        seen_all_day_keys = set()
         for p in plans:
+            is_p_multi = (
+                (p.transfersCount is not None and p.transfersCount > 0)
+                or (len(p.legs) > 1)
+                or (p.transfers and len(p.transfers) > 0)
+                or any("+" in (l.names.lineCode or "") or "->" in (l.names.lineCode or "") for l in p.legs)
+            )
+            if is_p_multi:
+                continue
+
             tj = None
             if p.legs:
                 first_line = normalize_train_number(p.legs[0].names.lineCode or "")
-                full_key = " + ".join(normalize_train_number(l.names.lineCode or "") for l in p.legs)
-                matched_rec = rec_map.get(full_key) or rec_map.get(first_line)
+                matched_rec = rec_map.get(first_line)
                 if matched_rec:
                     tj = _scrape_record_to_train_journey(matched_rec, date_str)
             if not tj and p.legs:
                 first_leg = p.legs[0]
-                last_leg = p.legs[-1]
-                t_num = " + ".join(l.names.lineCode for l in p.legs) if len(p.legs) > 1 else first_leg.names.lineCode
+                t_num = first_leg.names.lineCode or "TRAIN"
+                if "+" in t_num or "->" in t_num:
+                    continue
                 stops_data = [
                     TrainStop(
                         stopNumber=s.stopSequence,
@@ -159,10 +178,10 @@ async def plan_route(
                 ]
                 tj = TrainJourney(
                     id=f"tr-{p.id}",
-                    trainNumber=t_num or "TRAIN",
+                    trainNumber=t_num,
                     operator=first_leg.names.operatorName or "CFR Călători",
                     origin=TrainStation(code=canonical_station_code(first_leg.names.originName), name=first_leg.names.originName, city=first_leg.names.originCity or first_leg.names.originName, platform="1"),
-                    destination=TrainStation(code=canonical_station_code(last_leg.names.destinationName), name=last_leg.names.destinationName, city=last_leg.names.destinationCity or last_leg.names.destinationName, platform="2"),
+                    destination=TrainStation(code=canonical_station_code(first_leg.names.destinationName), name=first_leg.names.destinationName, city=first_leg.names.destinationCity or first_leg.names.destinationName, platform="2"),
                     departureTime=to_bucharest_iso(p.departureTime, date_str) or p.departureTime,
                     arrivalTime=to_bucharest_iso(p.arrivalTime, date_str) or p.arrivalTime,
                     durationMinutes=p.totalDurationMinutes,
@@ -176,8 +195,11 @@ async def plan_route(
                     ] if p.fare else [],
                     stops=stops_data
                 )
-            if tj:
-                all_day_deps.append(tj)
+            if tj and not ("+" in tj.trainNumber or "->" in tj.trainNumber):
+                t_key = (normalize_train_number(tj.trainNumber), tj.departureTime)
+                if t_key not in seen_all_day_keys:
+                    seen_all_day_keys.add(t_key)
+                    all_day_deps.append(tj)
     else:
         all_day_deps = []
 

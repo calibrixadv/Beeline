@@ -16,14 +16,18 @@ const nextConfig: NextConfig = {
     },
   },
   async rewrites() {
+    const backendUrl =
+      process.env.BACKEND_INTERNAL_URL ||
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, '') ||
+      "http://localhost:8000";
     return [
       {
         source: "/api/v1/:path*",
-        destination: "http://localhost:8000/api/v1/:path*",
+        destination: `${backendUrl}/api/v1/:path*`,
       },
       {
         source: "/plan",
-        destination: "http://localhost:8000/plan",
+        destination: `${backendUrl}/plan`,
       },
     ];
   },

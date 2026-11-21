@@ -30,6 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../services/apiClient';
 import { isTrainDeparted } from '../../utils/departureTime';
 import { buildOfficialTicketUrl } from '../../utils/officialTicketUrl';
+import { formatPercent, formatCurrency, roundPercent } from '../../utils/formatters';
 import BaseCard from '../../components/BaseCard';
 import BaseButton from '../../components/BaseButton';
 import StationAutocompleteInput from '../../components/StationAutocompleteInput';
@@ -37,7 +38,6 @@ import BookingTripCard from '../../components/BookingTripCard';
 import TripFilterBar from '../../components/TripFilterBar';
 import MascotBee, { MascotGear } from '../../components/MascotBee';
 import TripsGhostSkeleton from '../../components/TripsGhostSkeleton';
-import MascotDebugModal from '../../components/MascotDebugModal';
 import AmbientPageMascot from '../../components/AmbientPageMascot';
 
 export const DEFAULT_TRIPS_ORIGIN = 'București Nord';
@@ -101,9 +101,6 @@ function TripsContent() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [fetchStatus, setFetchStatus] = useState<TripFetchStatus | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isDebugModalOpen, setIsDebugModalOpen] = useState<boolean>(false);
-  const [isDebugLoadingForced, setIsDebugLoadingForced] = useState<boolean>(false);
-  const [debugGearOverride, setDebugGearOverride] = useState<MascotGear | null>(null);
   const activeRequestIdRef = React.useRef<number>(0);
   const [fetchTrigger, setFetchTrigger] = useState<number>(0);
 
@@ -127,9 +124,6 @@ function TripsContent() {
     if (currentPillar === 'BEST_VALUE') return 'economy';
     return 'default';
   }, [filters.pillar, initialPillarParam]);
-
-  const effectiveIsLoading = isLoading || isDebugLoadingForced;
-  const effectiveSpinnerGear: MascotGear = debugGearOverride ?? activeMascotGear;
 
   const isPlanHighlighted = (plan: TransitRoutePlan) => {
     if (!initialPillarParam) return false;
@@ -185,7 +179,7 @@ function TripsContent() {
   const isDateTooFar = activeDate > maxDateStr;
   const isOutOfBounds = isDatePast || isDateTooFar;
   const hasNoTrainsError =
-    !effectiveIsLoading &&
+    !isLoading &&
     (fetchStatus === 'NO_TRAINS' ||
       fetchStatus === 'INVALID_ROUTE' ||
       (backendPlans.length === 0 && !isOutOfBounds && fetchStatus !== 'OUT_OF_WINDOW'));
@@ -298,7 +292,9 @@ function TripsContent() {
     if (rawTrips.length === 0) return null;
     const lowestFare = Math.min(...rawTrips.map((t) => t.fare.totalAmountLei));
     const fastestDuration = Math.min(...rawTrips.map((t) => t.totalDurationMinutes));
-    const highestShield = Math.max(...rawTrips.map((t) => 100 - t.riskAnalysis.overallRiskScore));
+    const highestShield = roundPercent(
+      Math.max(...rawTrips.map((t) => 100 - (t.riskAnalysis?.overallRiskScore ?? 0)))
+    );
     return { lowestFare, fastestDuration, highestShield };
   }, [rawTrips]);
 
@@ -597,7 +593,7 @@ function TripsContent() {
       )}
 
       {/* Main Content Slot: Shimmering Glass Ghost Skeleton vs Real Trips */}
-      {effectiveIsLoading ? (
+      {isLoading ? (
         <div className="w-full my-4">
           <TripsGhostSkeleton />
         </div>
@@ -616,7 +612,7 @@ function TripsContent() {
                     Queen Flora · Best Price
                   </span>
                   <span className="text-lg sm:text-xl font-bold tabular-nums text-[#1E1B18] leading-snug block">
-                    {summaryStats.lowestFare.toFixed(2)} LEI
+                    {formatCurrency(summaryStats.lowestFare)} LEI
                   </span>
                 </div>
               </div>
@@ -640,7 +636,7 @@ function TripsContent() {
                     Queen Meli · Transfer Shield
                   </span>
                   <span className="text-lg sm:text-xl font-bold tabular-nums text-[#1E1B18] leading-snug block">
-                    {summaryStats.highestShield}% Reliable
+                    {formatPercent(summaryStats.highestShield)} Reliable
                   </span>
                 </div>
               </div>
@@ -706,60 +702,6 @@ function TripsContent() {
           </div>
         </div>
       )}
-
-      {/* Floating Mascot Debug Trigger */}
-      <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-40 flex flex-col items-end gap-1.5">
-        {isDebugLoadingForced && (
-          <button
-            type="button"
-            onClick={() => setIsDebugLoadingForced(false)}
-            className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-500 hover:bg-amber-400 text-stone-950 shadow-md border border-amber-600 transition-all cursor-pointer flex items-center gap-1"
-            title="Click to stop forced loading"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-stone-950 animate-ping" />
-            <span>Loading Forced (Stop)</span>
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setIsDebugModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-stone-900/85 hover:bg-stone-950 text-stone-200 border border-stone-700/60 shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500/50 cursor-pointer"
-          title="Open Mascot Testing / Debug Tools"
-          aria-label="Open Debug Tools"
-          aria-haspopup="dialog"
-          aria-expanded={isDebugModalOpen}
-        >
-          <span className="text-amber-400">🛠️</span>
-          <span>Debug Tools</span>
-          {(debugGearOverride !== null || isDebugLoadingForced) && (
-            <span
-              className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"
-              title="Manual override active"
-            />
-          )}
-        </button>
-      </div>
-
-      {/* Testing / Debug Modal */}
-      <MascotDebugModal
-        isOpen={isDebugModalOpen}
-        onClose={() => setIsDebugModalOpen(false)}
-        currentGear={effectiveSpinnerGear}
-        onSelectGear={(gear) => setDebugGearOverride(gear)}
-        isManualOverride={debugGearOverride !== null || isDebugLoadingForced}
-        isLoadingForced={isDebugLoadingForced}
-        onToggleForceLoading={() => {
-          setIsDebugLoadingForced((prev) => !prev);
-          setIsDebugModalOpen(false);
-        }}
-        onResetAuto={() => {
-          setDebugGearOverride(null);
-          setIsDebugLoadingForced(false);
-        }}
-        onResetLoading={() => {
-          setIsDebugLoadingForced(false);
-        }}
-      />
       </div>
     </div>
   );

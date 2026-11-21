@@ -124,94 +124,17 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.queryByText(/CFR SA \/ IRIS Verified/i)).not.toBeInTheDocument();
   });
 
-  it('does not allow gear selection in regular UI but allows manual override in Debug Tools popup', () => {
-    const { container } = render(<HomePage />);
-    const bgContainer = container.querySelector('[data-testid="background-flying-mascot"]');
+  it('does not allow gear selection in regular UI and does not render Debug Tools', () => {
+    render(<HomePage />);
     
     // Regular UI must NOT expose the gear chips
     expect(screen.queryByRole('button', { name: /⚡ Fast/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /🛡️ Safe/i })).not.toBeInTheDocument();
 
-    // Open discrete Debug Tools popup
-    const debugTrigger = screen.getByRole('button', { name: /Debug Tools/i });
-    expect(debugTrigger).toBeInTheDocument();
-    expect(debugTrigger).toHaveAttribute('aria-haspopup', 'dialog');
-    expect(debugTrigger).toHaveAttribute('aria-expanded', 'false');
-
-    fireEvent.click(debugTrigger);
-    expect(debugTrigger).toHaveAttribute('aria-expanded', 'true');
-
-    // Modal is now open, showing override options
-    expect(screen.getByText(/Mascot Gear Override Panel/i)).toBeInTheDocument();
-
-    // Toggle to Fast gear manually
-    const fastChip = screen.getByRole('button', { name: /⚡ Fast/i });
-    fireEvent.click(fastChip);
-    expect(bgContainer).toHaveAttribute('data-gear', 'fast');
-
-    // Toggle to Safe gear manually
-    const safeChip = screen.getByRole('button', { name: /🛡️ Safe/i });
-    fireEvent.click(safeChip);
-    expect(bgContainer).toHaveAttribute('data-gear', 'safe');
-
-    // Toggle to Economy gear manually
-    const economyChip = screen.getByRole('button', { name: /🍯 Economy/i });
-    fireEvent.click(economyChip);
-    expect(bgContainer).toHaveAttribute('data-gear', 'economy');
-
-    // Toggle back to Default gear
-    const defaultChip = screen.getByRole('button', { name: /🧭 Default/i });
-    fireEvent.click(defaultChip);
-    expect(bgContainer).toHaveAttribute('data-gear', 'default');
-
-    // Reset to Automatic Route Mode
-    const resetAutoBtn = screen.getByRole('button', { name: /Reset to Automatic Route Mode/i });
-    fireEvent.click(resetAutoBtn);
-
-    // Close the debug popup
-    const closeBtn = screen.getByRole('button', { name: /Close Debug Tools/i });
-    fireEvent.click(closeBtn);
+    // Debug Tools must NOT be rendered in production UI
+    expect(screen.queryByRole('button', { name: /Open Debug Tools/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Debug Tools/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Mascot Gear Override Panel/i)).not.toBeInTheDocument();
-    expect(debugTrigger).toHaveAttribute('aria-expanded', 'false');
-  });
-
-  it('toggles glassmorphic ghost layout via Debug Tools modal and restores hero form upon stopping', () => {
-    const { container } = render(<HomePage />);
-
-    // Open Debug Tools
-    const debugTrigger = screen.getByRole('button', { name: /Open Debug Tools/i });
-    fireEvent.click(debugTrigger);
-
-    // Check modal opened with Test Loading State button
-    const testLoadingBtn = screen.getByTestId('debug-toggle-loading-state');
-    expect(testLoadingBtn).toHaveTextContent(/Test Loading State/i);
-
-    // Click "Test Loading State"
-    fireEvent.click(testLoadingBtn);
-
-    // Ghost layout is rendered
-    expect(screen.getByTestId('homepage-ghost-skeleton')).toBeInTheDocument();
-    expect(screen.getByTestId('ghost-hero-search-card')).toBeInTheDocument();
-    const queenGhostCards = screen.getAllByTestId('ghost-queen-card');
-    expect(queenGhostCards.length).toBe(3);
-    expect(container.querySelectorAll('.glass-shimmer-overlay').length).toBeGreaterThanOrEqual(4);
-
-    // Main hero form is hidden while loading
-    expect(screen.queryByPlaceholderText(/e\.g\. Galați/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 1, name: /^Beeline$/i })).not.toBeInTheDocument();
-
-    // Open Debug Tools again and stop loading state
-    const debugTrigger2 = screen.getByRole('button', { name: /Open Debug Tools/i });
-    fireEvent.click(debugTrigger2);
-
-    const stopLoadingBtn = screen.getByTestId('debug-toggle-loading-state');
-    expect(stopLoadingBtn).toHaveTextContent(/Stop Loading State/i);
-    fireEvent.click(stopLoadingBtn);
-
-    // Ghost skeleton is removed and main hero is restored
-    expect(screen.queryByTestId('homepage-ghost-skeleton')).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/e\.g\. Galați/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: /^Beeline$/i })).toBeInTheDocument();
   });
 
   it('renders the scaled-up background flying bee mascot in a non-intrusive container', () => {

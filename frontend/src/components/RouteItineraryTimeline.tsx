@@ -11,6 +11,8 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { TransitRoutePlan } from '../types/routePlan';
+import { buildInfoferTrainUrl } from '../utils/officialTicketUrl';
+import { formatPercent } from '../utils/formatters';
 
 export interface RouteItineraryTimelineProps {
   plan: TransitRoutePlan;
@@ -83,18 +85,23 @@ export const RouteItineraryTimeline: React.FC<RouteItineraryTimelineProps> = ({
               {/* Leg Header Row */}
               <div className="flex items-center justify-between gap-3 flex-wrap border-b border-stone-200/70 pb-3 mb-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {/* Clickable Train Badge */}
-                  <button
-                    type="button"
+                  {/* Clickable Train Badge -> Direct External Train Link */}
+                  <a
+                    href={buildInfoferTrainUrl(
+                      trainNumber,
+                      leg.timings?.scheduledDeparture?.slice(0, 10) || baseDate
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
                     data-testid="train-itinerary-trigger"
-                    onClick={() => onOpenTrainModal?.(trainNumber)}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-black bg-amber-500 hover:bg-amber-400 text-stone-950 transition-colors shadow-2xs cursor-pointer group"
-                    title={`Click to view full end-to-end run for ${trainNumber}`}
+                    title={`Deschide trenul ${trainNumber} pe InfoFer / Bilet online`}
                   >
                     <Train className="w-3.5 h-3.5 text-stone-900 group-hover:scale-110 transition-transform" />
                     <span>{trainNumber}</span>
                     <ExternalLink className="w-3 h-3 text-stone-800 opacity-60 group-hover:opacity-100" />
-                  </button>
+                  </a>
 
                   {/* Operator Badge */}
                   <span className="text-[11px] font-bold text-stone-700 bg-white border border-stone-200 px-2 py-0.5 rounded-md shadow-2xs">
@@ -324,7 +331,7 @@ export const RouteItineraryTimeline: React.FC<RouteItineraryTimelineProps> = ({
 
                     {transferAfter.missedConnectionProbability !== undefined && (
                       <span className="text-xs font-bold text-stone-700 bg-white border border-amber-200 px-2 py-0.5 rounded-full">
-                        🛡️ {Math.max(0, Math.min(100, Math.round((1 - transferAfter.missedConnectionProbability) * 100)))}% guarantee
+                        🛡️ {formatPercent((1 - transferAfter.missedConnectionProbability) * 100)} guarantee
                       </span>
                     )}
                   </div>

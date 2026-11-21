@@ -1,9 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import BookingTripCard from '../components/BookingTripCard';
-import TrainItineraryModal from '../components/TrainItineraryModal';
 import * as apiClientModule from '../services/apiClient';
-import { TransitRoutePlan, TrainItineraryResponse } from '../types/routePlan';
+import { TransitRoutePlan } from '../types/routePlan';
 
 // Sample Direct Train: IR 1572 (9 commercial stops, 7 intermediate, 259.6 km)
 const mockDirectPlan: TransitRoutePlan = {
@@ -344,26 +343,6 @@ const mockTransferPlan: TransitRoutePlan = {
   ],
 };
 
-const mockItineraryResponse: TrainItineraryResponse = {
-  trainNumber: 'IR 1572',
-  operator: 'CFR Călători',
-  trainCategory: 'IR',
-  date: '2026-11-20',
-  fullTrainOrigin: 'Galați',
-  fullTrainDestination: 'București Nord',
-  totalDistanceKm: 259.6,
-  totalDurationMinutes: 224,
-  liveSource: 'INFOFER_IRIS_AND_OFFICIAL_XML',
-  bookingWindow: {
-    minDate: '2026-11-19',
-    maxDate: '2027-02-17',
-    advanceBookingDays: 90,
-    activeTimetable: '2025-2026 / 2026-2027',
-    liveSource: 'INFOFER_IRIS_AND_OFFICIAL_XML',
-  },
-  stops: mockDirectPlan.legs[0].stops!,
-};
-
 describe('Route Itinerary & Full Train Path UI Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -458,52 +437,69 @@ describe('Route Itinerary & Full Train Path UI Tests', () => {
     expect(screen.getByText(/58% guarantee/i)).toBeInTheDocument();
   });
 
-  it('clicking train number badge triggers full train itinerary modal with endpoint and stops', async () => {
-    jest.spyOn(apiClientModule, 'fetchTrainItinerary').mockResolvedValue(mockItineraryResponse);
-
+  it('clicking train code badge links to external InfoFer page and does NOT open modal; inline accordion expands stopovers', async () => {
     render(<BookingTripCard plan={mockDirectPlan} />);
 
+    // 1. Train code badge is an external <a> link directly to InfoFer
     const trigger = screen.getByTestId('train-itinerary-trigger');
     expect(trigger).toBeInTheDocument();
+    expect(trigger.tagName).toBe('A');
+    expect(trigger).toHaveAttribute('target', '_blank');
+    expect(trigger).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(trigger).toHaveAttribute('href', 'https://mersultrenurilor.infofer.ro/ro-RO/Tren/1572?Date=20.11.2026');
+    expect(trigger).toHaveAttribute('title', expect.stringContaining('InfoFer'));
+
+    // 2. Clicking train code badge does NOT open broken modal
     fireEvent.click(trigger);
+    expect(screen.queryByTestId('train-itinerary-modal')).not.toBeInTheDocument();
 
-    // Modal opens and finishes loading
-    await waitFor(() => {
-      expect(screen.getByTestId('train-itinerary-modal')).toBeInTheDocument();
-      expect(screen.getByTestId('train-modal-origin')).toBeInTheDocument();
-    });
+    // 3. Inline "View Stopovers & Shield Analysis" expands stopovers cleanly
+    const expandBtn = screen.getByRole('button', { name: /view stopovers & shield analysis/i });
+    expect(expandBtn).toBeInTheDocument();
+    fireEvent.click(expandBtn);
 
-    const modal = screen.getByTestId('train-itinerary-modal');
-    expect(within(modal).getByTestId('train-modal-origin')).toHaveTextContent('Galați');
-    expect(within(modal).getByTestId('train-modal-destination')).toHaveTextContent('București Nord');
-    expect(within(modal).getAllByText(/259\.6\s*km/).length).toBeGreaterThan(0);
-    expect(within(modal).getByText('9 stops')).toBeInTheDocument();
-
-    // Close via close button
-    const closeBtn = screen.getByTestId('close-train-modal');
-    fireEvent.click(closeBtn);
-
-    await waitFor(() => {
-      expect(screen.queryByTestId('train-itinerary-modal')).not.toBeInTheDocument();
-    });
+    expect(screen.getByText('Itinerary Breakdown')).toBeInTheDocument();
+    expect(screen.getByTestId('route-itinerary-timeline')).toBeInTheDocument();
   });
 
-  it('closes modal with keyboard Escape key', async () => {
-    jest.spyOn(apiClientModule, 'fetchTrainItinerary').mockResolvedValue(mockItineraryResponse);
-    const onClose = jest.fn();
+  it('renders individual external InfoFer links for each leg on multi-leg transfer cards', () => {
+    const multiLegPlan: TransitRoutePlan = {
+      ...mockDirectPlan,
+      id: 'multileg-plan-1',
+      transfersCount: 1,
+      legs: [
+        {
+          ...mockDirectPlan.legs[0],
+          id: 'leg-1',
+          names: {
+            ...mockDirectPlan.legs[0].names,
+            lineCode: 'R 7360',
+          },
+        },
+        {
+          ...mockDirectPlan.legs[0],
+          id: 'leg-2',
+          names: {
+            ...mockDirectPlan.legs[0].names,
+            lineCode: 'R-E 10700',
+          },
+        },
+      ],
+    };
 
-    render(
-      <TrainItineraryModal
-        isOpen={true}
-        onClose={onClose}
-        trainNumber="IR 1572"
-        travelDate="2026-11-20"
-      />
-    );
+    render(<BookingTripCard plan={multiLegPlan} />);
 
-    expect(screen.getByTestId('train-itinerary-modal')).toBeInTheDocument();
+    const triggers = screen.getAllByTestId('train-itinerary-trigger');
+    expect(triggers.length).toBeGreaterThanOrEqual(2);
 
-    fireEvent.keyDown(window, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalled();
+    const leg1Link = triggers.find((el) => el.getAttribute('href')?.includes('/Tren/7360'));
+    const leg2Link = triggers.find((el) => el.getAttribute('href')?.includes('/Tren/10700'));
+
+    expect(leg1Link).toBeDefined();
+    expect(leg2Link).toBeDefined();
+    expect(leg1Link).toHaveAttribute('href', 'https://mersultrenurilor.infofer.ro/ro-RO/Tren/7360?Date=20.11.2026');
+    expect(leg2Link).toHaveAttribute('href', 'https://mersultrenurilor.infofer.ro/ro-RO/Tren/10700?Date=20.11.2026');
+    expect(leg1Link).toHaveAttribute('target', '_blank');
+    expect(leg2Link).toHaveAttribute('target', '_blank');
   });
 });

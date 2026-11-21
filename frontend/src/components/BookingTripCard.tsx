@@ -22,9 +22,9 @@ import { TransitRoutePlan } from '../types/routePlan';
 import BaseCard from './BaseCard';
 import BaseButton from './BaseButton';
 import RouteItineraryTimeline from './RouteItineraryTimeline';
-import TrainItineraryModal from './TrainItineraryModal';
 import { isTrainDeparted, useNowTick } from '../utils/departureTime';
-import { buildOfficialTicketUrl, buildLegTrainLinks, SAFE_EXTERNAL_LINK_ATTRS } from '../utils/officialTicketUrl';
+import { buildOfficialTicketUrl, buildInfoferTrainUrl, buildLegTrainLinks, SAFE_EXTERNAL_LINK_ATTRS } from '../utils/officialTicketUrl';
+import { roundPercent, formatPercent, formatCurrency } from '../utils/formatters';
 
 export interface BookingTripCardProps {
   plan: TransitRoutePlan;
@@ -82,16 +82,9 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
   const isInTrip = isInItinerary !== undefined ? isInItinerary : isBooked;
   const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded);
   const [expandedStops, setExpandedStops] = useState<Record<string, boolean>>({});
-  const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [selectedTrainNumber, setSelectedTrainNumber] = useState<string>('');
 
   const now = useNowTick();
   const departed = isTrainDeparted(plan.departureTime, plan.date, now);
-
-  const handleOpenTrainModal = (trainNum: string) => {
-    setSelectedTrainNumber(trainNum);
-    setModalOpen(true);
-  };
 
   const totalIntermediateStops = plan.legs.reduce((acc, l) => {
     if (l.intermediateStopCount !== undefined) return acc + l.intermediateStopCount;
@@ -106,16 +99,30 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
     return acc;
   }, 0);
 
+  const lineCodesStr = (plan.legs || []).map((l) => l.names?.lineCode || '').join(' ');
+  const hasMultiCode =
+    lineCodesStr.includes('+') ||
+    lineCodesStr.includes('->') ||
+    (plan.summary ? plan.summary.includes('+') || plan.summary.includes('->') : false);
+
+  const effectiveTransfersCount = Math.max(
+    typeof plan.transfersCount === 'number' ? plan.transfersCount : 0,
+    plan.legs && plan.legs.length > 1 ? plan.legs.length - 1 : 0,
+    plan.transfers ? plan.transfers.length : 0,
+    hasMultiCode ? 1 : 0
+  );
+
   const hasTransfers =
-    (plan.transfersCount !== undefined && plan.transfersCount > 0) ||
+    effectiveTransfersCount > 0 ||
     (plan.legs && plan.legs.length > 1) ||
-    (plan.transfers && plan.transfers.length > 0);
+    (plan.transfers && plan.transfers.length > 0) ||
+    hasMultiCode;
   const isDirectRoute = !hasTransfers;
 
   const transferText =
-    plan.transfersCount === 0
+    isDirectRoute
       ? 'Direct'
-      : `${plan.transfersCount} transfer${plan.transfersCount > 1 ? 's' : ''}`;
+      : `${effectiveTransfersCount} transfer${effectiveTransfersCount > 1 ? 's' : ''}`;
   const stopsSummaryPart = totalIntermediateStops > 0 ? `${totalIntermediateStops} stop${totalIntermediateStops > 1 ? 's' : ''}` : null;
   const distSummaryPart = totalDistanceKm > 0 ? `${totalDistanceKm.toFixed(1)} km` : null;
   const collapsedSummary = [transferText, stopsSummaryPart, distSummaryPart].filter(Boolean).join(' · ');
@@ -136,7 +143,7 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
     .join(' ➔ ');
 
   const legLinks = buildLegTrainLinks(plan, plan.date);
-  const isDirect = isDirectRoute || legLinks.length <= 1;
+  const isDirect = isDirectRoute && legLinks.length <= 1 && !hasMultiCode;
   const directTrainUrl = buildOfficialTicketUrl({
     origin: plan.query?.origin?.name || plan.legs[0]?.names.originName || originStation,
     destination: plan.query?.destination?.name || plan.legs[plan.legs.length - 1]?.names.destinationName || destStation,
@@ -145,12 +152,11 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
     trainNumber: plan.legs[0]?.names.lineCode || plan.summary,
   });
 
-  // Multi-badge pillar configuration
-  const rawPillars = Array.isArray(plan.curatedPillars) && plan.curatedPillars.length > 0
-    ? plan.curatedPillars
-    : plan.curatedPillar
-    ? [plan.curatedPillar]
-    : [];
+  // Multi-badge pillar configuration: highlights Flora whenever curatedPillars.includes("BEST_VALUE") || curatedPillar === "BEST_VALUE"
+  const rawPillars = [
+    ...(Array.isArray(plan.curatedPillars) ? plan.curatedPillars : []),
+    ...(plan.curatedPillar ? [plan.curatedPillar] : []),
+  ];
   const activePillarsSet = new Set(rawPillars);
 
   const isReliableActive = activePillarsSet.has('MOST_RELIABLE');
@@ -209,17 +215,53 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-stone-100">
         {/* Left Cluster: Train Identity & Inline Summary */}
         <div className="flex items-center gap-2 flex-wrap min-w-0">
-          {trainCodes && (
-            <button
-              type="button"
+          {legLinks.length > 1 ? (
+            <div className="inline-flex items-center gap-1.5 flex-wrap" data-testid="trip-train-codes">
+              {legLinks.map((leg, idx) => (
+                <React.Fragment key={`leg-link-${leg.legIndex ?? idx}-${idx}`}>
+                  {idx > 0 && <span className="text-xs text-stone-400 font-semibold select-none">→</span>}
+                  <a
+                    href={leg.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="train-itinerary-trigger"
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md bg-stone-100 hover:bg-amber-100 text-stone-800 border border-stone-200/80 transition-colors cursor-pointer group"
+                    title={`Deschide trenul ${leg.trainCode} pe InfoFer / Bilet online`}
+                  >
+                    <span data-testid="trip-train-code">{leg.trainCode}</span>
+                    <ExternalLink className="w-3 h-3 text-stone-500 group-hover:text-amber-700" />
+                  </a>
+                </React.Fragment>
+              ))}
+            </div>
+          ) : legLinks.length === 1 ? (
+            <a
+              href={legLinks[0].url}
+              target="_blank"
+              rel="noopener noreferrer"
               data-testid="train-itinerary-trigger"
-              onClick={() => handleOpenTrainModal(plan.legs[0]?.names.lineCode || trainCodes)}
-              className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-md bg-stone-100 hover:bg-amber-100 text-stone-800 border border-stone-200/80 transition-colors cursor-pointer"
-              title={`View full route for ${trainCodes}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md bg-stone-100 hover:bg-amber-100 text-stone-800 border border-stone-200/80 transition-colors cursor-pointer group"
+              title={`Deschide trenul ${legLinks[0].trainCode} pe InfoFer / Bilet online`}
+            >
+              <span data-testid="trip-train-code">{legLinks[0].trainCode}</span>
+              <ExternalLink className="w-3.5 h-3.5 text-stone-500 group-hover:text-amber-700" />
+            </a>
+          ) : trainCodes ? (
+            <a
+              href={buildInfoferTrainUrl(trainCodes, plan.date)}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="train-itinerary-trigger"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-md bg-stone-100 hover:bg-amber-100 text-stone-800 border border-stone-200/80 transition-colors cursor-pointer group"
+              title={`Deschide trenul ${trainCodes} pe InfoFer / Bilet online`}
             >
               <span data-testid="trip-train-code">{trainCodes}</span>
-            </button>
-          )}
+              <ExternalLink className="w-3.5 h-3.5 text-stone-500 group-hover:text-amber-700" />
+            </a>
+          ) : null}
 
           <span
             data-testid="trip-collapsed-summary"
@@ -227,6 +269,15 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
           >
             {collapsedSummary}
           </span>
+
+          {plan.transfers && plan.transfers.length > 0 && (
+            <span
+              data-testid="transfer-station-badge"
+              className="px-2 py-0.5 text-[11px] font-semibold rounded-md bg-stone-100 text-stone-700 border border-stone-200/80"
+            >
+              via {plan.transfers.map((t) => t.stationName).join(', ')}
+            </span>
+          )}
 
           {isHighlighted && (
             <span
@@ -339,12 +390,12 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
           <div className="text-left md:text-right">
             <div className="flex items-baseline md:justify-end gap-1">
               <span className="text-xl md:text-2xl font-black text-amber-600">
-                {plan.fare.totalAmountLei.toFixed(2)}
+                {formatCurrency(plan.fare.totalAmountLei)}
               </span>
               <span className="text-xs font-bold text-stone-600 uppercase">LEI</span>
             </div>
             <span className="text-xs text-stone-400 block">
-              approx. &euro;{plan.fare.totalAmountEur.toFixed(2)}
+              approx. &euro;{formatCurrency(plan.fare.totalAmountEur)}
             </span>
           </div>
 
@@ -449,7 +500,7 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
                 </>
               ) : shield.missedConnectionProbability !== undefined ? (
                 (() => {
-                  const pct = Math.max(0, Math.min(100, Math.round((1 - shield.missedConnectionProbability) * 100)));
+                  const pct = roundPercent((1 - shield.missedConnectionProbability) * 100);
                   if (pct >= 85) {
                     return (
                       <>
@@ -479,7 +530,14 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
                     );
                   }
                 })()
-              ) : null}
+              ) : (
+                <>
+                  <span className="text-stone-300">·</span>
+                  <span data-testid="trip-connection-label" className="font-medium text-amber-700">
+                    🛡️ {effectiveTransfersCount} transfer{effectiveTransfersCount > 1 ? 's' : ''}
+                  </span>
+                </>
+              )}
             </>
           ) : shield ? (
             <div
@@ -497,7 +555,14 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
               ) : (
                 <ShieldAlert className="w-3.5 h-3.5" />
               )}
-              <span>Shield: {100 - shield.overallRiskScore}%</span>
+              <span>Shield: {formatPercent(100 - shield.overallRiskScore)}</span>
+              <span className="text-stone-300">·</span>
+              <span
+                data-testid="trip-connection-label"
+                className={`font-medium ${isDirectRoute ? 'text-emerald-700' : 'text-amber-700'}`}
+              >
+                {isDirectRoute ? '🛡️ Direct route' : `${effectiveTransfersCount} transfer${effectiveTransfersCount > 1 ? 's' : ''}`}
+              </span>
             </div>
           ) : null}
         </div>
@@ -524,7 +589,6 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
             <RouteItineraryTimeline
               plan={plan}
               travelDate={plan.date}
-              onOpenTrainModal={handleOpenTrainModal}
             />
           ) : (
             <div className="space-y-3 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-amber-200">
@@ -593,32 +657,8 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
               })}
             </div>
           )}
-
-          {/* Romanian Transfer Shield Reliability Footer */}
-          {shield && (
-            <div className="bg-amber-50/80 border border-amber-200 p-3.5 rounded-xl flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-              <div className="text-xs text-stone-700">
-                <span className="font-bold text-stone-900 block">Romanian Transfer Shield Evaluation</span>
-                <p className="mt-0.5">{shield.riskSummaryText}</p>
-                <div className="flex items-center gap-4 mt-2 text-[11px] font-medium text-stone-600">
-                  <span>Buffer: {shield.bufferAdequacy}</span>
-                  <span>Punctuality: {(shield.historicalPunctualityRate * 100).toFixed(0)}%</span>
-                  <span>Risk Level: {shield.riskLevel}</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
-
-      {/* Full Train Path Modal */}
-      <TrainItineraryModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        trainNumber={selectedTrainNumber}
-        travelDate={plan.date}
-      />
     </BaseCard>
   );
 };

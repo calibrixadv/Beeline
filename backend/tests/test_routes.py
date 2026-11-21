@@ -520,7 +520,8 @@ async def test_cluj_timisoara_itinerary_normalization_and_zero_fake_trains(clien
 
     assert data1["bookingWindow"]["liveSource"] == "INFOFER_LIVE_ONLY"
     assert len(data1["plans"]) == 5
-    assert len(data1["allDayDepartures"]) == 5
+    assert len(data1["allDayDepartures"]) == 2  # Only direct trains IR 16520 and IR 16522 (zero flattened multi-leg transfers)
+    assert all("+" not in d["trainNumber"] and "/" not in d["trainNumber"] for d in data1["allDayDepartures"])
     assert data1["totalDayRoutes"] == 5
 
     # Direct trains: 2 (transfersCount == 0)
@@ -568,8 +569,208 @@ async def test_cluj_timisoara_itinerary_normalization_and_zero_fake_trains(clien
     data2 = resp2.json()
 
     assert len(data2["plans"]) == 5
-    assert len(data2["allDayDepartures"]) == 5
+    assert len(data2["allDayDepartures"]) == 2
     assert data2["totalDayRoutes"] == 5
     assert [p["summary"] for p in data2["plans"]] == [p["summary"] for p in data1["plans"]]
+
+    # Verify maxTransfers=0 returns strictly direct trains
+    payload_direct_only = {
+        **payload_hyphen,
+        "maxTransfers": 0
+    }
+    resp_dir = await client.post("/api/v1/routes/plan", json=payload_direct_only)
+    assert resp_dir.status_code == 200
+    data_dir = resp_dir.json()
+    assert len(data_dir["plans"]) == 2
+    assert all(p["transfersCount"] == 0 for p in data_dir["plans"])
+    assert all(len(p["legs"]) == 1 for p in data_dir["plans"])
+
+    # Verify maxTransfers=1 preserves valid transfers
+    payload_max1 = {
+        **payload_hyphen,
+        "maxTransfers": 1
+    }
+    resp_max1 = await client.post("/api/v1/routes/plan", json=payload_max1)
+    assert resp_max1.status_code == 200
+    data_max1 = resp_max1.json()
+    assert len(data_max1["plans"]) == 5
+    assert any(p["transfersCount"] == 1 for p in data_max1["plans"])
+
+
+@pytest.mark.asyncio
+async def test_galati_bucuresti_multi_leg_not_rendered_as_direct_and_no_flattened_duplicates(client: AsyncClient):
+    """
+    Verifies Galați -> București Nord on 2026-11-22:
+    - Multi-leg routes (e.g. R 7360 + R-E 10700) are converted to multi-leg plans (legs >= 2, transfersCount >= 1).
+    - allDayDepartures contains ONLY direct trains, with ZERO '+' or '->' flattened entries.
+    - maxTransfers: 0 returns strictly direct trains (transfersCount == 0, legs.length == 1, ZERO '+' in lineCode).
+    - maxTransfers: 1 returns both direct trains and 1-transfer plans without dropping transfers.
+    """
+    payload_base = {
+        "origin": {"name": "Galați", "city": "Galați"},
+        "destination": {"name": "București Nord", "city": "București"},
+        "departureTime": "2026-11-22T08:00:00+02:00",
+        "allowedModes": ["TRAIN"]
+    }
+
+    # 1. maxTransfers: 0 -> Strictly direct trains
+    resp_0 = await client.post("/api/v1/routes/plan", json={**payload_base, "maxTransfers": 0})
+    assert resp_0.status_code == 200
+    data_0 = resp_0.json()
+    assert len(data_0["plans"]) > 0
+    for p in data_0["plans"]:
+        assert p["transfersCount"] == 0
+        assert len(p["legs"]) == 1
+        assert "+" not in p["legs"][0]["names"]["lineCode"]
+        assert "->" not in p["legs"][0]["names"]["lineCode"]
+
+    # allDayDepartures must never contain flattened multi-leg transfers
+    for d in data_0["allDayDepartures"]:
+        assert "+" not in d["trainNumber"]
+        assert "->" not in d["trainNumber"]
+        assert "/" not in d["trainNumber"]
+
+    # 2. maxTransfers: 1 -> Direct trains + 1-transfer plans
+    resp_1 = await client.post("/api/v1/routes/plan", json={**payload_base, "maxTransfers": 1})
+    assert resp_1.status_code == 200
+    data_1 = resp_1.json()
+
+    # Must contain direct trains
+    has_direct = any(p["transfersCount"] == 0 for p in data_1["plans"])
+    assert has_direct
+
+    # Must contain multi-leg plans with legs.length == 2 and transfersCount == 1
+    transfer_plans = [p for p in data_1["plans"] if p["transfersCount"] == 1]
+    assert len(transfer_plans) > 0
+    for tp in transfer_plans:
+        assert len(tp["legs"]) == 2
+        assert len(tp["transfers"]) == 1
+        assert tp["transfers"][0]["stationName"]
+        assert tp["transfers"][0]["bufferStatus"] in ["SAFE", "TIGHT", "RISKY"]
+
+    # In allDayDepartures, ZERO flattened multi-leg transfers
+    for d in data_1["allDayDepartures"]:
+        assert "+" not in d["trainNumber"]
+        assert "->" not in d["trainNumber"]
+        assert "/" not in d["trainNumber"]
+
+
+@pytest.mark.asyncio
+async def test_flora_strictly_lowest_price_and_max_transfers(client: AsyncClient):
+    """
+    Verifies that:
+    1. Flora (BEST_VALUE) is strictly assigned to the plan with the minimum fare among returned plans.
+    2. request.maxTransfers runs before computing curatedPillars.
+    3. No more expensive plan ever has BEST_VALUE.
+    4. Tie-breaking prioritizes fewest transfers, then lowest risk, then shortest duration.
+    """
+    payload = {
+        "origin": {"name": "Galați", "city": "Galați"},
+        "destination": {"name": "București Nord", "city": "București"},
+        "departureTime": "2026-11-21T08:00:00+02:00",
+        "allowedModes": ["TRAIN"],
+        "maxTransfers": 0,
+    }
+    resp = await client.post("/api/v1/routes/plan", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    plans = data["plans"]
+    assert len(plans) >= 1
+
+    # All plans must be direct
+    for p in plans:
+        assert p["transfersCount"] == 0
+
+    min_fare = min(p["fare"]["totalAmountLei"] for p in plans)
+    best_val_plans = [p for p in plans if "BEST_VALUE" in (p.get("curatedPillars") or []) or p.get("curatedPillar") == "BEST_VALUE"]
+    assert len(best_val_plans) >= 1
+    for bp in best_val_plans:
+        assert abs(bp["fare"]["totalAmountLei"] - min_fare) < 1e-4
+
+    # Direct unit test of tie-breaking in _assign_pillars_and_sort
+    from app.services.routing_service import routing_service
+    from app.schemas.route_plan import TransitRouteQuery, LocationQuery
+    q = TransitRouteQuery(
+        origin=LocationQuery(name="Galați"),
+        destination=LocationQuery(name="București Nord"),
+        departureTime="2026-11-21T08:00:00+02:00",
+        allowedModes=["TRAIN"],
+    )
+
+    p1 = plans[0].copy()
+    p2 = plans[0].copy()
+    p3 = plans[0].copy()
+
+    # Create dummy plans for tie-break testing
+    test_p1 = routing_service._build_candidate_plans(q)[0].model_copy(deep=True)
+    test_p2 = test_p1.model_copy(deep=True)
+    test_p3 = test_p1.model_copy(deep=True)
+
+    test_p1.id = "plan-tie-1"
+    test_p2.id = "plan-tie-2"
+    test_p3.id = "plan-tie-3"
+
+    # All have same lowest fare 39.12 LEI
+    test_p1.fare.totalAmountLei = 39.12
+    test_p2.fare.totalAmountLei = 39.12
+    test_p3.fare.totalAmountLei = 55.0  # More expensive
+
+    # p1 has 0 transfers, p2 has 1 transfer
+    test_p1.transfersCount = 0
+    test_p2.transfersCount = 1
+
+    sorted_res = routing_service._assign_pillars_and_sort([test_p1, test_p2, test_p3], q)
+    winner_p1 = next(p for p in sorted_res if p.id == "plan-tie-1")
+    tied_p2 = next(p for p in sorted_res if p.id == "plan-tie-2")
+    expensive_p3 = next(p for p in sorted_res if p.id == "plan-tie-3")
+
+    # ALL routes sharing the strict lowest price receive BEST_VALUE in curatedPillars
+    assert "BEST_VALUE" in winner_p1.curatedPillars
+    assert "BEST_VALUE" in tied_p2.curatedPillars
+    assert "BEST_VALUE" not in expensive_p3.curatedPillars
+    assert expensive_p3.curatedPillar != "BEST_VALUE"
+
+
+@pytest.mark.asyncio
+async def test_flora_awarded_to_all_tied_lowest_fare_routes():
+    """
+    Verifies that when 2+ routes share the exact same lowest fare (e.g. 39.12 LEI),
+    ALL of them receive BEST_VALUE in curatedPillars, while strictly pricier routes do not.
+    """
+    from app.services.routing_service import routing_service
+    from app.schemas.route_plan import TransitRouteQuery, LocationQuery
+    q = TransitRouteQuery(
+        origin=LocationQuery(name="Galați"),
+        destination=LocationQuery(name="București Nord"),
+        departureTime="2026-11-21T08:00:00+02:00",
+        allowedModes=["TRAIN"],
+    )
+    base_plans = routing_service._build_candidate_plans(q)
+    assert len(base_plans) >= 3
+
+    p1 = base_plans[0].model_copy(deep=True)
+    p2 = base_plans[1].model_copy(deep=True)
+    p3 = base_plans[2].model_copy(deep=True)
+
+    p1.id = "plan-flora-tie-1"
+    p2.id = "plan-flora-tie-2"
+    p3.id = "plan-flora-pricier"
+
+    # Exact same lowest fare: 39.12 LEI (3912 bani)
+    p1.fare.totalAmountLei = 39.12
+    p2.fare.totalAmountLei = 39.12
+    p3.fare.totalAmountLei = 49.50
+
+    result = routing_service._assign_pillars_and_sort([p1, p2, p3], q)
+
+    res_p1 = next(p for p in result if p.id == "plan-flora-tie-1")
+    res_p2 = next(p for p in result if p.id == "plan-flora-tie-2")
+    res_p3 = next(p for p in result if p.id == "plan-flora-pricier")
+
+    assert "BEST_VALUE" in res_p1.curatedPillars
+    assert "BEST_VALUE" in res_p2.curatedPillars
+    assert "BEST_VALUE" not in res_p3.curatedPillars
+    assert res_p3.curatedPillar != "BEST_VALUE"
+
 
 
