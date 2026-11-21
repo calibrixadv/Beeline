@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 import logging
 import math
 from typing import Any, List, Optional, Union
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,10 @@ from app.schemas.common import PaginatedResponse, PaginationMeta
 from app.schemas.route_corridor import PopularCorridorsResponse
 from app.schemas.route_plan import (
     BookingWindowInfo,
+    CacheStats,
     LocationQuery,
+    RecentSearchItem,
+    RecentSearchesResponse,
     RoutePlanResponse,
     SaveRouteRequest,
     SavedRouteResponse,
@@ -27,6 +30,7 @@ from app.services.corridor_service import corridor_service
 from app.services.email_service import email_service
 from app.services.idempotency_service import IdempotencyService
 from app.services.routing_service import routing_service
+from app.services.search_cache_service import search_cache_service
 from app.services.timetable_sync_service import timetable_sync_service
 from app.schemas.train import TrainFare, TrainJourney, TrainStation, TrainStatus, TrainStop
 from app.services.train_service import _scrape_record_to_train_journey
@@ -51,8 +55,22 @@ async def get_popular_corridors() -> Any:
     return PopularCorridorsResponse(corridors=corridor_service.get_popular_corridors())
 
 
+@router.get("/recent-searches", response_model=RecentSearchesResponse)
+async def get_recent_route_searches(
+    limit: int = Query(10, ge=1, le=25, description="Number of recent searches to return (max 25)")
+) -> Any:
+    """Returns recent route searches from Redis and cache hit/miss statistics."""
+    recent = await search_cache_service.get_recent_route_searches(limit=limit)
+    stats = await search_cache_service.get_cache_stats()
+    return RecentSearchesResponse(
+        recentSearches=[RecentSearchItem(**item) for item in recent],
+        stats=CacheStats(**stats),
+    )
+
+
 @router.get("/plan", response_model=RoutePlanResponse)
 async def plan_route_get(
+    response: Response,
     origin: str = Query(..., description="Origin city or station name"),
     destination: str = Query(..., description="Destination city or station name"),
     date: Optional[str] = Query(None, description="Optional ISO travel date (YYYY-MM-DD)"),
@@ -83,12 +101,13 @@ async def plan_route_get(
         allowedModes=["TRAIN"],
         maxTransfers=maxTransfers,
     )
-    return await plan_route(query=q, current_user=current_user)
+    return await plan_route(query=q, response=response, current_user=current_user)
 
 
 @router.post("/plan", response_model=RoutePlanResponse)
 async def plan_route(
     query: TransitRouteQuery,
+    response: Response,
     current_user: User = Depends(get_optional_current_user)
 ) -> Any:
     """
@@ -115,14 +134,40 @@ async def plan_route(
             )
     else:
         query.departureTime = f"{min_date}T08:00:00+02:00"
+        date_str = min_date
+
+    orig_q = query.origin.name or query.origin.city or ""
+    dest_q = query.destination.name or query.destination.city or ""
+    om = resolve_known_station(orig_q)
+    dm = resolve_known_station(dest_q)
+    eff_orig = om.name if om else orig_q
+    eff_dest = dm.name if dm else dest_q
+
+    # Search Cache Check
+    cache_key = search_cache_service.compute_route_plan_key(query)
+    cached_entry = await search_cache_service.get_route_plan(cache_key)
+    if cached_entry is not None:
+        cached_resp, source = cached_entry
+        if response is not None:
+            response.headers["X-Beeline-Cache"] = "HIT"
+            response.headers["X-Beeline-Cache-Source"] = source
+        await search_cache_service.record_recent_route_search(
+            origin=eff_orig,
+            destination=eff_dest,
+            date=date_str,
+            cache_key=cache_key,
+            result_count=cached_resp.totalDayRoutes,
+        )
+        return cached_resp
+
+    if response is not None:
+        response.headers["X-Beeline-Cache"] = "MISS"
+        response.headers["X-Beeline-Cache-Source"] = "origin"
 
     plans = await routing_service.plan_routes(query)
     if query.maxTransfers is not None:
         plans = [p for p in plans if p.transfersCount <= query.maxTransfers]
     recommended_id = plans[0].id if plans else None
-
-    orig_q = query.origin.name or query.origin.city or ""
-    dest_q = query.destination.name or query.destination.city or ""
     om = resolve_known_station(orig_q)
     dm = resolve_known_station(dest_q)
     eff_orig = om.name if om else orig_q
@@ -205,7 +250,7 @@ async def plan_route(
 
     bw["liveSource"] = "INFOFER_LIVE_ONLY"
 
-    return RoutePlanResponse(
+    resp = RoutePlanResponse(
         plans=plans,
         recommendedPlanId=recommended_id,
         query=query,
@@ -214,6 +259,16 @@ async def plan_route(
         allDayDepartures=all_day_deps,
         totalDayRoutes=len(plans),
     )
+
+    await search_cache_service.set_route_plan(
+        cache_key=cache_key,
+        response=resp,
+        date_str=date_str,
+        origin=eff_orig,
+        destination=eff_dest,
+    )
+
+    return resp
 
 
 @router.post("/saved", response_model=SavedRouteResponse, status_code=status.HTTP_201_CREATED)

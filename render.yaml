@@ -16,6 +16,8 @@ services:
         fromDatabase:
           name: beeline-db
           property: connectionString
+      - key: AUTO_SEED_DB
+        value: "false"
       - key: REDIS_URL
         fromService:
           type: redis
@@ -25,20 +27,34 @@ services:
         generateValue: true
       - key: CORS_ORIGINS
         sync: false
+      - key: CORS_ORIGIN_REGEX
+        value: "^https://beeline[a-z0-9-]*\\.vercel\\.app$"
       - key: FRONTEND_URL
         sync: false
       - key: EMAIL_MODE
-        value: dev_sink
+        value: smtp
       - key: SMTP_HOST
-        sync: false
+        value: smtp-relay.brevo.com
       - key: SMTP_PORT
-        sync: false
+        value: "587"
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASSWORD
         sync: false
       - key: SMTP_FROM_EMAIL
         sync: false
+      - key: SMTP_FROM_NAME
+        value: "Beeline VoyageRail"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_API_URL
+        value: "https://api.brevo.com/v3/smtp/email"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: "none"
+      - key: ENABLE_API_DOCS
+        value: "false"
 
   - type: redis
     name: beeline-redis

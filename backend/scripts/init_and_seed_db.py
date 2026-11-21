@@ -21,6 +21,10 @@ async def seed_users():
     await init_db()
     print("Database tables initialized successfully.")
 
+    if not settings.auto_seed_db:
+        print("AUTO_SEED_DB is disabled (production default). Skipping demo users and seed.sql insertion.")
+        return
+
     async with AsyncSessionLocal() as session:
         # 1. Traveler User
         result = await session.execute(select(User).where(User.email == "traveler@beeline.io"))

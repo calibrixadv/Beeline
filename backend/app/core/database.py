@@ -207,7 +207,7 @@ async def init_db() -> None:
     except Exception:
         user_count = 0
 
-    if user_count == 0 and seed_sql_file.exists():
+    if settings.auto_seed_db and user_count == 0 and seed_sql_file.exists():
         logger.info("Database empty on startup. Applying automatic fixtures from seed.sql...")
         seed_content = seed_sql_file.read_text(encoding="utf-8")
         async with engine.begin() as seed_conn:

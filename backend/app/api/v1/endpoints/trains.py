@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -16,6 +17,7 @@ from app.schemas.train import (
     TrainUpdate,
 )
 from app.services.operator_summary_service import operator_summary_service
+from app.services.search_cache_service import search_cache_service, BUCHAREST_TZ
 from app.services.timetable_sync_service import timetable_sync_service
 from app.services.train_service import train_service
 
@@ -24,6 +26,7 @@ router = APIRouter()
 
 @router.get("", response_model=PaginatedResponse[TrainJourney])
 async def search_trains(
+    response: Response,
     searchQuery: Optional[str] = Query(None, description="Search by train number, origin, or destination"),
     trainNumber: Optional[str] = Query(None, description="Search alias for train number"),
     train_number: Optional[str] = Query(None, description="Search alias for train number"),
@@ -48,6 +51,42 @@ async def search_trains(
     """Search Romanian rail journeys with status, tiered seat classes, amenities, and multi-operator fares."""
     effective_query = searchQuery or trainNumber or train_number or trainCode or train_code or q or code
     effective_date = travel_date or date
+
+    cache_key = search_cache_service.compute_trains_search_key(
+        search_query=effective_query,
+        status_filter=status,
+        operator_filter=operator,
+        origin_code=originCode,
+        destination_code=destinationCode,
+        origin=origin,
+        destination=destination,
+        travel_date=effective_date,
+        max_price=maxPrice,
+        sort_by=sortBy,
+        sort_order=sortOrder,
+        page=page,
+        page_size=pageSize,
+    )
+    cached = await search_cache_service.get_trains_search(cache_key)
+    if cached is not None:
+        cached_resp, source = cached
+        if response is not None:
+            response.headers["X-Beeline-Cache"] = "HIT"
+            response.headers["X-Beeline-Cache-Source"] = source
+        eff_date = effective_date or datetime.now(BUCHAREST_TZ).strftime("%Y-%m-%d")
+        await search_cache_service.record_recent_train_search(
+            origin=origin or originCode or effective_query or "All Trains",
+            destination=destination or destinationCode or "",
+            date=eff_date,
+            cache_key=cache_key,
+            result_count=len(cached_resp.data),
+        )
+        return cached_resp
+
+    if response is not None:
+        response.headers["X-Beeline-Cache"] = "MISS"
+        response.headers["X-Beeline-Cache-Source"] = "origin"
+
     trains, pagination = train_service.get_trains(
         search_query=effective_query,
         status_filter=status,
@@ -64,7 +103,18 @@ async def search_trains(
         page_size=pageSize
     )
     bw = timetable_sync_service.get_booking_window()
-    return PaginatedResponse[TrainJourney](data=trains, pagination=pagination, bookingWindow=bw)
+    resp = PaginatedResponse[TrainJourney](data=trains, pagination=pagination, bookingWindow=bw)
+
+    eff_date = effective_date or datetime.now(BUCHAREST_TZ).strftime("%Y-%m-%d")
+    await search_cache_service.set_trains_search(
+        cache_key=cache_key,
+        response=resp,
+        date_str=eff_date,
+        origin=origin or originCode or "",
+        destination=destination or destinationCode or "",
+        query_display=effective_query or "",
+    )
+    return resp
 
 
 @router.get("/timetable-status", response_model=TimetableStatusResponse)
@@ -104,12 +154,29 @@ async def get_operators_summary() -> Any:
 @router.get("/{train_number}/itinerary", response_model=TrainItineraryResponse)
 async def get_train_itinerary(
     train_number: str,
+    response: Response,
     date: Optional[str] = Query(None, description="Travel date in YYYY-MM-DD format"),
     travel_date: Optional[str] = Query(None, description="Travel date alias in YYYY-MM-DD format"),
 ) -> Any:
     """Returns the train's complete end-to-end commercial itinerary with all stops, times, and dwell minutes."""
     effective_date = travel_date or date
-    return train_service.get_train_itinerary(train_number, effective_date)
+    cache_key = search_cache_service.compute_train_itinerary_key(train_number, effective_date)
+    cached = await search_cache_service.get_train_itinerary(cache_key)
+    if cached is not None:
+        cached_resp, source = cached
+        if response is not None:
+            response.headers["X-Beeline-Cache"] = "HIT"
+            response.headers["X-Beeline-Cache-Source"] = source
+        return cached_resp
+
+    if response is not None:
+        response.headers["X-Beeline-Cache"] = "MISS"
+        response.headers["X-Beeline-Cache-Source"] = "origin"
+
+    itin = train_service.get_train_itinerary(train_number, effective_date)
+    eff_date = effective_date or datetime.now(BUCHAREST_TZ).strftime("%Y-%m-%d")
+    await search_cache_service.set_train_itinerary(cache_key, itin, eff_date)
+    return itin
 
 
 @router.get("/{train_id}", response_model=TrainJourney)
