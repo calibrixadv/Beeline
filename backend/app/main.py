@@ -163,16 +163,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await close_redis_pool()
 
 
+is_production = settings.ENVIRONMENT.lower() == "production"
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    docs_url=f"{settings.API_V1_STR}/docs",
-    redoc_url=f"{settings.API_V1_STR}/redoc",
+    openapi_url=None if is_production else f"{settings.API_V1_STR}/openapi.json",
+    docs_url=None if is_production else f"{settings.API_V1_STR}/docs",
+    redoc_url=None if is_production else f"{settings.API_V1_STR}/redoc",
     lifespan=lifespan
 )
 
-# Global Exception Handlers adhering to api.md Section 2 Uniform Error Semantics
+# Global Exception Handlers adhering to docs/api/api.md Section 2 Uniform Error Semantics
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     code = STATUS_CODE_MAP.get(exc.status_code, f"HTTP_{exc.status_code}_ERROR")

@@ -119,7 +119,7 @@ def build_leg_stops(
         return []
 
     base_date = datetime.strptime(travel_date[:10], "%Y-%m-%d").date()
-    boarding_km = float(raw_stops[0].get("cum_km", 0.0))
+    boarding_km = float(raw_stops[0].get("cum_km", raw_stops[0].get("distance_km", 0.0)))
     day_rollover = 0
     last_sec = int(raw_stops[0].get("dep_sec", 0)) % 86400
     parsed_stops: List[LegStop] = []
@@ -135,7 +135,7 @@ def build_leg_stops(
         lon = coords[1] if coords else st.get("lon")
         city = st.get("city") or infer_station_city(code, clean_name)
 
-        stop_km = float(st.get("cum_km", 0.0))
+        stop_km = float(st.get("cum_km", st.get("distance_km", 0.0)))
         dist_from_origin = round(max(0.0, stop_km - boarding_km), 1)
 
         raw_arr = int(st.get("arr_sec", 0))
@@ -1007,7 +1007,10 @@ class RoutingService:
                 duration_min = max(1, int(round((dt_arr - dt_dep).total_seconds() / 60.0)))
             except Exception:
                 pass
-            dist_km = stops[-1].distanceFromOriginKm
+            if stops[-1].distanceFromOriginKm > 0.0:
+                dist_km = stops[-1].distanceFromOriginKm
+            elif dist_km > 0.0:
+                stops[-1].distanceFromOriginKm = dist_km
             inter_count = max(0, len(stops) - 2)
         else:
             inter_count = len(intermediate)

@@ -1041,9 +1041,11 @@ def _load_snapshot_train(digits: str, date_str: str) -> Optional[str]:
     candidates = [
         snap_dir / f"infofer_train_{digits}_{clean_date}.html",
         snap_dir / f"infofer_train_{digits}_20261121.html",
+        snap_dir / f"infofer_train_{digits}_20261120.html",
         snap_dir / f"infofer_train_{digits}.html",
         snap_dir / f"train_{digits}_{clean_date}.html",
         snap_dir / f"train_{digits}_20261121.html",
+        snap_dir / f"train_{digits}_20261120.html",
         snap_dir / f"train_{digits}_ontime.html",
         snap_dir / f"train_{digits}_delayed.html",
         snap_dir / f"train_{digits}.html",
@@ -1925,23 +1927,63 @@ class TransitousLiveAdapter(BaseTrainAdapter):
         except Exception:
             tz_offset = "+02:00"
 
+        day_rollover = 0
+        last_sec = -1
         for s_idx, st in enumerate(raw_stops):
-            s_dep_iso = st.get("dep_iso")
-            s_arr_iso = st.get("arr_iso")
             s_dep = st.get("departure_time")
             s_arr = st.get("arrival_time")
+            arr_sec = st.get("arr_sec")
+            dep_sec = st.get("dep_sec")
 
-            if not s_dep_iso and s_dep and s_dep != "--:--":
-                s_dep_iso = f"{date_str}T{s_dep}:00{tz_offset}"
-            if not s_arr_iso and s_arr and s_arr != "--:--":
-                s_arr_iso = f"{date_str}T{s_arr}:00{tz_offset}"
+            if arr_sec is not None:
+                sec_norm = arr_sec % 86400
+                if last_sec >= 0 and sec_norm < last_sec:
+                    day_rollover += 1
+                last_sec = sec_norm
+            arr_date_str = (base_d + timedelta(days=day_rollover)).isoformat()
 
-            s_dep_iso = to_bucharest_iso(s_dep_iso, date_str)
-            s_arr_iso = to_bucharest_iso(s_arr_iso, date_str)
+            if dep_sec is not None:
+                sec_norm = dep_sec % 86400
+                if last_sec >= 0 and sec_norm < last_sec:
+                    day_rollover += 1
+                last_sec = sec_norm
+            dep_date_str = (base_d + timedelta(days=day_rollover)).isoformat()
+
+            s_dep_iso = st.get("dep_iso")
+            s_arr_iso = st.get("arr_iso")
+
+            if s_arr_iso and "T" in s_arr_iso:
+                s_arr_iso = f"{arr_date_str}T{s_arr_iso.split('T')[1]}"
+            elif s_arr and s_arr != "--:--":
+                s_arr_iso = f"{arr_date_str}T{s_arr}:00{tz_offset}"
+            else:
+                s_arr_iso = None
+
+            if s_dep_iso and "T" in s_dep_iso:
+                s_dep_iso = f"{dep_date_str}T{s_dep_iso.split('T')[1]}"
+            elif s_dep and s_dep != "--:--":
+                s_dep_iso = f"{dep_date_str}T{s_dep}:00{tz_offset}"
+            else:
+                s_dep_iso = None
+
+            s_arr_iso = to_bucharest_iso(s_arr_iso, arr_date_str)
+            s_dep_iso = to_bucharest_iso(s_dep_iso, dep_date_str)
 
             is_first = (s_idx == 0)
             is_last = (s_idx == len(raw_stops) - 1)
             st_type = "BOARDING" if is_first else ("ALIGHTING" if is_last else "INTERMEDIATE")
+            if is_first:
+                s_arr_iso = None
+            if is_last:
+                s_dep_iso = None
+
+            dwell = 0
+            if arr_sec is not None and dep_sec is not None and not is_first and not is_last:
+                dwell_diff = dep_sec - arr_sec
+                if dwell_diff < 0:
+                    dwell_diff += 86400
+                dwell = max(0, int(round(dwell_diff / 60)))
+
             stops.append(LegStop(
                 stopSequence=s_idx + 1,
                 stationCode=st.get("code", "STN"),
@@ -1949,6 +1991,7 @@ class TransitousLiveAdapter(BaseTrainAdapter):
                 city=st.get("name", "Gara"),
                 arrivalTime=s_arr_iso,
                 departureTime=s_dep_iso,
+                dwellMinutes=dwell,
                 distanceFromOriginKm=float(st.get("cum_km", st.get("distance_km", 0.0))),
                 stopType=st_type,
                 platform=str((s_idx % 4) + 1),
@@ -2646,6 +2689,32 @@ class InfoFerLiveAdapter(TransitousLiveAdapter):
         return records
 
     async def fetch_train(self, train_number: str, date_str: str) -> Optional[TrainScrapeRecord]:
+        norm_num = normalize_train_number(train_number)
+        digits_only = re.sub(r"\D", "", norm_num) or norm_num
+        url = f"{self.INFOFER_BASE_URL}/ro-RO/Train/{digits_only}"
+
+        if getattr(self, "cache", None):
+            cached = self.cache.get(date_str, norm_num)
+            if cached and "html" in cached:
+                try:
+                    return self.parse_train_html(cached["html"], default_train_num=norm_num)
+                except Exception:
+                    pass
+
+        try:
+            resp = await self._request_with_resilience("GET", url, params={"date": date_str})
+            html_text = resp.text
+            if getattr(self, "cache", None):
+                self.cache.set(date_str, norm_num, {
+                    "date": date_str,
+                    "train_number": norm_num,
+                    "html": html_text,
+                    "timestamp": time.time(),
+                })
+            return self.parse_train_html(html_text, default_train_num=norm_num)
+        except Exception:
+            pass
+
         return await asyncio.to_thread(self.fetch_train_sync, train_number, date_str)
 
     def fetch_train_sync(self, train_number: str, date_str: str) -> Optional[TrainScrapeRecord]:
