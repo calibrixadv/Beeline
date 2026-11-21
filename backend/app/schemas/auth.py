@@ -13,6 +13,30 @@ class SignUpRequest(BaseModel):
     remember_me: bool = False
 
 
+class SignUpResponse(BaseModel):
+    verification_required: bool = True
+    email: EmailStr
+    message: str = "Verification code sent to your email. Please verify your email to activate your account."
+    expires_in_minutes: int = 15
+
+
+class VerifyEmailRequest(BaseModel):
+    email: Optional[EmailStr] = None
+    code: Optional[str] = None
+    token: Optional[str] = None
+    remember_me: bool = False
+    device_info: Optional[str] = "Web Browser"
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+class ResendVerificationResponse(BaseModel):
+    message: str
+    expires_in_minutes: Optional[int] = 15
+
+
 class LoginRequest(BaseModel):
     email: Optional[str] = None
     username: Optional[str] = None

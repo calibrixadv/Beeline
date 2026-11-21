@@ -29,6 +29,9 @@ async def create_booking(
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """Reserve journey itinerary and issue passenger tickets with idempotency protection."""
+    # Strict departure-time guard (Europe/Bucharest)
+    booking_service.validate_departure_times(data.items)
+
     payload_hash = IdempotencyService.compute_hash(data.model_dump())
 
     if idempotency_key:

@@ -3,6 +3,7 @@ import math
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional, Tuple
 from fastapi import HTTPException, status
 from sqlalchemy import or_, select
@@ -22,11 +23,13 @@ from app.schemas.train import (
 from app.schemas.route_plan import BookingWindowInfo, TrainItineraryResponse
 from app.services.timetable_sync_service import timetable_sync_service
 from scraper.collectors.train_api import (
-    DataGovXMLAdapter,
+    InfoFerLiveAdapter,
     STATION_DICTIONARY,
+    canonical_train_category,
     normalize_train_number,
     resolve_known_station,
     normalize_text,
+    to_bucharest_iso,
 )
 
 OPERATORS_DATA: List[RailwayOperator] = [
@@ -435,19 +438,29 @@ def _scrape_record_to_train_journey(
         else:
             arr_sec = dep_sec + duration_min * 60
 
+    tz_bucharest = ZoneInfo("Europe/Bucharest")
+    base_d = datetime.strptime(travel_date, "%Y-%m-%d").date()
+    dt_ref = datetime(base_d.year, base_d.month, base_d.day, tzinfo=tz_bucharest)
+    tz_offset_str = dt_ref.strftime("%z")
+    tz_offset = f"{tz_offset_str[:3]}:{tz_offset_str[3:]}" if len(tz_offset_str) == 5 else "+02:00"
+
     dep_hh = dep_sec // 3600
     dep_mm = (dep_sec % 3600) // 60
-    dep_time_iso = f"{travel_date}T{dep_hh:02d}:{dep_mm:02d}:00+02:00"
+    computed_dep_iso = f"{travel_date}T{dep_hh:02d}:{dep_mm:02d}:00{tz_offset}"
+    raw_dep_iso = getattr(rec, "departure_iso", None)
+    dep_time_iso = to_bucharest_iso(raw_dep_iso, travel_date) if raw_dep_iso else computed_dep_iso
 
     arr_day_offset = arr_sec // 86400
     arr_rem_sec = arr_sec % 86400
     arr_hh = arr_rem_sec // 3600
     arr_mm = (arr_rem_sec % 3600) // 60
     if arr_day_offset > 0:
-        arr_date = (datetime.strptime(travel_date, "%Y-%m-%d").date() + timedelta(days=arr_day_offset)).isoformat()
+        arr_date = (base_d + timedelta(days=arr_day_offset)).isoformat()
     else:
         arr_date = travel_date
-    arr_time_iso = f"{arr_date}T{arr_hh:02d}:{arr_mm:02d}:00+02:00"
+    computed_arr_iso = f"{arr_date}T{arr_hh:02d}:{arr_mm:02d}:00{tz_offset}"
+    raw_arr_iso = getattr(rec, "arrival_iso", None)
+    arr_time_iso = to_bucharest_iso(raw_arr_iso, travel_date) if raw_arr_iso else computed_arr_iso
 
     full_op = getattr(rec, "full_operator", None) or (route_info.get("full_operator") if route_info else None)
     if not full_op:
@@ -495,8 +508,23 @@ def _scrape_record_to_train_journey(
         for idx, s in enumerate(raw_stops):
             s_dep_sec = s.get("dep_sec", 0)
             s_arr_sec = s.get("arr_sec", s_dep_sec)
-            s_dep_iso = f"{travel_date}T{(s_dep_sec // 3600):02d}:{((s_dep_sec % 3600) // 60):02d}:00+02:00"
-            s_arr_iso = f"{travel_date}T{(s_arr_sec // 3600):02d}:{((s_arr_sec % 3600) // 60):02d}:00+02:00"
+
+            dep_day_off = s_dep_sec // 86400
+            dep_rem = s_dep_sec % 86400
+            s_dep_date = (base_d + timedelta(days=dep_day_off)).isoformat()
+            fallback_dep_iso = f"{s_dep_date}T{(dep_rem // 3600):02d}:{((dep_rem % 3600) // 60):02d}:00{tz_offset}"
+
+            arr_day_off = s_arr_sec // 86400
+            arr_rem = s_arr_sec % 86400
+            s_arr_date = (base_d + timedelta(days=arr_day_off)).isoformat()
+            fallback_arr_iso = f"{s_arr_date}T{(arr_rem // 3600):02d}:{((arr_rem % 3600) // 60):02d}:00{tz_offset}"
+
+            raw_dep = s.get("dep_iso") or (fallback_dep_iso if s.get("departure_time") != "--:--" else None)
+            raw_arr = s.get("arr_iso") or (fallback_arr_iso if s.get("arrival_time") != "--:--" else None)
+
+            s_dep_iso = to_bucharest_iso(raw_dep, travel_date)
+            s_arr_iso = to_bucharest_iso(raw_arr, travel_date)
+
             stops_data.append(TrainStop(
                 stopNumber=idx + 1,
                 station=TrainStation(code=s["code"], name=s["name"], city=s["name"]),
@@ -547,22 +575,83 @@ def _scrape_record_to_train_journey(
 
 
 class TrainService:
-    _cached_xml_journeys: Dict[str, List[TrainJourney]] = {}
-
     @classmethod
-    def _get_xml_journeys_for_date(cls, date_str: str) -> List[TrainJourney]:
-        if date_str in cls._cached_xml_journeys:
-            return cls._cached_xml_journeys[date_str]
-        xml_adapter = DataGovXMLAdapter.get_shared_instance()
-        store = xml_adapter._get_store_for_date(date_str)
-        routes_map = store.get("train_routes", {})
-        journeys: List[TrainJourney] = []
-        for _, rinfo in routes_map.items():
-            rec = rinfo.get("record")
-            if rec:
-                journeys.append(_scrape_record_to_train_journey(rec, date_str, route_info=rinfo))
-        cls._cached_xml_journeys[date_str] = journeys
-        return journeys
+    def _itinerary_to_train_journey(cls, itin: TrainItineraryResponse, travel_date: str) -> TrainJourney:
+        stops = itin.stops
+        first_st_code = stops[0].stationCode if stops else "GLT"
+        first_st_name = stops[0].stationName if stops else (itin.fullTrainOrigin or "Galați")
+        first_st_city = stops[0].city if stops else first_st_name
+        last_st_code = stops[-1].stationCode if stops else "BCT"
+        last_st_name = stops[-1].stationName if stops else (itin.fullTrainDestination or "București Nord")
+        last_st_city = stops[-1].city if stops else last_st_name
+
+        first_st = TrainStation(code=first_st_code, name=first_st_name, city=first_st_city)
+        last_st = TrainStation(code=last_st_code, name=last_st_name, city=last_st_city)
+
+        dep_iso = None
+        for s in stops:
+            if s.departureTime:
+                dep_iso = to_bucharest_iso(s.departureTime, travel_date)
+                break
+        if not dep_iso:
+            dep_iso = to_bucharest_iso(stops[0].arrivalTime, travel_date) if stops else f"{travel_date}T08:00:00+02:00"
+
+        arr_iso = None
+        for s in reversed(stops):
+            if s.arrivalTime:
+                arr_iso = to_bucharest_iso(s.arrivalTime, travel_date)
+                break
+        if not arr_iso:
+            arr_iso = to_bucharest_iso(stops[-1].departureTime, travel_date) if stops else f"{travel_date}T12:00:00+02:00"
+
+        stops_data = [
+            TrainStop(
+                stopNumber=s.stopSequence,
+                station=TrainStation(code=s.stationCode, name=s.stationName, city=s.city or s.stationName),
+                scheduledArrival=to_bucharest_iso(s.arrivalTime, travel_date),
+                scheduledDeparture=to_bucharest_iso(s.departureTime, travel_date),
+                platform=s.platform,
+            )
+            for s in stops
+        ]
+
+        cat = 3 if "IC" in itin.trainNumber else (2 if "IR" in itin.trainNumber else 1)
+        amenities = ["POWER_OUTLETS", "WHEELCHAIR_ACCESSIBLE"]
+        if cat >= 2:
+            amenities.append("WIFI")
+        if cat == 3 or "astra" in itin.operator.lower() or "softrans" in itin.operator.lower():
+            amenities.append("DINING_CAR")
+
+        fares = [
+            TrainFare(classType="STANDARD", price=round(7.0 + itin.totalDistanceKm * 0.25, 2), currency="RON", seatsAvailable=40),
+            TrainFare(classType="FIRST", price=round((7.0 + itin.totalDistanceKm * 0.25) * 1.5, 2), currency="RON", seatsAvailable=12),
+        ]
+        if cat >= 2:
+            fares.append(TrainFare(classType="BUSINESS", price=round((7.0 + itin.totalDistanceKm * 0.25) * 2.0, 2), currency="RON", seatsAvailable=4))
+
+        dur = itin.totalDurationMinutes
+        dur_fmt = f"{dur // 60}h {dur % 60:02d}m" if dur >= 60 else f"{dur}m"
+
+        norm_digits = re.sub(r"[^a-zA-Z0-9]", "-", itin.trainNumber.lower())
+        j_id = f"trn-{norm_digits}-{travel_date.replace('-', '')}"
+
+        return TrainJourney(
+            id=j_id,
+            trainNumber=itin.trainNumber,
+            operator=itin.operator,
+            origin=TrainStation(code=first_st.code, name=first_st.name, city=first_st.city or first_st.name, platform="1"),
+            destination=TrainStation(code=last_st.code, name=last_st.name, city=last_st.city or last_st.name, platform="1"),
+            departureTime=dep_iso,
+            arrivalTime=arr_iso,
+            durationMinutes=dur,
+            durationFormatted=dur_fmt,
+            status="ON_TIME",
+            delayMinutes=0,
+            carbonFootprintKg=round(itin.totalDistanceKm * 0.035, 1),
+            amenities=amenities,
+            fares=fares,
+            stops=stops_data,
+        )
 
     @classmethod
     def get_trains(
@@ -601,41 +690,124 @@ class TrainService:
         else:
             effective_date = min_date
 
+        infofer_adapter = InfoFerLiveAdapter.get_shared_instance()
         effective_orig = origin or origin_code
         effective_dest = destination or destination_code
+
+        # Check if search_query represents a corridor e.g. "Galați -> București Nord" or "GLT - BCT"
+        if not (effective_orig and effective_dest) and search_query:
+            corr_m = re.search(r"([A-Za-zȘșȚțĂăÎîÂâ0-9\s-]+?)\s*(?:➔|->|–|-)\s*([A-Za-zȘșȚțĂăÎîÂâ0-9\s-]+)", search_query)
+            if corr_m:
+                cand_orig = corr_m.group(1).strip()
+                cand_dest = corr_m.group(2).strip()
+                if resolve_known_station(cand_orig) and resolve_known_station(cand_dest):
+                    effective_orig = cand_orig
+                    effective_dest = cand_dest
+
+        results: List[TrainJourney] = []
+        seen_train_keys: set = set()
+
+        TRAIN_NUMBER_PATTERN = re.compile(r"^\s*(?:IC|IR-N|IRN|IR|RE|R)?[\s\-]*(\d{1,6})\s*$", re.IGNORECASE)
+        train_match = TRAIN_NUMBER_PATTERN.match(search_query) if search_query else None
+
         if effective_orig and effective_dest:
             orig_match = resolve_known_station(effective_orig)
             dest_match = resolve_known_station(effective_dest)
             if not orig_match or not dest_match:
                 return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
-            xml_adapter = DataGovXMLAdapter.get_shared_instance()
-            records = xml_adapter.fetch_itinerary_sync(effective_orig, effective_dest, date_str=effective_date)
-            results = [_scrape_record_to_train_journey(r, effective_date) for r in records] if records else []
+
+            eff_orig = orig_match.name
+            eff_dest = dest_match.name
+            # Strictly 100% Live InfoFer only:
+            records = infofer_adapter.fetch_itinerary_sync(eff_orig, eff_dest, date_str=effective_date)
+            if records:
+                for r in records:
+                    t_num = normalize_train_number(r.source_train_api.train_number)
+                    dedup_key = (t_num, effective_date)
+                    if dedup_key not in seen_train_keys:
+                        seen_train_keys.add(dedup_key)
+                        results.append(_scrape_record_to_train_journey(r, effective_date))
+
+            # Only check custom created TRAINS_DATA if travel_date matches exactly and not in live results
             for t in TRAINS_DATA:
-                if ((t.origin.code.upper() == orig_match.code.upper() or normalize_text(t.origin.name) == normalize_text(orig_match.name)) and
-                    (t.destination.code.upper() == dest_match.code.upper() or normalize_text(t.destination.name) == normalize_text(dest_match.name))):
-                    if not any(r.trainNumber == t.trainNumber for r in results):
-                        results.append(t)
-        else:
-            if effective_orig and not resolve_known_station(effective_orig):
-                return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
-            if effective_dest and not resolve_known_station(effective_dest):
+                if t.departureTime.startswith(effective_date):
+                    if ((t.origin.code.upper() == orig_match.code.upper() or normalize_text(t.origin.name) == normalize_text(orig_match.name)) and
+                        (t.destination.code.upper() == dest_match.code.upper() or normalize_text(t.destination.name) == normalize_text(dest_match.name))):
+                        t_num = normalize_train_number(t.trainNumber)
+                        if (t_num, effective_date) not in seen_train_keys:
+                            seen_train_keys.add((t_num, effective_date))
+                            results.append(t)
+
+        elif effective_orig or effective_dest:
+            # Single station specified via origin or destination
+            target_st = effective_orig or effective_dest
+            st_match = resolve_known_station(target_st)
+            if not st_match:
                 return [], PaginationMeta(totalItems=0, page=page, pageSize=page_size, totalPages=0, hasNext=False, hasPrev=False)
 
-            # Build full candidate pool combining TRAINS_DATA and active XML timetable
-            results = list(TRAINS_DATA)
-            seen_numbers = {t.trainNumber.upper() for t in results}
-            xml_journeys = cls._get_xml_journeys_for_date(effective_date)
-            for j in xml_journeys:
-                if j.trainNumber.upper() not in seen_numbers:
+            board_recs = infofer_adapter.fetch_station_board_sync(st_match.name, effective_date)
+            for r in board_recs:
+                t_num = normalize_train_number(r.source_train_api.train_number)
+                dedup_key = (t_num, effective_date)
+                if dedup_key not in seen_train_keys:
+                    seen_train_keys.add(dedup_key)
+                    results.append(_scrape_record_to_train_journey(r, effective_date))
+
+        elif train_match:
+            # Flexible train number query: e.g. "r2300", "R 2300", "R-2300", "2300", "ir10072", "IC 572"
+            digits = train_match.group(1)
+            itin = infofer_adapter.get_train_itinerary_live(digits, effective_date)
+            if itin:
+                j = cls._itinerary_to_train_journey(itin, effective_date)
+                t_key = (normalize_train_number(j.trainNumber), effective_date)
+                if t_key not in seen_train_keys:
+                    seen_train_keys.add(t_key)
                     results.append(j)
-                    seen_numbers.add(j.trainNumber.upper())
+
+        elif search_query and resolve_known_station(search_query):
+            # Station board query by single station name (e.g. "Sibiu", "Craiova", "Timișoara Nord")
+            st_match = resolve_known_station(search_query)
+            board_recs = infofer_adapter.fetch_station_board_sync(st_match.name, effective_date)
+            for r in board_recs:
+                t_num = normalize_train_number(r.source_train_api.train_number)
+                dedup_key = (t_num, effective_date)
+                if dedup_key not in seen_train_keys:
+                    seen_train_keys.add(dedup_key)
+                    results.append(_scrape_record_to_train_journey(r, effective_date))
+
+        else:
+            # Mainline corridors browse pool (when browsing or searching by category e.g. "IC"):
+            mainline_corridors = [
+                ("București Nord", "Brașov"),
+                ("Galați", "București Nord"),
+                ("București Nord", "Constanța"),
+            ]
+            for m_orig, m_dest in mainline_corridors:
+                recs = infofer_adapter.fetch_itinerary_sync(m_orig, m_dest, date_str=effective_date)
+                for r in recs:
+                    t_num = normalize_train_number(r.source_train_api.train_number)
+                    dedup_key = (t_num, effective_date)
+                    if dedup_key not in seen_train_keys:
+                        seen_train_keys.add(dedup_key)
+                        results.append(_scrape_record_to_train_journey(r, effective_date))
+
+            # Backward-compat with in-memory test fixtures in TRAINS_DATA
+            for t in TRAINS_DATA:
+                t_num = normalize_train_number(t.trainNumber)
+                if (t_num, effective_date) not in seen_train_keys:
+                    if not travel_date or t.departureTime.startswith(effective_date):
+                        results.append(t)
+                        seen_train_keys.add((t_num, effective_date))
 
         # Filters
         if search_query:
             clean_q = normalize_code_str(search_query)
             if clean_q in {"IC", "IR", "RE", "R"}:
                 results = [t for t in results if matches_train_code(t.trainNumber, search_query)]
+            elif train_match:
+                results = [t for t in results if matches_train_code(t.trainNumber, search_query)]
+            elif resolve_known_station(search_query):
+                pass
             else:
                 q_low = search_query.lower().strip()
                 results = [
@@ -728,8 +900,8 @@ class TrainService:
 
         return paginated_items, meta
 
-    @staticmethod
-    def get_train_by_id(train_id: str) -> Optional[TrainJourney]:
+    @classmethod
+    def get_train_by_id(cls, train_id: str) -> Optional[TrainJourney]:
         for t in TRAINS_DATA:
             if t.id == train_id:
                 return t
@@ -740,23 +912,20 @@ class TrainService:
             train_category = parts[1].upper()
             train_number = parts[2]
             target_norm = f"{train_category} {train_number}"
-            xml_adapter = DataGovXMLAdapter()
-            store = xml_adapter._get_store_for_date(date_str)
-            routes = store.get("train_routes", {})
-            for t_num, rinfo in routes.items():
-                if target_norm == t_num or (train_number in t_num and train_category in t_num):
-                    rec = rinfo.get("record")
-                    if rec:
-                        return _scrape_record_to_train_journey(rec, date_str, route_info=rinfo)
+
+            infofer_adapter = InfoFerLiveAdapter.get_shared_instance()
+            itin = infofer_adapter.get_train_itinerary_live(target_norm, date_str=date_str)
+            if itin:
+                return cls._itinerary_to_train_journey(itin, date_str)
         return None
 
     @staticmethod
     def list_operators() -> List[RailwayOperator]:
         return OPERATORS_DATA
 
-    @staticmethod
+    @classmethod
     def get_train_itinerary(
-        train_number: str, travel_date: Optional[str] = None
+        cls, train_number: str, travel_date: Optional[str] = None
     ) -> TrainItineraryResponse:
         bw = timetable_sync_service.get_booking_window()
         min_date = bw["minDate"]
@@ -776,51 +945,14 @@ class TrainService:
                 detail=f"Travel date '{date_str}' is outside the booking window ({min_date} to {max_date}). Please choose a date within 90 days.",
             )
 
-        xml_adapter = DataGovXMLAdapter.get_shared_instance()
-        route_info = xml_adapter.get_train_route_info(train_number, service_date=date_str)
-        if not route_info:
+        infofer_adapter = InfoFerLiveAdapter.get_shared_instance()
+        itinerary = infofer_adapter.get_train_itinerary_live(train_number, date_str=date_str)
+        if not itinerary:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Train '{train_number}' not found in active timetable.",
+                detail=f"Train '{train_number}' not found in live InfoFer timetable for date {date_str}.",
             )
-
-        rec = route_info["record"]
-        raw_stops = route_info["stops"]
-        operator = route_info.get("full_operator") or "CFR Călători"
-        full_train_origin = route_info.get("full_train_origin") or (raw_stops[0]["name"] if raw_stops else "Origin")
-        full_train_destination = route_info.get("full_train_destination") or (raw_stops[-1]["name"] if raw_stops else "Destination")
-        cat_name = route_info.get("train_category") or "IR"
-
-        # Build complete stop-by-stop itinerary
-        from app.services.routing_service import build_leg_stops
-        stops = build_leg_stops(raw_stops, date_str, is_first_leg=True, is_last_leg=True)
-
-        tot_dist = float(stops[-1].distanceFromOriginKm) if stops else float(rec.source_train_api.distance_km)
-        tot_dur = int(rec.source_train_api.scheduled_duration_minutes)
-
-        norm_num = normalize_train_number(train_number) or rec.train_number
-
-        bw_info = BookingWindowInfo(
-            minDate=min_date,
-            maxDate=max_date,
-            advanceBookingDays=bw.get("advanceBookingDays", 90),
-            activeTimetable=bw.get("activeTimetable", "2025-2026 / 2026-2027"),
-            liveSource=bw.get("liveSource", "INFOFER_IRIS_AND_OFFICIAL_XML"),
-        )
-
-        return TrainItineraryResponse(
-            trainNumber=norm_num,
-            operator=operator,
-            trainCategory=cat_name,
-            date=date_str,
-            fullTrainOrigin=full_train_origin,
-            fullTrainDestination=full_train_destination,
-            totalDistanceKm=tot_dist,
-            totalDurationMinutes=tot_dur,
-            stops=stops,
-            liveSource="INFOFER_IRIS_AND_OFFICIAL_XML",
-            bookingWindow=bw_info,
-        )
+        return itinerary
 
     @staticmethod
     async def create_train(data: TrainCreate, db: Optional[AsyncSession] = None) -> TrainJourney:

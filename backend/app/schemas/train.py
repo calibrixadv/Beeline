@@ -138,7 +138,7 @@ class TimetableBookingWindow(BaseModel):
     maxDate: str
     advanceBookingDays: int = 90
     activeTimetable: str = "2025-2026 / 2026-2027"
-    liveSource: str = "INFOFER_IRIS_AND_OFFICIAL_XML"
+    liveSource: str = "INFOFER_LIVE_ONLY"
 
     model_config = ConfigDict(extra="ignore")
 

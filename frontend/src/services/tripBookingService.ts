@@ -18,6 +18,7 @@ export interface TripFilterState {
   pillar: 'ALL' | CuratedPillar;
   maxPriceLei?: number;
   maxDurationMinutes?: number;
+  maxTransfers?: number;
   sortBy: 'departure' | 'duration' | 'price' | 'risk';
   sortOrder: 'asc' | 'desc';
 }
@@ -28,6 +29,7 @@ export const DEFAULT_TRIP_FILTERS: TripFilterState = {
   pillar: 'ALL',
   maxPriceLei: undefined,
   maxDurationMinutes: undefined,
+  maxTransfers: undefined,
   sortBy: 'departure',
   sortOrder: 'asc',
 };
@@ -54,6 +56,20 @@ function normalizeName(str: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+function withFutureDates(plans: TransitRoutePlan[]): TransitRoutePlan[] {
+  const futureDate = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  return plans.map((p) => {
+    const updatedDep = p.departureTime ? p.departureTime.replace(/^\d{4}-\d{2}-\d{2}/, futureDate) : p.departureTime;
+    const updatedArr = p.arrivalTime ? p.arrivalTime.replace(/^\d{4}-\d{2}-\d{2}/, futureDate) : p.arrivalTime;
+    return {
+      ...p,
+      date: p.date ? p.date.replace(/^\d{4}-\d{2}-\d{2}/, futureDate) : futureDate,
+      departureTime: updatedDep,
+      arrivalTime: updatedArr,
+    };
+  });
+}
+
 /**
  * Creates a canonical or generated set of multi-carrier trip options between two places.
  */
@@ -72,7 +88,7 @@ export function generateTripsForCorridor(
     (normOrig.includes('galati') || normOrig.includes('micro 19') || normOrig.includes('micro19')) &&
     (normDest.includes('bucuresti') || normDest.includes('uniri') || normDest.includes('gara de nord'))
   ) {
-    return [
+    return withFutureDates([
       // Option 1: Fastest Direct IR (CFR Călători)
       {
         id: 'trip-gl-buc-fastest-01',
@@ -384,7 +400,7 @@ export function generateTripsForCorridor(
 
       // Option 3: Canonical Honey Shielded (Transurb Bus 102 ➔ CFR IR 1572 ➔ Metrorex M2)
       SAMPLE_ROUTE_PLAN_MICRO19_TO_PIATA_UNIRII,
-    ];
+    ]);
   }
 
   // 2. București ➔ Brașov corridor
@@ -392,7 +408,7 @@ export function generateTripsForCorridor(
     (normOrig.includes('bucur') || normOrig.includes('gara de nord')) &&
     (normDest.includes('brasov') || normDest.includes('gara brasov'))
   ) {
-    return [
+    return withFutureDates([
       // Option 1: Fastest Direct IR (CFR IR 1631)
       SAMPLE_ROUTE_PLAN_BUCHAREST_TO_BRASOV,
 
@@ -822,14 +838,14 @@ export function generateTripsForCorridor(
         createdAt: '2026-10-21T06:00:00+03:00',
         validUntil: '2026-10-21T18:00:00+03:00',
       },
-    ];
+    ]);
   }
 
   // 3. Dynamic Multi-Modal Generator for any custom pair
   const cleanOrig = origin.trim() || 'Origin Hub';
   const cleanDest = destination.trim() || 'Destination Hub';
 
-  return [
+  return withFutureDates([
     // Dynamic 1: Fastest InterRegio Direct
     {
       id: `trip-dyn-${cleanOrig}-${cleanDest}-fastest`,
@@ -1222,7 +1238,7 @@ export function generateTripsForCorridor(
       createdAt: '2026-10-21T06:00:00+03:00',
       validUntil: '2026-10-21T12:00:00+03:00',
     },
-  ];
+  ]);
 }
 
 /**
@@ -1276,7 +1292,20 @@ export function filterAndSortTrips(
     result = result.filter((t) => t.totalDurationMinutes <= filters.maxDurationMinutes!);
   }
 
-  // 6. Sorting
+  // 6. Max transfers filter
+  if (filters.maxTransfers !== undefined && filters.maxTransfers !== null && filters.maxTransfers >= 0) {
+    result = result.filter((t) => {
+      const transfers =
+        typeof t.transfersCount === 'number'
+          ? t.transfersCount
+          : t.legs && t.legs.length > 0
+          ? Math.max(0, t.legs.length - 1)
+          : 0;
+      return transfers <= filters.maxTransfers!;
+    });
+  }
+
+  // 7. Sorting
   result.sort((a, b) => {
     let cmp = 0;
     switch (filters.sortBy) {
@@ -1402,6 +1431,9 @@ export function convertRoutePlanToTrainJourney(plan: TransitRoutePlan): TrainJou
     amenities: uniqueAmenities,
     carbonFootprintKg: plan.eco.routeEmissionsKgCO2,
     riskAnalysis: plan.riskAnalysis,
+    legs: plan.legs,
+    transfersCount: plan.transfersCount ?? (plan.legs.length > 1 ? plan.legs.length - 1 : 0),
+    transfers: plan.transfers,
   };
 }
 
@@ -1605,7 +1637,8 @@ export async function fetchDayTripsFromBackend(
   origin: string,
   destination: string,
   date?: string,
-  pillarPreference?: 'ALL' | CuratedPillar
+  pillarPreference?: 'ALL' | CuratedPillar,
+  maxTransfers?: number
 ): Promise<DayTripsBackendResult> {
   const travelDate =
     date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toISOString().slice(0, 10);
@@ -1621,6 +1654,7 @@ export async function fetchDayTripsFromBackend(
           pillarPreference && pillarPreference !== 'ALL' && pillarPreference !== 'ECO_HERO'
             ? pillarPreference
             : 'FASTEST',
+        ...(typeof maxTransfers === 'number' ? { maxTransfers } : {}),
       }),
       apiClient.getTrains({
         origin,
@@ -1745,26 +1779,26 @@ export async function fetchDayTripsFromBackend(
         .join('->');
 
     const existingSigs = new Set(plans.map(computeClientPlanSig));
-    const existingTrainKeys = new Set(
-      plans.map(
-        (p) => `${(p.legs[0]?.names.lineCode || '').trim().toUpperCase()}|${p.departureTime}`
-      )
+    const normalizeTrainKey = (num: string) =>
+      num.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9]/g, '');
+
+    const existingDirectTrainKeys = new Set(
+      plans
+        .filter((p) => p.transfersCount === 0 && p.legs.length > 0)
+        .map((p) => `${normalizeTrainKey(p.legs[0]?.names.lineCode || '')}|${travelDate}`)
     );
 
     if (allDayDepartures && allDayDepartures.length > 0) {
       for (const journey of allDayDepartures) {
-        const depIso = journey.departureTime.includes('T')
-          ? journey.departureTime
-          : `${travelDate}T${journey.departureTime}:00+02:00`;
-        const trainKey = `${journey.trainNumber.trim().toUpperCase()}|${depIso}`;
-        if (!existingTrainKeys.has(trainKey)) {
+        const directKey = `${normalizeTrainKey(journey.trainNumber)}|${travelDate}`;
+        if (!existingDirectTrainKeys.has(directKey)) {
           const journeyPlan = convertTrainJourneyToRoutePlan(journey, travelDate);
           journeyPlan.curatedPillars = [];
           journeyPlan.curatedPillar = null;
           const sig = computeClientPlanSig(journeyPlan);
           if (!existingSigs.has(sig)) {
             existingSigs.add(sig);
-            existingTrainKeys.add(trainKey);
+            existingDirectTrainKeys.add(directKey);
             plans.push(journeyPlan);
           }
         }
@@ -1784,8 +1818,16 @@ export async function fetchDayTripsFromBackend(
 
     // Strict client-side deduplication guard
     const seenSignatures = new Set<string>();
+    const seenDirectKeys = new Set<string>();
     const deduplicatedPlans: TransitRoutePlan[] = [];
     for (const plan of plans) {
+      if (plan.transfersCount === 0 && plan.legs.length > 0) {
+        const dKey = `${normalizeTrainKey(plan.legs[0]?.names.lineCode || '')}|${travelDate}`;
+        if (seenDirectKeys.has(dKey)) {
+          continue;
+        }
+        seenDirectKeys.add(dKey);
+      }
       const sig = computeClientPlanSig(plan);
       if (!seenSignatures.has(sig)) {
         seenSignatures.add(sig);

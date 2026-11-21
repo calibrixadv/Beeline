@@ -1,7 +1,10 @@
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
@@ -218,22 +221,23 @@ async def test_disruption_crud_lifecycle(client: AsyncClient, db_session: AsyncS
 @pytest.mark.asyncio
 async def test_booking_read_and_patch_lifecycle(client: AsyncClient, db_session: AsyncSession):
     """Test Read and Patch lifecycle for Bookings."""
-    # 1. Register test user
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # 1. Register and verify test user
+    signup_data = await signup_and_verify(client, {
         "email": "booking.crud.user@beeline.io",
         "password": "SecurePass123!",
         "full_name": "Radu Ionescu"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # 2. Create booking
+    future_date = (datetime.now(ZoneInfo("Europe/Bucharest")).date() + timedelta(days=7)).isoformat()
     booking_payload = {
         "items": [
             {
                 "journeyId": "tr-ir-1572-20261021",
                 "selectedClass": "STANDARD",
-                "travelDate": "2026-10-21",
+                "travelDate": future_date,
                 "seatPreferences": {"position": "WINDOW", "quietZone": False},
                 "passengers": [{"fullName": "Radu Ionescu", "passengerType": "ADULT"}]
             }
@@ -270,12 +274,12 @@ async def test_booking_read_and_patch_lifecycle(client: AsyncClient, db_session:
 @pytest.mark.asyncio
 async def test_saved_routes_patch_lifecycle(client: AsyncClient):
     """Test PATCH update on Saved Routes."""
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "routes.crud.user@beeline.io",
         "password": "SecurePass123!",
         "full_name": "Elena Vasilescu"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Plan a route first
@@ -328,13 +332,12 @@ async def test_saved_routes_patch_lifecycle(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_user_self_deletion_lifecycle(client: AsyncClient, db_session: AsyncSession):
     """Test User DELETE /me (account self-deletion) lifecycle."""
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "user.to.delete@beeline.io",
         "password": "TemporaryPassword123!",
         "full_name": "Utilizator Temporar"
     })
-    assert signup_res.status_code == 201
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Verify user can access profile

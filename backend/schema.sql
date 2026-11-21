@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
     is_guest BOOLEAN NOT NULL DEFAULT FALSE,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    email_verified_at TIMESTAMPTZ,
     account_status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' CONSTRAINT ck_users_account_status CHECK (account_status IN ('ACTIVE', 'FROZEN_PENDING_DELETION')),
     frozen_at TIMESTAMPTZ,
     deletion_scheduled_at TIMESTAMPTZ,
@@ -32,7 +34,28 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_is_guest ON users(is_guest);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email_verified);
 CREATE INDEX IF NOT EXISTS idx_users_account_status ON users(account_status);
+
+-- 1b. EMAIL VERIFICATION TOKENS TABLE
+-- Single-use cryptographically hashed 6-digit OTPs and magic-link URL tokens for signup email verification
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    code_hash VARCHAR(128) NOT NULL,
+    token_hash VARCHAR(128) NOT NULL UNIQUE,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_email_verification_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_email_verification_user_id ON email_verification_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_verification_email ON email_verification_tokens(email);
+CREATE INDEX IF NOT EXISTS idx_email_verification_token_hash ON email_verification_tokens(token_hash);
+CREATE INDEX IF NOT EXISTS idx_email_verification_is_used ON email_verification_tokens(is_used);
 
 -- 2. USER SESSIONS TABLE
 -- Tracks multi-device sessions with rotating refresh token hashes and client metadata
@@ -190,6 +213,8 @@ CREATE TABLE IF NOT EXISTS saved_routes (
     destination_name VARCHAR(255) NOT NULL,
     plan_data TEXT NOT NULL,
     notes VARCHAR(500),
+    alert_muted BOOLEAN NOT NULL DEFAULT FALSE,
+    alert_lead_minutes INTEGER NOT NULL DEFAULT 30 CONSTRAINT ck_saved_routes_alert_lead CHECK (alert_lead_minutes IN (5, 10, 30, 60)),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_saved_routes_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

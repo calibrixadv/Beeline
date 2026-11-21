@@ -1,7 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { UserProfile, MFALoginChallengeResponse, TokenResponse } from '../types/auth';
+import {
+  UserProfile,
+  MFALoginChallengeResponse,
+  TokenResponse,
+  SignUpResponse,
+  VerifyEmailRequest,
+  ResendVerificationResponse,
+} from '../types/auth';
 import { apiClient, tokenStorage } from '../services/apiClient';
 
 interface AuthContextType {
@@ -10,8 +17,12 @@ interface AuthContextType {
   isGuest: boolean;
   isLoading: boolean;
   mfaChallenge: MFALoginChallengeResponse | null;
+  pendingRecoveryCodes?: string[] | null;
+  clearPendingRecoveryCodes?: () => void;
   login: (identifier: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, username?: string, fullName?: string) => Promise<void>;
+  signup: (email: string, password: string, username?: string, fullName?: string) => Promise<SignUpResponse>;
+  verifyEmail: (data: VerifyEmailRequest) => Promise<TokenResponse>;
+  resendVerification: (email: string) => Promise<ResendVerificationResponse>;
   continueAsGuest: () => Promise<void>;
   convertGuest: (email: string, password: string, fullName?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -26,6 +37,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [mfaChallenge, setMfaChallenge] = useState<MFALoginChallengeResponse | null>(null);
+  const [pendingRecoveryCodes, setPendingRecoveryCodes] = useState<string[] | null>(null);
+
+  const clearPendingRecoveryCodes = () => {
+    setPendingRecoveryCodes(null);
+  };
 
   const refreshUser = async () => {
     try {
@@ -51,6 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (identifier: string, password: string): Promise<boolean> => {
     setIsLoading(true);
+    setPendingRecoveryCodes(null);
     try {
       const isEmail = identifier.includes('@');
       const res = await apiClient.login({
@@ -79,7 +96,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     password: string,
     usernameOrFullName?: string,
     fullName?: string
-  ): Promise<void> => {
+  ): Promise<SignUpResponse> => {
     setIsLoading(true);
     try {
       const username = fullName !== undefined ? usernameOrFullName : undefined;
@@ -90,10 +107,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         username: username || (usernameOrFullName && !fullName && !usernameOrFullName.includes(' ') ? usernameOrFullName : undefined),
         full_name: name || usernameOrFullName,
       });
-      setUser(res.user);
+      // Email verification required before session creation
+      return res;
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const verifyEmail = async (data: VerifyEmailRequest): Promise<TokenResponse> => {
+    setIsLoading(true);
+    try {
+      const res = await apiClient.verifyEmail(data);
+      if (res.recovery_codes && res.recovery_codes.length > 0) {
+        setPendingRecoveryCodes(res.recovery_codes);
+      }
+      setUser(res.user);
+      return res;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendVerification = async (email: string): Promise<ResendVerificationResponse> => {
+    return await apiClient.resendVerification(email);
   };
 
   const continueAsGuest = async (): Promise<void> => {
@@ -125,6 +161,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setUser(null);
       setMfaChallenge(null);
+      setPendingRecoveryCodes(null);
       setIsLoading(false);
     }
   };
@@ -154,8 +191,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isGuest: !!user?.is_guest,
     isLoading,
     mfaChallenge,
+    pendingRecoveryCodes,
+    clearPendingRecoveryCodes,
     login,
     signup,
+    verifyEmail,
+    resendVerification,
     continueAsGuest,
     convertGuest,
     logout,

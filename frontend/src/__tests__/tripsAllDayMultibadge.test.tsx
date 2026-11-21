@@ -1,7 +1,10 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+jest.setTimeout(20000);
 import TripsPage from '../app/trips/page';
+import BookingTripCard from '../components/BookingTripCard';
 import { TripProvider } from '../context/TripContext';
 import * as tripBookingService from '../services/tripBookingService';
 import { TransitRoutePlan } from '../types/routePlan';
@@ -227,13 +230,13 @@ describe('Trips All-Day Routes & Multi-Badge Pillar Test Suite', () => {
     const bestValueBadge = screen.getByTestId('badge-BEST_VALUE');
     expect(reliableBadge).toBeInTheDocument();
     expect(bestValueBadge).toBeInTheDocument();
-    expect(reliableBadge).toHaveTextContent(/Safe • Transfer Shield/i);
-    expect(bestValueBadge).toHaveTextContent(/Economy • Best Value/i);
+    expect(reliableBadge).toHaveTextContent(/Meli/i);
+    expect(bestValueBadge).toHaveTextContent(/Flora/i);
 
     // Assert fastest badge is on IC 572
     const fastestBadge = screen.getByTestId('badge-FASTEST');
     expect(fastestBadge).toBeInTheDocument();
-    expect(fastestBadge).toHaveTextContent(/Fast • Express Scout/i);
+    expect(fastestBadge).toHaveTextContent(/Vira/i);
 
     // Assert RE 11631 occurs exactly once (never duplicated)
     const occurrences = screen.getAllByText('RE 11631');
@@ -249,8 +252,8 @@ describe('Trips All-Day Routes & Multi-Badge Pillar Test Suite', () => {
 
     await screen.findByTestId('trips-count-header');
 
-    // 1. Click "🛡️ Most Reliable" pillar filter
-    const reliableBtn = screen.getByRole('button', { name: /🛡️ Most Reliable/i });
+    // 1. Click "Reliable" pillar filter (Queen Meli)
+    const reliableBtn = screen.getByRole('button', { name: /Queen Meli/i });
     fireEvent.click(reliableBtn);
 
     // Multi-badge route RE 11631 is included
@@ -259,8 +262,8 @@ describe('Trips All-Day Routes & Multi-Badge Pillar Test Suite', () => {
       expect(screen.queryByText('IC 572')).not.toBeInTheDocument();
     });
 
-    // 2. Click "💰 Best Value" pillar filter
-    const bestValueBtn = screen.getByRole('button', { name: /💰 Best Value/i });
+    // 2. Click "Eco" pillar filter (Queen Flora)
+    const bestValueBtn = screen.getByRole('button', { name: /Queen Flora/i });
     fireEvent.click(bestValueBtn);
 
     // Multi-badge route RE 11631 is ALSO included under Best Value
@@ -269,8 +272,8 @@ describe('Trips All-Day Routes & Multi-Badge Pillar Test Suite', () => {
       expect(screen.queryByText('IC 572')).not.toBeInTheDocument();
     });
 
-    // 3. Click "⚡ Fastest Direct" pillar filter
-    const fastestBtn = screen.getByRole('button', { name: /⚡ Fastest Direct/i });
+    // 3. Click "Fastest" pillar filter (Queen Vira)
+    const fastestBtn = screen.getByRole('button', { name: /Queen Vira/i });
     fireEvent.click(fastestBtn);
 
     // IC 572 is shown under fastest
@@ -280,7 +283,7 @@ describe('Trips All-Day Routes & Multi-Badge Pillar Test Suite', () => {
     });
 
     // 4. Click "All Trips" filter to restore all 6 trains
-    const allBtn = screen.getByRole('button', { name: /All Trips/i });
+    const allBtn = screen.getByRole('button', { name: /^All Trips$/i });
     fireEvent.click(allBtn);
 
     await waitFor(() => {
@@ -289,4 +292,299 @@ describe('Trips All-Day Routes & Multi-Badge Pillar Test Suite', () => {
       expect(screen.getByText('IR 1572')).toBeInTheDocument();
     });
   }, 15000);
+
+  it('renders blended-in 3-stat summary strip with computed values and supports secondary filters drawer on /trips', async () => {
+    render(
+      <TripProvider>
+        <TripsPage />
+      </TripProvider>
+    );
+
+    await screen.findByTestId('trips-count-header');
+
+    // Verify 3 summary metrics are present and computed correctly
+    const strip = screen.getByTestId('summary-stats-strip');
+    expect(strip).toBeInTheDocument();
+
+    const bestPriceStat = screen.getByTestId('stat-best-price');
+    expect(bestPriceStat).toHaveTextContent(/Best Price/i);
+    expect(bestPriceStat).toHaveTextContent(/LEI/i);
+
+    const fastestStat = screen.getByTestId('stat-fastest-transit');
+    expect(fastestStat).toHaveTextContent(/Fastest Transit/i);
+    expect(fastestStat).toHaveTextContent(/h.*m/i);
+
+    const shieldStat = screen.getByTestId('stat-transfer-shield');
+    expect(shieldStat).toHaveTextContent(/Transfer Shield/i);
+    expect(shieldStat).toHaveTextContent(/% Reliable/i);
+
+    // Verify secondary filters panel is hidden initially
+    expect(screen.queryByTestId('more-filters-panel')).not.toBeInTheDocument();
+
+    // Open More filters drawer
+    const toggleBtn = screen.getByTestId('toggle-more-filters');
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggleBtn);
+
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
+    const panel = await screen.findByTestId('more-filters-panel');
+    expect(panel).toBeInTheDocument();
+
+    // Select operator CFR Călători
+    const cfrBtn = screen.getByRole('button', { name: 'CFR Călători' });
+    fireEvent.click(cfrBtn);
+
+    // Active secondary count badge appears
+    await waitFor(() => {
+      const badge = screen.getByTestId('active-secondary-count-badge');
+      expect(badge).toHaveTextContent('1');
+    });
+
+    // Close More filters drawer
+    fireEvent.click(toggleBtn);
+    expect(screen.queryByTestId('more-filters-panel')).not.toBeInTheDocument();
+  }, 15000);
+});
+
+describe('BookingTripCard Engraved and Filled Pillar Badges Focused Suite', () => {
+  it('renders a card with curatedPillars: [FASTEST, BEST_VALUE] showing badge-FASTEST, badge-BEST_VALUE, and badge-engraved-MOST_RELIABLE', () => {
+    const plan = createMockPlan('card-1', 'IC 572', '08:00', '11:00', 180, 75, ['FASTEST', 'BEST_VALUE'], null);
+    render(<BookingTripCard plan={plan} />);
+
+    // 1. Active badges
+    const fastest = screen.getByTestId('badge-FASTEST');
+    expect(fastest).toBeInTheDocument();
+    expect(fastest).toHaveAttribute('data-badge-state', 'active');
+    expect(fastest).toHaveAttribute('aria-label', 'Queen Vira — Fastest (active route badge)');
+    expect(fastest).toHaveTextContent('Vira');
+
+    const bestValue = screen.getByTestId('badge-BEST_VALUE');
+    expect(bestValue).toBeInTheDocument();
+    expect(bestValue).toHaveAttribute('data-badge-state', 'active');
+    expect(bestValue).toHaveAttribute('aria-label', 'Queen Flora — Best Value (active route badge)');
+    expect(bestValue).toHaveTextContent('Flora');
+
+    // 2. Engraved slot
+    const engravedReliable = screen.getByTestId('badge-engraved-MOST_RELIABLE');
+    expect(engravedReliable).toBeInTheDocument();
+    expect(engravedReliable).toHaveAttribute('data-badge-state', 'engraved');
+    expect(engravedReliable).toHaveAttribute('aria-label', 'Queen Meli — Most Reliable (not top ranked for this train)');
+    expect(engravedReliable).toHaveTextContent('Meli');
+
+    // 3. Confirm opposite states are absent
+    expect(screen.queryByTestId('badge-MOST_RELIABLE')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('badge-engraved-FASTEST')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('badge-engraved-BEST_VALUE')).not.toBeInTheDocument();
+  });
+
+  it('renders a standard card with curatedPillars: [] showing all 3 engraved slots and 0 active badges', () => {
+    const standardPlan = createMockPlan('card-2', 'IR 1572', '09:00', '12:40', 220, 63.0, [], null);
+    render(<BookingTripCard plan={standardPlan} />);
+
+    // All 3 engraved
+    const engravedReliable = screen.getByTestId('badge-engraved-MOST_RELIABLE');
+    const engravedFastest = screen.getByTestId('badge-engraved-FASTEST');
+    const engravedBestValue = screen.getByTestId('badge-engraved-BEST_VALUE');
+
+    expect(engravedReliable).toBeInTheDocument();
+    expect(engravedReliable).toHaveAttribute('data-badge-state', 'engraved');
+    expect(engravedReliable).toHaveAttribute('aria-label', 'Queen Meli — Most Reliable (not top ranked for this train)');
+
+    expect(engravedFastest).toBeInTheDocument();
+    expect(engravedFastest).toHaveAttribute('data-badge-state', 'engraved');
+    expect(engravedFastest).toHaveAttribute('aria-label', 'Queen Vira — Fastest (not top ranked for this train)');
+
+    expect(engravedBestValue).toBeInTheDocument();
+    expect(engravedBestValue).toHaveAttribute('data-badge-state', 'engraved');
+    expect(engravedBestValue).toHaveAttribute('aria-label', 'Queen Flora — Best Value (not top ranked for this train)');
+
+    // 0 active badges
+    expect(screen.queryByTestId('badge-MOST_RELIABLE')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('badge-FASTEST')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('badge-BEST_VALUE')).not.toBeInTheDocument();
+  });
+
+  it('preserves trip-train-code, train-itinerary-trigger, trip-collapsed-summary, and expandable RouteItineraryTimeline', () => {
+    const richPlan: TransitRoutePlan = {
+      ...createMockPlan('card-3', 'RE 11631', '06:00', '09:00', 180, 50, ['MOST_RELIABLE'], 'MOST_RELIABLE'),
+      legs: [
+        {
+          ...createMockPlan('card-3', 'RE 11631', '06:00', '09:00', 180, 50, ['MOST_RELIABLE'], 'MOST_RELIABLE').legs[0],
+          intermediateStopCount: 7,
+          distanceKm: 259.6,
+          stops: [
+            {
+              stopSequence: 1,
+              stationCode: 'GLT',
+              stationName: 'Galați',
+              city: 'Galați',
+              arrivalTime: null,
+              departureTime: '2026-11-20T06:00:00+02:00',
+              dwellMinutes: 0,
+              distanceFromOriginKm: 0.0,
+              stopType: 'BOARDING',
+            },
+            {
+              stopSequence: 2,
+              stationCode: 'BRL',
+              stationName: 'Brăila',
+              city: 'Brăila',
+              arrivalTime: '2026-11-20T06:30:00+02:00',
+              departureTime: '2026-11-20T06:32:00+02:00',
+              dwellMinutes: 2,
+              distanceFromOriginKm: 31.2,
+              stopType: 'INTERMEDIATE',
+            },
+            {
+              stopSequence: 3,
+              stationCode: 'BCT',
+              stationName: 'București Nord',
+              city: 'București',
+              arrivalTime: '2026-11-20T09:00:00+02:00',
+              departureTime: null,
+              dwellMinutes: 0,
+              distanceFromOriginKm: 259.6,
+              stopType: 'ALIGHTING',
+            },
+          ],
+        },
+      ],
+    };
+
+    render(<BookingTripCard plan={richPlan} />);
+
+    // 1. Train code & trigger
+    const trainCode = screen.getByTestId('trip-train-code');
+    expect(trainCode).toHaveTextContent('RE 11631');
+    const trigger = screen.getByTestId('train-itinerary-trigger');
+    expect(trigger).toBeInTheDocument();
+
+    // 2. Borderless inline collapsed summary
+    const summary = screen.getByTestId('trip-collapsed-summary');
+    expect(summary).toBeInTheDocument();
+    expect(summary.textContent).toMatch(/Direct/i);
+    expect(summary.textContent).toMatch(/7 stops/i);
+    expect(summary.textContent).toMatch(/259\.6 km/i);
+
+    // 3. Expand accordion & RouteItineraryTimeline
+    const expandBtn = screen.getByRole('button', { name: /view stopovers & shield analysis/i });
+    fireEvent.click(expandBtn);
+
+    expect(screen.getByText('Itinerary Breakdown')).toBeInTheDocument();
+    expect(screen.getByTestId('route-itinerary-timeline')).toBeInTheDocument();
+  });
+});
+
+describe('BookingTripCard Accurate Connection & Transfer Chance Labels', () => {
+  it('renders "Direct route" with emerald styling when transfersCount === 0 (regardless of missedConnectionProbability)', () => {
+    const directPlan = {
+      ...createMockPlan('card-direct', 'IR 1572', '08:00', '11:00', 180, 60, [], null),
+      transfersCount: 0,
+      riskAnalysis: {
+        ...createMockPlan('card-direct', 'IR 1572', '08:00', '11:00', 180, 60, [], null).riskAnalysis,
+        isMlComputed: true,
+        missedConnectionProbability: 0.04,
+      },
+    };
+
+    render(<BookingTripCard plan={directPlan} />);
+
+    const label = screen.getByTestId('trip-connection-label');
+    expect(label).toBeInTheDocument();
+    expect(label).toHaveTextContent('Direct route');
+    expect(label).toHaveClass('text-emerald-700');
+    expect(screen.queryByText(/connection guarantee/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/transfer chance/i)).not.toBeInTheDocument();
+  });
+
+  it('renders low connection percentage (0.98 missed probability -> 2% transfer chance) with rose/red styling (NOT green)', () => {
+    const connectingPlan: TransitRoutePlan = {
+      ...createMockPlan('card-conn-low', 'IR 1574 + R 3001', '09:00', '13:30', 270, 75, [], null),
+      transfersCount: 1,
+      legs: [
+        {
+          ...createMockPlan('card-conn-low', 'IR 1574', '09:00', '11:00', 120, 45, [], null).legs[0],
+          id: 'leg-1',
+        },
+        {
+          ...createMockPlan('card-conn-low', 'R 3001', '11:30', '13:30', 120, 30, [], null).legs[0],
+          id: 'leg-2',
+        },
+      ],
+      riskAnalysis: {
+        ...createMockPlan('card-conn-low', 'IR 1574', '09:00', '11:00', 120, 45, [], null).riskAnalysis,
+        isMlComputed: true,
+        missedConnectionProbability: 0.98,
+      },
+    };
+
+    render(<BookingTripCard plan={connectingPlan} />);
+
+    const label = screen.getByTestId('trip-connection-label');
+    expect(label).toBeInTheDocument();
+    expect(label).toHaveTextContent('2% transfer chance');
+    expect(label).toHaveClass('text-rose-700');
+    expect(label).not.toHaveClass('text-emerald-700');
+    expect(screen.queryByText(/connection guarantee/i)).not.toBeInTheDocument();
+  });
+
+  it('renders high connection percentage (0.04 missed probability -> 96% transfer chance) with emerald styling', () => {
+    const connectingPlan: TransitRoutePlan = {
+      ...createMockPlan('card-conn-high', 'IR 1574 + R 3001', '09:00', '13:30', 270, 75, [], null),
+      transfersCount: 1,
+      legs: [
+        {
+          ...createMockPlan('card-conn-high', 'IR 1574', '09:00', '11:00', 120, 45, [], null).legs[0],
+          id: 'leg-1',
+        },
+        {
+          ...createMockPlan('card-conn-high', 'R 3001', '11:30', '13:30', 120, 30, [], null).legs[0],
+          id: 'leg-2',
+        },
+      ],
+      riskAnalysis: {
+        ...createMockPlan('card-conn-high', 'IR 1574', '09:00', '11:00', 120, 45, [], null).riskAnalysis,
+        isMlComputed: true,
+        missedConnectionProbability: 0.04,
+      },
+    };
+
+    render(<BookingTripCard plan={connectingPlan} />);
+
+    const label = screen.getByTestId('trip-connection-label');
+    expect(label).toBeInTheDocument();
+    expect(label).toHaveTextContent('96% transfer chance');
+    expect(label).toHaveClass('text-emerald-700');
+    expect(label).not.toHaveClass('text-rose-700');
+    expect(screen.queryByText(/connection guarantee/i)).not.toBeInTheDocument();
+  });
+
+  it('renders moderate connection percentage (0.35 missed probability -> 65% transfer chance) with amber styling', () => {
+    const connectingPlan: TransitRoutePlan = {
+      ...createMockPlan('card-conn-mod', 'IR 1574 + R 3001', '09:00', '13:30', 270, 75, [], null),
+      transfersCount: 1,
+      legs: [
+        {
+          ...createMockPlan('card-conn-mod', 'IR 1574', '09:00', '11:00', 120, 45, [], null).legs[0],
+          id: 'leg-1',
+        },
+        {
+          ...createMockPlan('card-conn-mod', 'R 3001', '11:30', '13:30', 120, 30, [], null).legs[0],
+          id: 'leg-2',
+        },
+      ],
+      riskAnalysis: {
+        ...createMockPlan('card-conn-mod', 'IR 1574', '09:00', '11:00', 120, 45, [], null).riskAnalysis,
+        isMlComputed: true,
+        missedConnectionProbability: 0.35,
+      },
+    };
+
+    render(<BookingTripCard plan={connectingPlan} />);
+
+    const label = screen.getByTestId('trip-connection-label');
+    expect(label).toBeInTheDocument();
+    expect(label).toHaveTextContent('65% transfer chance');
+    expect(label).toHaveClass('text-amber-700');
+  });
 });

@@ -1,15 +1,16 @@
 import pytest
 from httpx import AsyncClient
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
 async def test_saved_routes_idempotency(client: AsyncClient):
-    # Signup user
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # Signup and verify user
+    signup_data = await signup_and_verify(client, {
         "email": "saved.idem@beeline.io",
         "password": "SecurePassword123!"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     key = "route:v1:user-1:gl-buc:2026-10-21"
     headers = {
         "Authorization": f"Bearer {token}",

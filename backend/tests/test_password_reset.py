@@ -1,11 +1,12 @@
 import pytest
 from httpx import AsyncClient
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
 async def test_password_reset_flow(client: AsyncClient):
-    # 1. Signup user
-    await client.post("/api/v1/auth/signup", json={
+    # 1. Signup and verify user
+    await signup_and_verify(client, {
         "email": "reset.tester@beeline.io",
         "password": "OldPassword123!"
     })

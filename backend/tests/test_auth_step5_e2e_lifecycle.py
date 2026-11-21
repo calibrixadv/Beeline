@@ -17,7 +17,7 @@ from app.services.account_lifecycle_service import AccountLifecycleService
 from app.services.auth_service import AuthService
 from app.services.email_service import email_service
 import pytest_asyncio
-from tests.conftest import TestAsyncSessionLocal
+from tests.conftest import TestAsyncSessionLocal, verify_user_for_test
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -81,15 +81,24 @@ async def test_complete_user_security_and_deletion_lifecycle(
         headers=base_headers,
     )
     assert signup_res.status_code == 201
-    signup_data = signup_res.json()
-    user_id = signup_data["user"]["id"]
-    token_step1 = signup_data["access_token"]
+    assert signup_res.json().get("verification_required") is True
+
+    # Verify email to activate account and receive recovery codes
+    verify_data = await verify_user_for_test(
+        client,
+        user_email,
+        remember_me=False,
+        device_info="MacBook Pro M2",
+        headers=base_headers,
+    )
+    user_id = verify_data["user"]["id"]
+    token_step1 = verify_data["access_token"]
 
     # 1.1 Verify encrypted HttpOnly session cookies
-    assert "beeline_auth_token" in signup_res.cookies
-    assert "beeline_device_proof" in signup_res.cookies
-    cookie_token_1 = signup_res.cookies["beeline_auth_token"]
-    cookie_proof_1 = signup_res.cookies["beeline_device_proof"]
+    assert "beeline_auth_token" in client.cookies
+    assert "beeline_device_proof" in client.cookies
+    cookie_token_1 = client.cookies["beeline_auth_token"]
+    cookie_proof_1 = client.cookies["beeline_device_proof"]
 
     # Verify 1-day (24h) token TTL
     payload_step1 = decrypt_auth_token(cookie_token_1)
@@ -98,7 +107,7 @@ async def test_complete_user_security_and_deletion_lifecycle(
     assert 86300 <= ttl_1day <= 86500
 
     # 1.2 Verify exactly 3 obfuscated recovery codes (BEE-XXXX-XXXX)
-    recovery_codes = signup_data.get("recovery_codes")
+    recovery_codes = verify_data.get("recovery_codes")
     assert recovery_codes is not None
     assert len(recovery_codes) == 3
     code_pattern = re.compile(r"^BEE-[A-Z0-9]{4}-[A-Z0-9]{4}$")
@@ -212,7 +221,7 @@ async def test_complete_user_security_and_deletion_lifecycle(
     # Refresh token associated with revoked session is also rejected
     blocked_refresh = await client.post(
         "/api/v1/auth/refresh",
-        json={"refresh_token": signup_data["refresh_token"]},
+        json={"refresh_token": verify_data["refresh_token"]},
         headers=base_headers,
     )
     assert blocked_refresh.status_code == 401

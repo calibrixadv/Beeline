@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Train, 
   Bus, 
@@ -11,20 +12,28 @@ import {
   ShieldCheck, 
   ShieldAlert, 
   Check, 
-  Clock 
+  Clock,
+  Zap,
+  Coins,
+  Leaf,
+  ExternalLink
 } from 'lucide-react';
-import { TransitRoutePlan, CuratedPillar } from '../types/routePlan';
+import { TransitRoutePlan } from '../types/routePlan';
 import BaseCard from './BaseCard';
 import BaseButton from './BaseButton';
-import MascotBee from './MascotBee';
 import RouteItineraryTimeline from './RouteItineraryTimeline';
 import TrainItineraryModal from './TrainItineraryModal';
+import { isTrainDeparted, useNowTick } from '../utils/departureTime';
+import { buildOfficialTicketUrl, buildLegTrainLinks, SAFE_EXTERNAL_LINK_ATTRS } from '../utils/officialTicketUrl';
 
 export interface BookingTripCardProps {
   plan: TransitRoutePlan;
   onBookTrip?: (plan: TransitRoutePlan) => void;
+  onAddToItinerary?: (plan: TransitRoutePlan) => void;
+  onInItineraryClick?: (plan: TransitRoutePlan) => void;
   onRemoveTrip?: (planId: string) => void;
   isBooked?: boolean;
+  isInItinerary?: boolean;
   defaultExpanded?: boolean;
   isHighlighted?: boolean;
   highlightLabel?: string;
@@ -60,16 +69,24 @@ export function getTransitModeIcon(mode: string) {
 export const BookingTripCard: React.FC<BookingTripCardProps> = ({
   plan,
   onBookTrip,
+  onAddToItinerary,
+  onInItineraryClick,
   onRemoveTrip,
   isBooked = false,
+  isInItinerary,
   defaultExpanded = false,
   isHighlighted = false,
   highlightLabel = '★ Selected from Home',
 }) => {
+  const router = useRouter();
+  const isInTrip = isInItinerary !== undefined ? isInItinerary : isBooked;
   const [isExpanded, setIsExpanded] = useState<boolean>(defaultExpanded);
   const [expandedStops, setExpandedStops] = useState<Record<string, boolean>>({});
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [selectedTrainNumber, setSelectedTrainNumber] = useState<string>('');
+
+  const now = useNowTick();
+  const departed = isTrainDeparted(plan.departureTime, plan.date, now);
 
   const handleOpenTrainModal = (trainNum: string) => {
     setSelectedTrainNumber(trainNum);
@@ -89,12 +106,19 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
     return acc;
   }, 0);
 
-  const stopsSummaryPart = totalIntermediateStops > 0 ? `${totalIntermediateStops} stops` : null;
+  const hasTransfers =
+    (plan.transfersCount !== undefined && plan.transfersCount > 0) ||
+    (plan.legs && plan.legs.length > 1) ||
+    (plan.transfers && plan.transfers.length > 0);
+  const isDirectRoute = !hasTransfers;
+
+  const transferText =
+    plan.transfersCount === 0
+      ? 'Direct'
+      : `${plan.transfersCount} transfer${plan.transfersCount > 1 ? 's' : ''}`;
+  const stopsSummaryPart = totalIntermediateStops > 0 ? `${totalIntermediateStops} stop${totalIntermediateStops > 1 ? 's' : ''}` : null;
   const distSummaryPart = totalDistanceKm > 0 ? `${totalDistanceKm.toFixed(1)} km` : null;
-  const collapsedSummary =
-    stopsSummaryPart && distSummaryPart
-      ? `${stopsSummaryPart} • ${distSummaryPart}`
-      : stopsSummaryPart || distSummaryPart;
+  const collapsedSummary = [transferText, stopsSummaryPart, distSummaryPart].filter(Boolean).join(' · ');
 
   const toggleStops = (legId: string) => {
     setExpandedStops((prev) => ({ ...prev, [legId]: !prev[legId] }));
@@ -111,48 +135,61 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
     .filter(Boolean)
     .join(' ➔ ');
 
+  const legLinks = buildLegTrainLinks(plan, plan.date);
+  const isDirect = isDirectRoute || legLinks.length <= 1;
+  const directTrainUrl = buildOfficialTicketUrl({
+    origin: plan.query?.origin?.name || plan.legs[0]?.names.originName || originStation,
+    destination: plan.query?.destination?.name || plan.legs[plan.legs.length - 1]?.names.destinationName || destStation,
+    travelDate: plan.date || (plan.departureTime ? plan.departureTime.slice(0, 10) : undefined),
+    operator: plan.legs[0]?.names.operatorName || plan.legs[0]?.names.operatorShortName,
+    trainNumber: plan.legs[0]?.names.lineCode || plan.summary,
+  });
+
   // Multi-badge pillar configuration
   const rawPillars = Array.isArray(plan.curatedPillars) && plan.curatedPillars.length > 0
     ? plan.curatedPillars
     : plan.curatedPillar
     ? [plan.curatedPillar]
     : [];
-  const activePillars = Array.from(new Set(rawPillars));
+  const activePillarsSet = new Set(rawPillars);
 
-  const getPillarConfig = (pillar: CuratedPillar) => {
-    switch (pillar) {
-      case 'MOST_RELIABLE':
-        return {
-          testId: 'badge-MOST_RELIABLE',
-          label: '🛡️ Safe • Transfer Shield',
-          mascot: 'bumble' as const,
-          className: 'bg-emerald-50 text-emerald-800 border-emerald-300',
-        };
-      case 'FASTEST':
-        return {
-          testId: 'badge-FASTEST',
-          label: '⚡ Fast • Express Scout',
-          mascot: 'barnaby' as const,
-          className: 'bg-blue-50 text-blue-700 border-blue-200',
-        };
-      case 'BEST_VALUE':
-        return {
-          testId: 'badge-BEST_VALUE',
-          label: '💰 Economy • Best Value',
-          mascot: 'honey' as const,
-          className: 'bg-amber-50 text-amber-800 border-amber-300',
-        };
-      case 'ECO_HERO':
-        return {
-          testId: 'badge-ECO_HERO',
-          label: '🌿 Eco Hero',
-          mascot: 'honey' as const,
-          className: 'bg-teal-50 text-teal-800 border-teal-300',
-        };
-      default:
-        return null;
-    }
-  };
+  const isReliableActive = activePillarsSet.has('MOST_RELIABLE');
+  const isFastestActive = activePillarsSet.has('FASTEST');
+  const isEcoActive = activePillarsSet.has('BEST_VALUE') || activePillarsSet.has('ECO_HERO');
+  const isEcoHero = activePillarsSet.has('ECO_HERO') && !activePillarsSet.has('BEST_VALUE');
+
+  const pillarsConfig = [
+    {
+      key: 'MOST_RELIABLE' as const,
+      label: 'Meli',
+      title: 'Queen Meli · Most Reliable',
+      activeAriaLabel: 'Queen Meli — Most Reliable (active route badge)',
+      engravedAriaLabel: 'Queen Meli — Most Reliable (not top ranked for this train)',
+      icon: ShieldCheck,
+      isActive: isReliableActive,
+      activeColorClasses: 'bg-emerald-700 text-white border border-emerald-700 shadow-emerald-700/20',
+    },
+    {
+      key: 'FASTEST' as const,
+      label: 'Vira',
+      title: 'Queen Vira · Fastest',
+      activeAriaLabel: 'Queen Vira — Fastest (active route badge)',
+      engravedAriaLabel: 'Queen Vira — Fastest (not top ranked for this train)',
+      icon: Zap,
+      isActive: isFastestActive,
+      activeColorClasses: 'bg-blue-600 text-white border border-blue-600 shadow-blue-600/20',
+    },
+    {
+      key: 'BEST_VALUE' as const,
+      label: 'Flora',
+      title: 'Queen Flora · Best Value',
+      activeAriaLabel: 'Queen Flora — Best Value (active route badge)',
+      engravedAriaLabel: 'Queen Flora — Best Value (not top ranked for this train)',
+      icon: isEcoHero ? Leaf : Coins,
+      isActive: isEcoActive,
+      activeColorClasses: 'bg-amber-500 text-stone-950 border border-amber-500 shadow-amber-500/20',
+    },
+  ];
 
   const shield = plan.riskAnalysis;
   const isLowRisk = (shield?.overallRiskScore ?? 0) <= 35;
@@ -168,98 +205,82 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
           : 'border-amber-100 hover:border-amber-300/80'
       }`}
     >
-      {/* Top Banner: Multi-Pillar Badges, Highlight Ring & Risk Shield */}
-      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-stone-100 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          {isHighlighted && (
-            <span
-              data-testid="selected-from-home-badge"
-              className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold bg-amber-400 text-stone-950 border border-amber-500 shadow-xs"
-            >
-              {highlightLabel}
-            </span>
-          )}
-          {activePillars.length > 0 && (
-            <div className="flex items-center gap-1.5 flex-wrap" data-testid="pillar-badges-row">
-              {activePillars.map((p) => {
-                const config = getPillarConfig(p);
-                if (!config) return null;
-                return (
-                  <span
-                    key={p}
-                    data-testid={config.testId}
-                    className={`inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full font-bold border ${config.className}`}
-                  >
-                    <MascotBee name={config.mascot} size="sm" animated={false} />
-                    <span>{config.label}</span>
-                  </span>
-                );
-              })}
-            </div>
-          )}
+      {/* Sleek Scannable Header Row: Train Identity, Route Meta & Fixed 3-Slot Pillar Badges */}
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-stone-100">
+        {/* Left Cluster: Train Identity & Inline Summary */}
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
           {trainCodes && (
             <button
               type="button"
               data-testid="train-itinerary-trigger"
               onClick={() => handleOpenTrainModal(plan.legs[0]?.names.lineCode || trainCodes)}
-              className="inline-flex items-center gap-1 text-xs font-bold text-stone-800 hover:text-stone-950 bg-stone-100 hover:bg-amber-200 px-2 py-0.5 rounded border border-stone-200 transition-colors cursor-pointer shadow-2xs group"
+              className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-md bg-stone-100 hover:bg-amber-100 text-stone-800 border border-stone-200/80 transition-colors cursor-pointer"
               title={`View full route for ${trainCodes}`}
             >
               <span data-testid="trip-train-code">{trainCodes}</span>
             </button>
           )}
-          <span className="text-xs text-stone-500 font-medium">
-            {plan.transfersCount === 0
-              ? 'Direct Route'
-              : `${plan.transfersCount} Transfer${plan.transfersCount > 1 ? 's' : ''}`}
+
+          <span
+            data-testid="trip-collapsed-summary"
+            className="text-xs font-medium text-stone-500"
+          >
+            {collapsedSummary}
           </span>
-          {collapsedSummary && (
+
+          {isHighlighted && (
             <span
-              data-testid="trip-collapsed-summary"
-              className="text-xs font-semibold text-amber-900 bg-amber-100/70 border border-amber-200 px-2 py-0.5 rounded shadow-2xs"
+              data-testid="selected-from-home-badge"
+              className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-amber-100/90 text-amber-900 border border-amber-300/70"
             >
-              {collapsedSummary}
+              {highlightLabel}
+            </span>
+          )}
+
+          {departed && (
+            <span
+              data-testid="trip-departed-badge"
+              className="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-stone-100 text-stone-500 border border-stone-200/80"
+            >
+              Departed
             </span>
           )}
         </div>
 
-        {/* ML Delay Pill & Connection Guarantee Indicator OR Rule-Based Shield Pill */}
-        {shield?.isMlComputed ? (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-xs font-semibold ${
-                (shield.expectedDelayMinutes ?? 0) <= 5
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : (shield.expectedDelayMinutes ?? 0) <= 15
-                  ? 'bg-amber-50 text-amber-800 border-amber-200'
-                  : 'bg-red-50 text-red-800 border-red-200'
-              }`}
-            >
-              {(shield.expectedDelayMinutes ?? 0) > 0
-                ? `⏱️ +${shield.expectedDelayMinutes}m expected delay`
-                : '✅ On Time'}
-            </span>
-            {shield.missedConnectionProbability !== undefined && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-xs font-semibold bg-emerald-50 text-emerald-800 border-emerald-200">
-                🛡️ {Math.max(0, Math.min(100, Math.round((1 - shield.missedConnectionProbability) * 100)))}% connection guarantee
+        {/* Right Cluster: Fixed 3-Slot Pillar Badges (Engraved vs. Filled) */}
+        <div className="flex items-center gap-1.5 shrink-0" data-testid="pillar-badges-row">
+          {pillarsConfig.map((item) => {
+            const Icon = item.icon;
+            if (item.isActive) {
+              return (
+                <span
+                  key={item.key}
+                  data-testid={`badge-${item.key}`}
+                  data-badge-state="active"
+                  title={item.title}
+                  aria-label={item.activeAriaLabel}
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-tight select-none transition-all duration-200 shadow-sm ${item.activeColorClasses}`}
+                >
+                  <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />
+                  <span>{item.label}</span>
+                </span>
+              );
+            }
+            return (
+              <span
+                key={item.key}
+                data-testid={`badge-engraved-${item.key}`}
+                data-badge-state="engraved"
+                title={item.title}
+                aria-label={item.engravedAriaLabel}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-tight select-none transition-all duration-200 bg-[#F4EFE6]/85 text-stone-400/85 border border-stone-200/80 shadow-[inset_0_1.5px_2.5px_rgba(28,25,23,0.12),0_1px_0_rgba(255,255,255,0.95)] [text-shadow:0_1px_0_rgba(255,255,255,0.85)]"
+              >
+                <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span>{item.label}</span>
               </span>
-            )}
-          </div>
-        ) : shield ? (
-          <div
-            className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-xs font-semibold ${
-              isLowRisk
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                : isHighRisk
-                ? 'bg-red-50 text-red-800 border-red-200'
-                : 'bg-amber-50 text-amber-800 border-amber-200'
-            }`}
-            title={shield.riskSummaryText}
-          >
-            {isLowRisk ? <ShieldCheck className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-            <span>Shield: {100 - shield.overallRiskScore}%</span>
-          </div>
-        ) : null}
+            );
+          })}
+        </div>
       </div>
 
       {/* Main Row: Time & Route Header + Price & Action */}
@@ -327,35 +348,171 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
             </span>
           </div>
 
-          <BaseButton
-            variant={isBooked ? 'success' : 'primary'}
-            size="md"
-            onClick={() => {
-              if (isBooked) {
-                onRemoveTrip?.(plan.id);
-              } else {
-                onBookTrip?.(plan);
-              }
-            }}
-            className={`font-bold min-w-[120px] ${
-              isBooked ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-400 text-stone-950'
-            }`}
-            leftIcon={isBooked ? <Check className="w-4 h-4" /> : undefined}
-          >
-            {isBooked ? 'In Trip ✓' : 'Book Trip'}
-          </BaseButton>
+          <div className="flex flex-col items-end gap-1">
+            <BaseButton
+              variant={isInTrip ? 'success' : departed ? 'secondary' : 'primary'}
+              size="md"
+              disabled={departed}
+              aria-disabled={departed}
+              onClick={() => {
+                if (departed) return;
+                if (isInTrip) {
+                  if (onInItineraryClick) {
+                    onInItineraryClick(plan);
+                  } else if (router) {
+                    router.push('/my-trip');
+                  }
+                  return;
+                }
+                if (onAddToItinerary) {
+                  onAddToItinerary(plan);
+                } else if (onBookTrip) {
+                  onBookTrip(plan);
+                }
+              }}
+              className={`font-bold min-w-[130px] ${
+                departed
+                  ? 'bg-stone-200 text-stone-500 border border-stone-300 cursor-not-allowed opacity-80 shadow-none'
+                  : isInTrip
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-semibold'
+                  : 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold shadow-xs'
+              }`}
+              leftIcon={!departed && isInTrip ? <Check className="w-4 h-4" /> : undefined}
+            >
+              {departed ? 'Departed' : isInTrip ? 'In Itinerary ✓' : 'Add to Itinerary'}
+            </BaseButton>
+
+            {isInTrip && !departed && (
+              isDirect ? (
+                <a
+                  href={directTrainUrl}
+                  {...SAFE_EXTERNAL_LINK_ATTRS}
+                  data-testid="open-official-ticket-link"
+                  className="text-[11px] font-semibold text-amber-700 hover:text-amber-800 hover:underline inline-flex items-center gap-1 pt-0.5"
+                  onClick={(e) => e.stopPropagation()}
+                  title="Vezi trenul pe InfoFer"
+                >
+                  <span>Vezi trenul pe InfoFer</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              ) : (
+                <div
+                  data-testid="multileg-infofer-links"
+                  className="flex items-center gap-1.5 pt-0.5 flex-wrap justify-end"
+                >
+                  {legLinks.map((leg) => (
+                    <a
+                      key={leg.legIndex}
+                      href={leg.url}
+                      {...SAFE_EXTERNAL_LINK_ATTRS}
+                      data-testid={`open-official-ticket-link-leg-${leg.legIndex}`}
+                      className="text-[11px] font-semibold text-amber-700 hover:text-amber-800 hover:underline inline-flex items-center gap-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                      title={`Vezi trenul ${leg.trainCode} pe InfoFer`}
+                    >
+                      <span>InfoFer: {leg.trainCode}</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Accordion Toggle */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full mt-4 pt-3 border-t border-stone-100 flex items-center justify-center gap-1.5 text-xs font-semibold text-stone-500 hover:text-amber-600 transition-colors cursor-pointer"
-      >
-        <span>{isExpanded ? 'Hide Route Details' : 'View Stopovers & Shield Analysis'}</span>
-        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-      </button>
+      {/* Bottom Utility Bar: Quiet Micro-Indicators + Expand Toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3 border-t border-stone-100 text-xs">
+        {/* Left: Quiet borderless ML Delay & Connection Guarantee / Shield Micro-Indicators */}
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          {shield?.isMlComputed ? (
+            <>
+              <span
+                className={`font-medium ${
+                  (shield.expectedDelayMinutes ?? 0) <= 0
+                    ? 'text-emerald-700'
+                    : (shield.expectedDelayMinutes ?? 0) <= 15
+                    ? 'text-amber-700'
+                    : 'text-rose-700'
+                }`}
+              >
+                {(shield.expectedDelayMinutes ?? 0) > 0
+                  ? `⏱️ +${shield.expectedDelayMinutes}m expected delay`
+                  : '✅ On Time'}
+              </span>
+              {isDirectRoute ? (
+                <>
+                  <span className="text-stone-300">·</span>
+                  <span data-testid="trip-connection-label" className="font-medium text-emerald-700">
+                    🛡️ Direct route
+                  </span>
+                </>
+              ) : shield.missedConnectionProbability !== undefined ? (
+                (() => {
+                  const pct = Math.max(0, Math.min(100, Math.round((1 - shield.missedConnectionProbability) * 100)));
+                  if (pct >= 85) {
+                    return (
+                      <>
+                        <span className="text-stone-300">·</span>
+                        <span data-testid="trip-connection-label" className="font-medium text-emerald-700">
+                          🛡️ {pct}% transfer chance
+                        </span>
+                      </>
+                    );
+                  } else if (pct >= 50) {
+                    return (
+                      <>
+                        <span className="text-stone-300">·</span>
+                        <span data-testid="trip-connection-label" className="font-medium text-amber-700">
+                          ⏱️ {pct}% transfer chance
+                        </span>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <>
+                        <span className="text-stone-300">·</span>
+                        <span data-testid="trip-connection-label" className="font-medium text-rose-700">
+                          ⚠️ {pct}% transfer chance
+                        </span>
+                      </>
+                    );
+                  }
+                })()
+              ) : null}
+            </>
+          ) : shield ? (
+            <div
+              className={`flex items-center gap-1 font-medium ${
+                isLowRisk
+                  ? 'text-emerald-700'
+                  : isHighRisk
+                  ? 'text-rose-700'
+                  : 'text-amber-700'
+              }`}
+              title={shield.riskSummaryText}
+            >
+              {isLowRisk ? (
+                <ShieldCheck className="w-3.5 h-3.5" />
+              ) : (
+                <ShieldAlert className="w-3.5 h-3.5" />
+              )}
+              <span>Shield: {100 - shield.overallRiskScore}%</span>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Right: Expand / Collapse Details Trigger */}
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
+          className="inline-flex items-center gap-1.5 font-semibold text-stone-500 hover:text-amber-600 transition-colors cursor-pointer ml-auto"
+        >
+          <span>{isExpanded ? 'Hide Route Details' : 'View Stopovers & Shield Analysis'}</span>
+          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+      </div>
 
       {/* Expandable Itinerary Breakdown */}
       {isExpanded && (
@@ -438,18 +595,20 @@ export const BookingTripCard: React.FC<BookingTripCardProps> = ({
           )}
 
           {/* Romanian Transfer Shield Reliability Footer */}
-          <div className="bg-amber-50/80 border border-amber-200 p-3.5 rounded-xl flex items-start gap-3">
-            <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-            <div className="text-xs text-stone-700">
-              <span className="font-bold text-stone-900 block">Romanian Transfer Shield Evaluation</span>
-              <p className="mt-0.5">{shield.riskSummaryText}</p>
-              <div className="flex items-center gap-4 mt-2 text-[11px] font-medium text-stone-600">
-                <span>Buffer: {shield.bufferAdequacy}</span>
-                <span>Punctuality: {(shield.historicalPunctualityRate * 100).toFixed(0)}%</span>
-                <span>Risk Level: {shield.riskLevel}</span>
+          {shield && (
+            <div className="bg-amber-50/80 border border-amber-200 p-3.5 rounded-xl flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-xs text-stone-700">
+                <span className="font-bold text-stone-900 block">Romanian Transfer Shield Evaluation</span>
+                <p className="mt-0.5">{shield.riskSummaryText}</p>
+                <div className="flex items-center gap-4 mt-2 text-[11px] font-medium text-stone-600">
+                  <span>Buffer: {shield.bufferAdequacy}</span>
+                  <span>Punctuality: {(shield.historicalPunctualityRate * 100).toFixed(0)}%</span>
+                  <span>Risk Level: {shield.riskLevel}</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

@@ -5,28 +5,31 @@ from app.core.database import AsyncSessionLocal
 from app.models.booking import IdempotencyRecord
 from app.services.idempotency_service import IdempotencyService
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
 
 from app.schemas.booking import CreateBookingRequest
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
 async def test_in_flight_concurrent_conflict(client: AsyncClient, db_session: AsyncSession):
-    # 1. Signup user
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # 1. Signup and verify user
+    signup_data = await signup_and_verify(client, {
         "email": "concurrency.traveler@beeline.io",
         "password": "SecurePassword123!"
     })
-    token = signup_res.json()["access_token"]
-    user_id = signup_res.json()["user"]["id"]
-    key = "book:v1:usr-concurrent:order-1234:2026-10-21"
+    token = signup_data["access_token"]
+    user_id = signup_data["user"]["id"]
+    future_date = (datetime.now(ZoneInfo("Europe/Bucharest")).date() + timedelta(days=7)).isoformat()
+    key = f"book:v1:usr-concurrent:order-1234:{future_date}"
 
     booking_payload = {
         "items": [
             {
                 "journeyId": "tr-ir-1572-20261021",
                 "selectedClass": "STANDARD",
-                "travelDate": "2026-10-21",
+                "travelDate": future_date,
                 "passengers": [{"fullName": "Ion Popa", "passengerType": "ADULT"}]
             }
         ],
@@ -75,12 +78,13 @@ async def test_in_flight_concurrent_conflict(client: AsyncClient, db_session: As
 
 @pytest.mark.asyncio
 async def test_error_releases_in_flight_claim(client: AsyncClient):
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "rollback.traveler@beeline.io",
         "password": "SecurePassword123!"
     })
-    token = signup_res.json()["access_token"]
-    key = "book:v1:usr-fail:order-failed-item:2026-10-21"
+    token = signup_data["access_token"]
+    future_date = (datetime.now(ZoneInfo("Europe/Bucharest")).date() + timedelta(days=7)).isoformat()
+    key = f"book:v1:usr-fail:order-failed-item:{future_date}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Idempotency-Key": key
@@ -92,7 +96,7 @@ async def test_error_releases_in_flight_claim(client: AsyncClient):
             {
                 "journeyId": "tr-ir-1572-20261021",
                 "selectedClass": "STANDARD",
-                "travelDate": "2026-10-21",
+                "travelDate": future_date,
                 "passengers": []  # empty passengers causes error
             }
         ],
@@ -110,7 +114,7 @@ async def test_error_releases_in_flight_claim(client: AsyncClient):
             {
                 "journeyId": "tr-ir-1572-20261021",
                 "selectedClass": "STANDARD",
-                "travelDate": "2026-10-21",
+                "travelDate": future_date,
                 "passengers": [{"fullName": "Elena Radu", "passengerType": "ADULT"}]
             }
         ],

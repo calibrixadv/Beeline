@@ -1,7 +1,11 @@
 import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
-import { TransitHoneycombSection } from '../components/hive-tour/TransitHoneycombSection';
+import {
+  TransitHoneycombSection,
+  getVisualBarPct,
+  RAIL_OPERATORS,
+} from '../components/hive-tour/TransitHoneycombSection';
 import { apiClient } from '../services/apiClient';
 
 describe('TransitHoneycombSection Live Binding', () => {
@@ -78,5 +82,43 @@ describe('TransitHoneycombSection Live Binding', () => {
     expect(screen.getByText(/2,103 trains\/day/i)).toBeInTheDocument();
     expect(screen.getByText(/709 routes/i)).toBeInTheDocument();
     expect(screen.getAllByText('CFR Călători').length).toBeGreaterThan(0);
+  });
+
+  describe('Relational Bar Percentage & Visual Scale Invariants', () => {
+    it('computes soft perceptual curve giving small operators >= 18% width (no tiny dots)', () => {
+      const maxValue = 1256;
+      // CFR (1256) -> 100%
+      expect(getVisualBarPct(1256, maxValue)).toBe(100);
+
+      // Mid-tier operators (303, 273, 216) -> graduated steps ~53% - 60%
+      expect(getVisualBarPct(303, maxValue)).toBe(60);
+      expect(getVisualBarPct(273, maxValue)).toBe(58);
+      expect(getVisualBarPct(216, maxValue)).toBe(53);
+
+      // Small operators (21, 18, 16) -> between 18% and 24%, never a microscopic dot!
+      const astraPct = getVisualBarPct(21, maxValue);
+      const ferotraficPct = getVisualBarPct(18, maxValue);
+      const softransPct = getVisualBarPct(16, maxValue);
+
+      expect(astraPct).toBeGreaterThanOrEqual(18);
+      expect(astraPct).toBeLessThanOrEqual(24);
+      expect(ferotraficPct).toBeGreaterThanOrEqual(18);
+      expect(ferotraficPct).toBeLessThanOrEqual(24);
+      expect(softransPct).toBeGreaterThanOrEqual(18);
+      expect(softransPct).toBeLessThanOrEqual(24);
+
+      // Monotonicity: larger train counts produce larger or equal bar percentage
+      expect(getVisualBarPct(1256, maxValue)).toBeGreaterThan(getVisualBarPct(303, maxValue));
+      expect(getVisualBarPct(303, maxValue)).toBeGreaterThan(getVisualBarPct(273, maxValue));
+      expect(getVisualBarPct(273, maxValue)).toBeGreaterThan(getVisualBarPct(216, maxValue));
+      expect(getVisualBarPct(216, maxValue)).toBeGreaterThan(getVisualBarPct(21, maxValue));
+      expect(getVisualBarPct(21, maxValue)).toBeGreaterThan(getVisualBarPct(18, maxValue));
+      expect(getVisualBarPct(18, maxValue)).toBeGreaterThan(getVisualBarPct(16, maxValue));
+
+      // Degenerate inputs clamp to minimum 18%
+      expect(getVisualBarPct(0, maxValue)).toBe(18);
+      expect(getVisualBarPct(-5, maxValue)).toBe(18);
+      expect(getVisualBarPct(10, 0)).toBe(18);
+    });
   });
 });

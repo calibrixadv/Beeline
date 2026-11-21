@@ -1,5 +1,6 @@
-from typing import List, Literal, Optional
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from datetime import datetime
+from typing import List, Literal, Optional, Union
+from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 PassengerType = Literal["ADULT", "CHILD", "STUDENT", "SENIOR"]
 SeatPosition = Literal["WINDOW", "AISLE", "MIDDLE"]
@@ -24,10 +25,18 @@ class BookingItemRequest(BaseModel):
     journeyId: str
     selectedClass: Literal["STANDARD", "FIRST", "BUSINESS", "SLEEPER"] = "STANDARD"
     travelDate: str
+    departureTime: Optional[str] = Field(default=None, validation_alias=AliasChoices("departureTime", "departure_time"))
     seatPreferences: Optional[SeatPreferences] = Field(default_factory=SeatPreferences)
     passengers: List[Passenger]
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    @field_validator("departureTime", mode="before")
+    @classmethod
+    def serialize_departure_time(cls, v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        return v
 
 
 class CreateBookingRequest(BaseModel):

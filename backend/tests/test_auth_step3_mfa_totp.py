@@ -19,7 +19,7 @@ from app.services.mfa_service import (
     mfa_service,
     totp_replay_shield,
 )
-from tests.conftest import TestAsyncSessionLocal
+from tests.conftest import TestAsyncSessionLocal, signup_and_verify
 
 
 @pytest.fixture(autouse=True)
@@ -49,13 +49,12 @@ async def test_mfa_setup_fernet_encryption_and_deep_links(
     - Stores mfa_credentials.secret_key Fernet-encrypted at rest in DB
     - Validates legacy plaintext fallback in decrypt_totp_secret
     """
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "fernet.traveler@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Fernet Traveler"
     })
-    assert signup_res.status_code == 201
-    auth_token = signup_res.json()["access_token"]
+    auth_token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {auth_token}"}
 
     setup_res = await client.post("/api/v1/auth/mfa/setup", headers=headers)
@@ -108,12 +107,12 @@ async def test_mfa_verify_clock_drift_email_alert_and_status(
     - Dispatches 2FA Enabled email alert via EmailService
     - GET /api/v1/auth/mfa/status reports mfa_enabled=True and remaining_recovery_codes=3
     """
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "clockdrift.traveler@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Clock Traveler"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     setup_res = await client.post("/api/v1/auth/mfa/setup", headers=headers)
@@ -156,12 +155,12 @@ async def test_2step_login_with_remember_me_30days_session(
     - Step 1: /login returns mfa_required=True and mfa_temp_token (without setting auth cookies)
     - Step 2: /mfa/challenge with TOTP code issues a 30-day session and sets encrypted cookies
     """
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "remember30.traveler@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Remember 30"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     setup_res = await client.post("/api/v1/auth/mfa/setup", headers=headers)
@@ -209,12 +208,12 @@ async def test_totp_replay_and_single_use_challenge_token_defense(
     - Replaying the same mfa_temp_token after success is rejected (401)
     - Submitting the same 6-digit TOTP code across two login challenges within 30s is rejected (401)
     """
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "replay.traveler@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Anti Replay"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     setup_res = await client.post("/api/v1/auth/mfa/setup", headers=headers)
@@ -269,12 +268,11 @@ async def test_lost_phone_recovery_code_challenge_and_decrement(
     - remaining_recovery_codes decrements from 3 to 2 in GET /mfa/status
     - Second attempt with the consumed recovery code fails (401)
     """
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "lostphone.traveler@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Lost Phone"
     })
-    signup_data = signup_res.json()
     token = signup_data["access_token"]
     recovery_codes = signup_data["recovery_codes"]
     assert len(recovery_codes) == 3
@@ -333,12 +331,12 @@ async def test_anti_brute_force_shield_locks_out_after_3_failures(
     - 3 wrong 6-digit codes locks out with 429 Too Many Requests
     - Challenge token is permanently invalidated (even if 4th attempt has correct TOTP)
     """
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "bruteforce.mfa@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Brute Force"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     setup_res = await client.post("/api/v1/auth/mfa/setup", headers=headers)

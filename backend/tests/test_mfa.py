@@ -1,17 +1,18 @@
 import pyotp
 import pytest
 from httpx import AsyncClient
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
 async def test_full_mfa_flow(client: AsyncClient):
-    # 1. Sign up user
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # 1. Sign up and verify user
+    verify_data = await signup_and_verify(client, {
         "email": "mfa.traveler@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Andrei MFA"
     })
-    token = signup_res.json()["access_token"]
+    token = verify_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # 2. Initiate MFA Setup
@@ -87,11 +88,11 @@ async def test_full_mfa_flow(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_disable_mfa_flow(client: AsyncClient):
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    verify_data = await signup_and_verify(client, {
         "email": "disable.mfa@beeline.io",
         "password": "SecurePassword123!"
     })
-    token = signup_res.json()["access_token"]
+    token = verify_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Setup

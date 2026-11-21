@@ -26,6 +26,10 @@ import {
 import { TransitRoutePlan, CuratedPillar } from '../../types/routePlan';
 import { StationAutocompleteItem } from '../../types/station';
 import { useTrip } from '../../context/TripContext';
+import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../services/apiClient';
+import { isTrainDeparted } from '../../utils/departureTime';
+import { buildOfficialTicketUrl } from '../../utils/officialTicketUrl';
 import BaseCard from '../../components/BaseCard';
 import BaseButton from '../../components/BaseButton';
 import StationAutocompleteInput from '../../components/StationAutocompleteInput';
@@ -34,6 +38,7 @@ import TripFilterBar from '../../components/TripFilterBar';
 import MascotBee, { MascotGear } from '../../components/MascotBee';
 import TripsGhostSkeleton from '../../components/TripsGhostSkeleton';
 import MascotDebugModal from '../../components/MascotDebugModal';
+import AmbientPageMascot from '../../components/AmbientPageMascot';
 
 export const DEFAULT_TRIPS_ORIGIN = 'București Nord';
 export const DEFAULT_TRIPS_DESTINATION = 'Brașov';
@@ -49,6 +54,14 @@ function TripsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { addTrainToTrip, removeTrainFromTrip, isTrainInTrip, trips: savedTrips } = useTrip();
+
+  let user: any = null;
+  try {
+    const auth = useAuth();
+    user = auth?.user;
+  } catch {
+    // Standalone tests outside AuthProvider
+  }
 
   const urlOrigin = searchParams.get('origin');
   const urlDestination = searchParams.get('destination');
@@ -96,7 +109,15 @@ function TripsContent() {
 
   // Keep active filter tab on ALL by default so all unique routes for day X are visible
   const [filters, setFilters] = useState<TripFilterState>(() => {
-    return { ...DEFAULT_TRIP_FILTERS, pillar: 'ALL' };
+    let parsedMaxTransfers: number | undefined = undefined;
+    const mtParam = searchParams.get('maxTransfers') ?? searchParams.get('max_transfers');
+    if (mtParam !== null && mtParam !== undefined && mtParam !== '') {
+      const parsed = parseInt(mtParam, 10);
+      if (!Number.isNaN(parsed) && parsed >= 0) {
+        parsedMaxTransfers = parsed;
+      }
+    }
+    return { ...DEFAULT_TRIP_FILTERS, pillar: 'ALL', maxTransfers: parsedMaxTransfers };
   });
 
   const activeMascotGear: MascotGear = useMemo(() => {
@@ -183,7 +204,13 @@ function TripsContent() {
 
     const startTime = Date.now();
 
-    fetchDayTripsFromBackend(activeOrigin, activeDestination, activeDate, backendPillarPref)
+    fetchDayTripsFromBackend(
+      activeOrigin,
+      activeDestination,
+      activeDate,
+      backendPillarPref,
+      filters.maxTransfers
+    )
       .then(async (res) => {
         if (requestId !== activeRequestIdRef.current) return;
         if (process.env.NODE_ENV !== 'test') {
@@ -282,12 +309,60 @@ function TripsContent() {
     if (filters.providers.length > 0) count++;
     if (filters.maxPriceLei !== undefined) count++;
     if (filters.sortBy !== 'departure') count++;
+    if (filters.maxTransfers !== undefined) count++;
     return count;
   }, [filters]);
 
-  const handleBookTrip = (plan: TransitRoutePlan) => {
+  const handleAddToItinerary = async (plan: TransitRoutePlan) => {
+    if (isTrainDeparted(plan.departureTime, plan.date || activeDate)) {
+      return;
+    }
+    const travelDate = plan.date || activeDate || (plan.departureTime ? plan.departureTime.slice(0, 10) : undefined);
     const journey = convertRoutePlanToTrainJourney(plan);
-    addTrainToTrip(journey, undefined, activeDate);
+    addTrainToTrip(journey, undefined, travelDate);
+
+    // Persist to saved_routes if logged in, or sessionStorage if logged out
+    const isRegistered = Boolean(user && !user.is_guest && !(user as any).isGuest);
+    if (isRegistered) {
+      try {
+        await apiClient.saveRoute(plan);
+      } catch (err) {
+        console.warn('Failed to persist to saved_routes:', err);
+      }
+    } else {
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          const raw = window.sessionStorage.getItem('beeline_guest_itinerary');
+          const list = raw ? JSON.parse(raw) : [];
+          if (!list.some((item: any) => item.id === plan.id)) {
+            list.push(plan);
+            window.sessionStorage.setItem('beeline_guest_itinerary', JSON.stringify(list));
+          }
+        }
+      } catch {}
+    }
+
+    // Open official Mersul Trenurilor ticket purchase page in new tab
+    const origin = plan.query?.origin?.name || plan.legs[0]?.names.originName || activeOrigin;
+    const destination = plan.query?.destination?.name || plan.legs[plan.legs.length - 1]?.names.destinationName || activeDestination;
+    const operator = plan.legs[0]?.names.operatorName || plan.legs[0]?.names.operatorShortName;
+    const trainNumber = plan.legs[0]?.names.lineCode || plan.summary;
+
+    const url = buildOfficialTicketUrl({
+      origin,
+      destination,
+      travelDate,
+      operator,
+      trainNumber,
+    });
+
+    if (typeof window !== 'undefined' && window.open) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleInItineraryClick = (_plan: TransitRoutePlan) => {
+    router.push('/my-trip');
   };
 
   const handleRemoveTrip = (planId: string) => {
@@ -296,7 +371,9 @@ function TripsContent() {
   };
 
   return (
-    <div className="py-6 md:py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+    <div className="relative min-h-screen">
+      <AmbientPageMascot gear={activeMascotGear} position="top-right" />
+      <div className="relative z-10 py-6 md:py-10 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
       {/* Day-X Timetable Navigation Bar */}
       <div
         data-testid="trips-date-bar"
@@ -526,38 +603,45 @@ function TripsContent() {
         </div>
       ) : hasNoTrainsError ? null : (
         <div className="space-y-6 animate-fade-in">
-          {/* Summary Matrix Ribbon */}
+          {/* Summary Matrix Ribbon - Blended-In Editorial Stat Strip */}
           {summaryStats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-500 text-stone-950 font-bold">
-                  <Coins className="w-4 h-4" />
-                </div>
+            <div
+              data-testid="summary-stats-strip"
+              className="w-full grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#E6D7BC]/75 border-y border-[#E6D7BC]/70 bg-[#FAF4E8]/35 py-3 px-2"
+            >
+              <div data-testid="stat-best-price" className="flex items-center gap-3 px-4 py-1.5 sm:justify-center">
+                <Coins className="w-4 h-4 text-amber-700/75 shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wide block">Best Price</span>
-                  <span className="text-lg font-black text-amber-700">{summaryStats.lowestFare.toFixed(2)} LEI</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#78716C] leading-tight block">
+                    Queen Flora · Best Price
+                  </span>
+                  <span className="text-lg sm:text-xl font-bold tabular-nums text-[#1E1B18] leading-snug block">
+                    {summaryStats.lowestFare.toFixed(2)} LEI
+                  </span>
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 p-3.5 rounded-xl flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500 text-white font-bold">
-                  <Zap className="w-4 h-4" />
-                </div>
+              <div data-testid="stat-fastest-transit" className="flex items-center gap-3 px-4 py-1.5 sm:justify-center">
+                <Zap className="w-4 h-4 text-blue-700/70 shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wide block">Fastest Transit</span>
-                  <span className="text-lg font-black text-blue-700">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#78716C] leading-tight block">
+                    Queen Vira · Fastest Transit
+                  </span>
+                  <span className="text-lg sm:text-xl font-bold tabular-nums text-[#1E1B18] leading-snug block">
                     {Math.floor(summaryStats.fastestDuration / 60)}h {summaryStats.fastestDuration % 60}m
                   </span>
                 </div>
               </div>
 
-              <div className="bg-emerald-50 border border-emerald-200 p-3.5 rounded-xl flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-600 text-white font-bold">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
+              <div data-testid="stat-transfer-shield" className="flex items-center gap-3 px-4 py-1.5 sm:justify-center">
+                <ShieldCheck className="w-4 h-4 text-emerald-700/75 shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-emerald-900 uppercase tracking-wide block">Transfer Shield</span>
-                  <span className="text-lg font-black text-emerald-700">{summaryStats.highestShield}% Reliable</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#78716C] leading-tight block">
+                    Queen Meli · Transfer Shield
+                  </span>
+                  <span className="text-lg sm:text-xl font-bold tabular-nums text-[#1E1B18] leading-snug block">
+                    {summaryStats.highestShield}% Reliable
+                  </span>
                 </div>
               </div>
             </div>
@@ -608,9 +692,12 @@ function TripsContent() {
                     key={plan.id}
                     plan={plan}
                     isBooked={isBooked}
+                    isInItinerary={isBooked}
                     isHighlighted={isHighlighted}
                     highlightLabel="★ Selected from Home"
-                    onBookTrip={handleBookTrip}
+                    onBookTrip={handleAddToItinerary}
+                    onAddToItinerary={handleAddToItinerary}
+                    onInItineraryClick={handleInItineraryClick}
                     onRemoveTrip={handleRemoveTrip}
                   />
                 );
@@ -673,6 +760,7 @@ function TripsContent() {
           setIsDebugLoadingForced(false);
         }}
       />
+      </div>
     </div>
   );
 }

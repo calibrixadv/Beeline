@@ -1,16 +1,21 @@
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import pytest
 from httpx import AsyncClient
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
 async def test_create_and_list_bookings(client: AsyncClient):
-    # 1. Signup user
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    future_date = (datetime.now(ZoneInfo("Europe/Bucharest")).date() + timedelta(days=7)).isoformat()
+
+    # 1. Signup and verify user
+    signup_data = await signup_and_verify(client, {
         "email": "booking.tester@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Andrei Popescu"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # 2. Create Booking
@@ -19,7 +24,7 @@ async def test_create_and_list_bookings(client: AsyncClient):
             {
                 "journeyId": "tr-ir-1572-20261021",
                 "selectedClass": "STANDARD",
-                "travelDate": "2026-10-21",
+                "travelDate": future_date,
                 "seatPreferences": {
                     "position": "WINDOW",
                     "quietZone": False
@@ -84,13 +89,14 @@ async def test_create_and_list_bookings(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_booking_idempotency_key_protocol(client: AsyncClient):
-    # 1. Signup user
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # 1. Signup and verify user
+    signup_data = await signup_and_verify(client, {
         "email": "idempotent.traveler@beeline.io",
         "password": "SecurePassword123!"
     })
-    token = signup_res.json()["access_token"]
-    idempotency_key = "book:v1:usr-idem:trip-1572:2026-10-21"
+    token = signup_data["access_token"]
+    future_date = (datetime.now(ZoneInfo("Europe/Bucharest")).date() + timedelta(days=7)).isoformat()
+    idempotency_key = f"book:v1:usr-idem:trip-1572:{future_date}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Idempotency-Key": idempotency_key
@@ -101,7 +107,7 @@ async def test_booking_idempotency_key_protocol(client: AsyncClient):
             {
                 "journeyId": "tr-ir-1572-20261021",
                 "selectedClass": "FIRST",
-                "travelDate": "2026-10-21",
+                "travelDate": future_date,
                 "passengers": [{"fullName": "Maria Ionescu", "passengerType": "ADULT"}]
             }
         ],
@@ -128,7 +134,7 @@ async def test_booking_idempotency_key_protocol(client: AsyncClient):
             {
                 "journeyId": "tr-ir-1572-20261021",
                 "selectedClass": "STANDARD",  # modified class!
-                "travelDate": "2026-10-21",
+                "travelDate": future_date,
                 "passengers": [{"fullName": "Different Person", "passengerType": "ADULT"}]
             }
         ],
@@ -145,12 +151,12 @@ async def test_booking_validation_and_auth_errors(client: AsyncClient):
     res_unauth = await client.post("/api/v1/bookings", json={"items": []})
     assert res_unauth.status_code == 401
 
-    # Signup
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # Signup and verify
+    signup_data = await signup_and_verify(client, {
         "email": "validation.user@beeline.io",
         "password": "SecurePassword123!"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Empty items
@@ -160,3 +166,97 @@ async def test_booking_validation_and_auth_errors(client: AsyncClient):
     # Cancel non-existent booking
     res_del_404 = await client.delete("/api/v1/bookings/non-existent-bkg", headers=headers)
     assert res_del_404.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_booking_rejected_for_past_departure_time(client: AsyncClient):
+    signup_data = await signup_and_verify(client, {
+        "email": "past.dep@beeline.io",
+        "password": "SecurePassword123!"
+    })
+    token = signup_data["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    tz_ro = ZoneInfo("Europe/Bucharest")
+    now_ro = datetime.now(tz_ro)
+    past_dep = (now_ro - timedelta(minutes=10)).isoformat()
+    today_str = now_ro.date().isoformat()
+
+    payload = {
+        "items": [
+            {
+                "journeyId": "tr-ir-1572-20261021",
+                "selectedClass": "STANDARD",
+                "travelDate": today_str,
+                "departureTime": past_dep,
+                "passengers": [{"fullName": "Test Past Dep", "passengerType": "ADULT"}]
+            }
+        ],
+        "contactEmail": "past.dep@beeline.io"
+    }
+    res = await client.post("/api/v1/bookings", json=payload, headers=headers)
+    assert res.status_code == 400
+    body = res.json()
+    err_code = body.get("code") or (body.get("detail", {}).get("code") if isinstance(body.get("detail"), dict) else None) or (body.get("error", {}).get("code") if isinstance(body.get("error"), dict) else None)
+    assert err_code == "TRAIN_ALREADY_DEPARTED"
+
+
+@pytest.mark.asyncio
+async def test_booking_rejected_for_past_travel_date(client: AsyncClient):
+    signup_data = await signup_and_verify(client, {
+        "email": "past.date@beeline.io",
+        "password": "SecurePassword123!"
+    })
+    token = signup_data["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    tz_ro = ZoneInfo("Europe/Bucharest")
+    yesterday = (datetime.now(tz_ro).date() - timedelta(days=1)).isoformat()
+
+    payload = {
+        "items": [
+            {
+                "journeyId": "tr-ir-1572-20261021",
+                "selectedClass": "STANDARD",
+                "travelDate": yesterday,
+                "passengers": [{"fullName": "Test Past Date", "passengerType": "ADULT"}]
+            }
+        ],
+        "contactEmail": "past.date@beeline.io"
+    }
+    res = await client.post("/api/v1/bookings", json=payload, headers=headers)
+    assert res.status_code == 400
+    body = res.json()
+    err_code = body.get("code") or (body.get("detail", {}).get("code") if isinstance(body.get("detail"), dict) else None) or (body.get("error", {}).get("code") if isinstance(body.get("error"), dict) else None)
+    assert err_code == "TRAIN_ALREADY_DEPARTED"
+
+
+@pytest.mark.asyncio
+async def test_booking_succeeds_for_future_departure_time(client: AsyncClient):
+    signup_data = await signup_and_verify(client, {
+        "email": "future.dep@beeline.io",
+        "password": "SecurePassword123!"
+    })
+    token = signup_data["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    tz_ro = ZoneInfo("Europe/Bucharest")
+    now_ro = datetime.now(tz_ro)
+    future_dep = (now_ro + timedelta(hours=2)).isoformat()
+    future_date = (now_ro + timedelta(hours=2)).date().isoformat()
+
+    payload = {
+        "items": [
+            {
+                "journeyId": "tr-ir-1572-20261021",
+                "selectedClass": "STANDARD",
+                "travelDate": future_date,
+                "departureTime": future_dep,
+                "passengers": [{"fullName": "Test Future Dep", "passengerType": "ADULT"}]
+            }
+        ],
+        "contactEmail": "future.dep@beeline.io"
+    }
+    res = await client.post("/api/v1/bookings", json=payload, headers=headers)
+    assert res.status_code == 201
+    assert res.json()["status"] == "CONFIRMED"

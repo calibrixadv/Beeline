@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.services.auth_service import recovery_shield
 from app.services.email_service import EmailCircuitBreaker, TokenBucketRateLimiter, email_service
+from tests.conftest import signup_and_verify, verify_user_for_test
 
 
 @pytest.fixture(autouse=True)
@@ -25,10 +26,10 @@ async def test_signup_generates_3_recovery_codes_and_stores_only_hashes(
     db_session: AsyncSession
 ):
     """
-    Test 1: Signup generates exactly 3 recovery codes in the response,
-    dispatches the welcome email to EmailService dev sink, and stores
-    only obfuscated hashes in mfa_credentials.backup_codes (assert plaintext
-    codes do NOT appear in the raw DB column).
+    Test 1: Signup requires email verification; after verification, exactly 3 recovery
+    codes are returned in the verify response, safe welcome email is dispatched to dev sink,
+    and stores only obfuscated hashes in mfa_credentials.backup_codes (assert plaintext
+    codes do NOT appear in the raw DB column or email).
     """
     user_email = "honeybee.traveler@beeline.io"
     user_pw = "GoldenHoneyComb#2026!"
@@ -39,10 +40,14 @@ async def test_signup_generates_3_recovery_codes_and_stores_only_hashes(
         "full_name": "Maya Honeybee"
     })
     assert res.status_code == 201
-    data = res.json()
+    assert res.json().get("verification_required") is True
+    assert "recovery_codes" not in res.json()
+
+    # Verify email to activate account and receive recovery codes
+    verify_data = await verify_user_for_test(client, user_email)
 
     # 1. Exactly 3 recovery codes returned
-    recovery_codes: List[str] = data.get("recovery_codes")
+    recovery_codes: List[str] = verify_data.get("recovery_codes")
     assert recovery_codes is not None
     assert len(recovery_codes) == 3
 
@@ -51,19 +56,19 @@ async def test_signup_generates_3_recovery_codes_and_stores_only_hashes(
     for code in recovery_codes:
         assert code_pattern.match(code), f"Code {code} does not match BEE-XXXX-XXXX"
 
-    # 2. Email dispatched to EmailService dev sink
+    # 2. Email dispatched to EmailService dev sink - safe welcome without plaintext codes
     last_email = email_service.get_last_email_for(user_email)
     assert last_email is not None
-    assert "Recovery Codes" in last_email.subject
+    assert "Welcome" in last_email.subject
     assert "Maya Honeybee" in last_email.html_body
     for code in recovery_codes:
-        assert code in last_email.html_body
-        assert code in last_email.text_body
+        assert code not in last_email.html_body
+        assert code not in last_email.text_body
 
     # 3. Raw database inspection: assert plaintext codes NEVER appear in raw database column
     db_result = await db_session.execute(
         text("SELECT backup_codes_hash, backup_codes FROM mfa_credentials WHERE user_id = :uid"),
-        {"uid": data["user"]["id"]}
+        {"uid": verify_data["user"]["id"]}
     )
     row = db_result.fetchone()
     assert row is not None
@@ -90,14 +95,13 @@ async def test_recovery_login_consumption_and_session_cookies(client: AsyncClien
     user_email = "lostphone.traveler@beeline.io"
     user_pw = "VoyageExplorer#2026!"
 
-    # Signup
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # Signup & verify
+    verify_data = await signup_and_verify(client, {
         "email": user_email,
         "password": user_pw,
         "full_name": "Lost Phone Traveler"
     })
-    assert signup_res.status_code == 201
-    codes = signup_res.json()["recovery_codes"]
+    codes = verify_data["recovery_codes"]
     code_1, code_2, code_3 = codes[0], codes[1], codes[2]
 
     # Use Code 1 to log in
@@ -144,13 +148,12 @@ async def test_anti_brute_force_shield_locks_out_after_3_failures(client: AsyncC
     # Clear shield memory state for this test
     await recovery_shield.clear_failures(user_email)
 
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    verify_data = await signup_and_verify(client, {
         "email": user_email,
         "password": user_pw,
         "full_name": "Target Account"
     })
-    assert signup_res.status_code == 201
-    valid_code = signup_res.json()["recovery_codes"][0]
+    valid_code = verify_data["recovery_codes"][0]
 
     # Attempt 1: WRONG CODE -> 401
     att1 = await client.post("/api/v1/auth/recovery-login", json={
@@ -224,6 +227,7 @@ async def test_unified_password_verifier_rejects_breached_and_weak_passwords(cli
         "password": "SafePass#2026!"
     })
     assert signup_res.status_code == 201
+    await verify_user_for_test(client, target_email)
 
     # Request reset token
     forgot_res = await client.post("/api/v1/auth/forgot-password", json={
@@ -265,15 +269,14 @@ async def test_full_forgot_password_reset_flow_with_email_and_session_revocation
     new_pw = "BrandNewSecureKey#9999!"
 
     # 1. Signup and establish initial session with cookies
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    verify_data = await signup_and_verify(client, {
         "email": user_email,
         "password": old_pw,
         "full_name": "Lifecycle Traveler"
     })
-    assert signup_res.status_code == 201
-    user_id = signup_res.json()["user"]["id"]
-    auth_token = signup_res.cookies["beeline_auth_token"]
-    proof = signup_res.cookies.get("beeline_device_proof", "")
+    user_id = verify_data["user"]["id"]
+    auth_token = client.cookies["beeline_auth_token"]
+    proof = client.cookies.get("beeline_device_proof", "")
 
     # Verify session is currently active
     sess_res = await client.get("/api/v1/users/me/sessions")

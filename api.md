@@ -538,6 +538,56 @@ GET /api/v1/users/me
 
 ---
 
+### 5.17b User Travel Statistics (vs. Car)
+```http
+GET /api/v1/users/me/travel-stats
+```
+**Auth:** Bearer Token. Computes verified journey savings vs. driving by car based on persisted account trips (confirmed bookings and unique saved routes). Returns strict zeros when 0 trips are present.
+
+- **Response `200 OK`:**
+```json
+{
+  "totalTrips": 3,
+  "moneySavedLei": 182.45,
+  "minutesSaved": 35,
+  "totalDistanceKm": 636.2,
+  "co2SavedKg": 86.5,
+  "comparisonBaseline": "CAR",
+  "favoriteRoute": {
+    "origin": "Galați",
+    "destination": "București Nord",
+    "tripCount": 2,
+    "totalDistanceKm": 465.8,
+    "moneySavedLei": 177.84,
+    "minutesSaved": 20,
+    "topOperator": "CFR Călători"
+  },
+  "topRoutes": [
+    {
+      "origin": "Galați",
+      "destination": "București Nord",
+      "tripCount": 2,
+      "totalDistanceKm": 465.8,
+      "moneySavedLei": 177.84,
+      "minutesSaved": 20,
+      "topOperator": "CFR Călători"
+    },
+    {
+      "origin": "București Nord",
+      "destination": "Brașov",
+      "tripCount": 1,
+      "totalDistanceKm": 170.4,
+      "moneySavedLei": 4.61,
+      "minutesSaved": 15,
+      "topOperator": "CFR Călători"
+    }
+  ]
+}
+```
+
+
+---
+
 ### 5.18 Self-Service Profile Update
 ```http
 PATCH /api/v1/users/me
@@ -907,35 +957,42 @@ Returns high-frequency Romanian transit corridors for quick one-tap search on th
 POST /api/v1/routes/saved
 Headers: Idempotency-Key: <key>
 ```
-**Auth:** Bearer Token. Saves an entire itinerary into traveler's persistent wallet.
+**Auth:** Bearer Token. Saves an entire itinerary into traveler's persistent wallet with per-trip alert preferences.
 
 - **Request Body:**
 ```json
 {
-  "plan": { "id": "itinerary-gl-micro19-buc-unirii-001", "..." : "..." }
+  "plan": { "id": "itinerary-gl-micro19-buc-unirii-001", "..." : "..." },
+  "notes": "Weekly commuter trip",
+  "alertMuted": false,
+  "alertLeadMinutes": 30
 }
 ```
-- **Response `201 Created`:** Returns saved route record with server ID.
+- **Response `201 Created`:** Returns saved route record with server ID, `alertMuted` (`false`), and `alertLeadMinutes` (`30`).
 
 ### 6.4 List Saved Itineraries
 ```http
 GET /api/v1/routes/saved?page=1&pageSize=20
 ```
-**Auth:** Bearer Token. Returns paginated list of saved itineraries for the current user.
+**Auth:** Bearer Token. Returns paginated list of saved itineraries for the current user, each including `alertMuted` and `alertLeadMinutes` (5, 10, 30, or 60 min).
 
 ### 6.5 Update Saved Itinerary
 ```http
 PATCH /api/v1/routes/saved/{routeId}
 ```
-**Auth:** Bearer Token. Updates custom label, notes, origin/destination names, or plan payload.
+**Auth:** Bearer Token. Updates custom label, notes, origin/destination names, plan payload, or per-trip alert preferences (`alertMuted` and `alertLeadMinutes` ∈ {5, 10, 30, 60}).
 - **Request Body:**
 ```json
 {
   "origin_name": "Galați Centru Acasă",
-  "destination_name": "București Birou Unirii"
+  "destination_name": "București Birou Unirii",
+  "alertMuted": false,
+  "alertLeadMinutes": 10
 }
 ```
 - **Response `200 OK`:** Returns updated `SavedRouteResponse`.
+- **Response `422 Unprocessable Entity`:** If `alertLeadMinutes` is not one of `5`, `10`, `30`, `60`.
+- **Response `403 Forbidden` / `404 Not Found`:** If route belongs to another user or does not exist.
 
 ### 6.6 Delete Saved Itinerary
 ```http
@@ -1398,6 +1455,7 @@ Archives or removes a resolved transit disruption incident.
 | **MFA** | `/auth/mfa/status` | `GET` | ✅ Implemented | MFA enrollment & recovery codes query |
 | **MFA** | `/auth/mfa/disable` | `POST` | ✅ Implemented | `apiClient.disableMFA()` |
 | **Users** | `/users/me` | `GET` | ✅ Implemented | `AuthContext.refreshUser()` |
+| **Users** | `/users/me/travel-stats` | `GET` | ✅ Implemented | Traveler journey savings vs. driving |
 | **Users** | `/users/me` | `PATCH` | ✅ Implemented | Profile settings modal (409 conflict checks) |
 | **Users** | `/users/me/password` | `POST` | ✅ Implemented | Password change & revoke other sessions |
 | **Users** | `/users/me/preferences` | `GET` | ✅ Implemented | Travel & notification preferences query |

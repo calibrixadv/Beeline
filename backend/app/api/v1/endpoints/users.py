@@ -23,12 +23,14 @@ from app.schemas.user import (
     UserProfile,
     UserPreferencesSchema,
     UserPreferencesUpdate,
+    UserTravelStatsResponse,
     UserUpdate,
 )
 from app.services.account_lifecycle_service import AccountLifecycleService
 from app.services.auth_service import AuthService, verify_password_policy_and_breach
 from app.services.email_service import email_service
 from app.services.mfa_service import mfa_service
+from app.services.travel_stats_service import travel_stats_service
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,16 @@ async def get_me(
 ) -> Any:
     """Retrieve full profile details of the currently authenticated user."""
     return UserProfile.model_validate(current_user)
+
+
+@router.get("/me/travel-stats", response_model=UserTravelStatsResponse)
+async def get_my_travel_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """Retrieve verified traveler journey statistics and honest savings vs driving by car."""
+    return await travel_stats_service.get_user_travel_stats(db, current_user)
+
 
 
 @router.patch("/me", response_model=UserProfile)

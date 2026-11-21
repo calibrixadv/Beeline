@@ -89,3 +89,47 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield c
 
     app.dependency_overrides.clear()
+
+
+from app.services.email_service import email_service
+
+
+async def verify_user_for_test(
+    client: AsyncClient,
+    email: str,
+    remember_me: bool = False,
+    device_info: str = "Web Browser",
+    headers: dict = None,
+) -> dict:
+    last_email = email_service.get_last_email_for(email)
+    assert last_email is not None, f"No verification email found for {email}"
+    otp_code = last_email.context.get("otp_code")
+    assert otp_code is not None, f"No OTP code found in context for {email}"
+    verify_res = await client.post(
+        "/api/v1/auth/verify-email",
+        json={
+            "email": email,
+            "code": otp_code,
+            "remember_me": remember_me,
+            "device_info": device_info,
+        },
+        headers=headers,
+    )
+    assert verify_res.status_code == 200, f"Email verification failed: {verify_res.text}"
+    return verify_res.json()
+
+
+async def signup_and_verify(
+    client: AsyncClient,
+    payload: dict,
+    headers: dict = None,
+) -> dict:
+    signup_res = await client.post("/api/v1/auth/signup", json=payload, headers=headers)
+    assert signup_res.status_code == 201, f"Signup failed: {signup_res.text}"
+    return await verify_user_for_test(
+        client=client,
+        email=payload["email"],
+        remember_me=payload.get("remember_me", False),
+        device_info=payload.get("device_info", "Web Browser"),
+        headers=headers,
+    )

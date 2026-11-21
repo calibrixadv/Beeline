@@ -3,12 +3,66 @@ export interface UserProfile {
   email?: string | null;
   username?: string | null;
   full_name?: string | null;
+  phone_number?: string | null;
+  avatar_url?: string | null;
   is_guest: boolean;
   is_active: boolean;
   mfa_enabled: boolean;
+  email_verified?: boolean;
+  email_verified_at?: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export interface RouteCorridorSummary {
+  origin: string;
+  destination: string;
+  tripCount: number;
+  totalDistanceKm: number;
+  moneySavedLei: number;
+  minutesSaved: number;
+  topOperator: string;
+}
+
+export interface UserTravelStats {
+  totalTrips: number;
+  moneySavedLei: number;
+  minutesSaved: number;
+  totalDistanceKm: number;
+  co2SavedKg: number;
+  comparisonBaseline: string;
+  favoriteRoute: RouteCorridorSummary | null;
+  topRoutes: RouteCorridorSummary[];
+}
+
+export interface TicketResponse {
+  ticketNumber: string;
+  trainNumber: string;
+  carNumber: string;
+  seatNumber: string;
+  classType: string;
+  passengerName: string;
+  qrCodePayload: string;
+  departureTime: string;
+  arrivalTime: string;
+  origin: string;
+  destination: string;
+}
+
+export interface BookingResponse {
+  bookingId: string;
+  bookingReference: string;
+  status: 'CONFIRMED' | 'CANCELLED' | 'PENDING' | 'REFUNDED';
+  createdAt: string;
+  totalAmountLei: number;
+  currency: string;
+  passengerCount: number;
+  seatPreference?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  tickets: TicketResponse[];
+}
+
 
 export interface TokenResponse {
   access_token: string;
@@ -16,6 +70,26 @@ export interface TokenResponse {
   token_type: string;
   expires_in: number;
   user: UserProfile;
+  recovery_codes?: string[];
+}
+
+export interface SignUpResponse {
+  verification_required: boolean;
+  email: string;
+  message: string;
+  expires_in_minutes: number;
+}
+
+export interface VerifyEmailRequest {
+  email?: string;
+  code?: string;
+  token?: string;
+  remember_me?: boolean;
+}
+
+export interface ResendVerificationResponse {
+  message: string;
+  expires_in_minutes?: number;
 }
 
 export interface MFALoginChallengeResponse {
@@ -51,6 +125,8 @@ export interface SavedRouteResponse {
   destination_name: string;
   plan: any;
   created_at: string;
+  alertMuted?: boolean;
+  alertLeadMinutes?: 5 | 10 | 30 | 60;
 }
 
 export interface BreachCheckResult {

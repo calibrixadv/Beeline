@@ -232,7 +232,7 @@ describe('Next.js UI Components', () => {
     expect(handleChange).toHaveBeenCalled();
   });
 
-  it('renders BookingTripCard with price and shield indicators', () => {
+  it('renders BookingTripCard with price and shield indicators and non-green submit CTA', () => {
     const trips = generateTripsForCorridor('Galați', 'București Nord');
     const plan = trips[0];
     const handleBook = jest.fn();
@@ -241,12 +241,69 @@ describe('Next.js UI Components', () => {
     expect(screen.getByText(/LEI/i)).toBeInTheDocument();
     expect(screen.getByText(/Shield:/i)).toBeInTheDocument();
 
-    const bookBtn = screen.getByRole('button', { name: /book trip/i });
-    fireEvent.click(bookBtn);
+    const addBtn = screen.getByRole('button', { name: /add to itinerary/i });
+    expect(addBtn).toHaveClass('bg-amber-500');
+    expect(addBtn).not.toHaveClass('bg-emerald-600');
+    expect(addBtn).not.toHaveClass('bg-green-600');
+
+    fireEvent.click(addBtn);
     expect(handleBook).toHaveBeenCalledWith(plan);
   });
 
-  it('renders TripFilterBar and handles filter changes', () => {
+  it('renders BookingTripCard with direct InfoFer link when in itinerary', () => {
+    const trips = generateTripsForCorridor('Galați', 'București Nord');
+    const plan = trips[0];
+
+    render(<BookingTripCard plan={plan} isInItinerary={true} />);
+    const link = screen.getByTestId('open-official-ticket-link');
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveTextContent(/vezi trenul pe infofer/i);
+    expect(link.getAttribute('href')).toMatch(/https:\/\/mersultrenurilor\.infofer\.ro\/ro-RO\/Tren\/\d+\?Date=/);
+  });
+
+  it('renders BookingTripCard with per-leg InfoFer links for multi-leg transfer routes', () => {
+    const multiLegPlan = {
+      ...generateTripsForCorridor('Galați', 'București Nord')[0],
+      transfersCount: 1,
+      legs: [
+        {
+          id: 'leg-1',
+          legIndex: 0,
+          transportType: 'TRAIN' as const,
+          names: { lineCode: 'IR 1732', originName: 'Galați', originCity: 'Galați', destinationName: 'Ploiești Sud', destinationCity: 'Ploiești', operatorName: 'CFR Călători' },
+          coords: { originCoords: { latitude: 0, longitude: 0 }, destinationCoords: { latitude: 0, longitude: 0 }, intermediateStops: [], geometry: { type: 'LineString' as const, coordinates: [] } },
+          timings: { scheduledDeparture: '2026-11-21T06:00:00Z', scheduledArrival: '2026-11-21T09:00:00Z', estimatedDeparture: '2026-11-21T06:00:00Z', estimatedArrival: '2026-11-21T09:00:00Z', durationMinutes: 180, delayMinutes: 0, isRealtime: false },
+          risk: { legRiskScore: 10, historicalPunctualityPercent: 95, isShieldedBuffer: true, disruptions: [] },
+          fare: { amount: 50, currency: 'RON' as const, ticketCategory: 'RAIL_INTERREGIO' as const },
+          amenities: { items: [], crowdingLevel: 'LOW' as const, stepFreeAccess: true },
+          instructions: { leadText: 'Board IR 1732' },
+        },
+        {
+          id: 'leg-2',
+          legIndex: 1,
+          transportType: 'TRAIN' as const,
+          names: { lineCode: 'R-E 10061', originName: 'Ploiești Sud', originCity: 'Ploiești', destinationName: 'Brașov', destinationCity: 'Brașov', operatorName: 'Regio Călători' },
+          coords: { originCoords: { latitude: 0, longitude: 0 }, destinationCoords: { latitude: 0, longitude: 0 }, intermediateStops: [], geometry: { type: 'LineString' as const, coordinates: [] } },
+          timings: { scheduledDeparture: '2026-11-21T09:30:00Z', scheduledArrival: '2026-11-21T11:30:00Z', estimatedDeparture: '2026-11-21T09:30:00Z', estimatedArrival: '2026-11-21T11:30:00Z', durationMinutes: 120, delayMinutes: 0, isRealtime: false },
+          risk: { legRiskScore: 10, historicalPunctualityPercent: 95, isShieldedBuffer: true, disruptions: [] },
+          fare: { amount: 30, currency: 'RON' as const, ticketCategory: 'RAIL_REGIO' as const },
+          amenities: { items: [], crowdingLevel: 'LOW' as const, stepFreeAccess: true },
+          instructions: { leadText: 'Board R-E 10061' },
+        },
+      ],
+    };
+
+    render(<BookingTripCard plan={multiLegPlan} isInItinerary={true} />);
+    expect(screen.getByTestId('multileg-infofer-links')).toBeInTheDocument();
+    const leg0 = screen.getByTestId('open-official-ticket-link-leg-0');
+    const leg1 = screen.getByTestId('open-official-ticket-link-leg-1');
+    expect(leg0).toHaveTextContent('InfoFer: IR 1732');
+    expect(leg0.getAttribute('href')).toContain('/Tren/1732?Date=');
+    expect(leg1).toHaveTextContent('InfoFer: R-E 10061');
+    expect(leg1.getAttribute('href')).toContain('/Tren/10061?Date=');
+  });
+
+  it('renders TripFilterBar floating islands and handles primary filter changes', () => {
     const handleChange = jest.fn();
     const handleReset = jest.fn();
 
@@ -259,7 +316,156 @@ describe('Next.js UI Components', () => {
       />
     );
 
-    expect(screen.getByText('Filters & Sorting')).toBeInTheDocument();
+    // Primary Floating Row islands
+    expect(screen.getByRole('button', { name: /^All Trips$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Queen Meli/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Queen Vira/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Queen Flora/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Sort trips by/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Max transfers/i)).toBeInTheDocument();
+
+    const toggleBtn = screen.getByTestId('toggle-more-filters');
+    expect(toggleBtn).toBeInTheDocument();
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
+
+    // Clicking a primary pillar triggers onChange
+    fireEvent.click(screen.getByRole('button', { name: /Queen Vira/i }));
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ pillar: 'FASTEST' })
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Queen Meli/i }));
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ pillar: 'MOST_RELIABLE' })
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Queen Flora/i }));
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ pillar: 'BEST_VALUE' })
+    );
+  });
+
+  it('renders max transfers selector with all required options and handles changes', () => {
+    const handleChange = jest.fn();
+
+    render(
+      <TripFilterBar
+        filters={DEFAULT_TRIP_FILTERS}
+        onChange={handleChange}
+        activeCount={0}
+      />
+    );
+
+    const selector = screen.getByLabelText(/Max transfers/i);
+    expect(selector).toBeInTheDocument();
+    expect(screen.getByTestId('max-transfers-select')).toBeInTheDocument();
+
+    // Verify all 5 required transfer options exist
+    expect(screen.getByRole('option', { name: /Any/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /0 \(Direct only\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Max 1 transfer/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Max 2 transfers/i })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Max 3 transfers/i })).toBeInTheDocument();
+
+    // Select 0 (Direct only)
+    fireEvent.change(selector, { target: { value: '0' } });
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTransfers: 0 })
+    );
+
+    // Select Max 1 transfer
+    fireEvent.change(selector, { target: { value: '1' } });
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTransfers: 1 })
+    );
+
+    // Select Max 2 transfers
+    fireEvent.change(selector, { target: { value: '2' } });
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTransfers: 2 })
+    );
+
+    // Select Max 3 transfers
+    fireEvent.change(selector, { target: { value: '3' } });
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTransfers: 3 })
+    );
+
+    // Select Any / All (resets to undefined)
+    fireEvent.change(selector, { target: { value: 'ANY' } });
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTransfers: undefined })
+    );
+  });
+
+  it('controls the secondary filters drawer and handles operator/budget filters with reset', () => {
+    const handleChange = jest.fn();
+
+    const { rerender } = render(
+      <TripFilterBar
+        filters={DEFAULT_TRIP_FILTERS}
+        onChange={handleChange}
+        activeCount={0}
+      />
+    );
+
+    // Secondary panel is hidden by default
+    expect(screen.queryByTestId('more-filters-panel')).not.toBeInTheDocument();
+
+    // Toggle drawer open
+    const toggleBtn = screen.getByTestId('toggle-more-filters');
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
+
+    const panel = screen.getByTestId('more-filters-panel');
+    expect(panel).toBeInTheDocument();
+
+    // Secondary filters are visible inside the drawer
+    const cfrBtn = screen.getByRole('button', { name: 'CFR Călători' });
+    expect(cfrBtn).toBeInTheDocument();
+    fireEvent.click(cfrBtn);
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ providers: ['CFR Călători'] })
+    );
+
+    // Click budget filter
+    const budgetBtn = screen.getByRole('button', { name: '< 50 LEI' });
+    expect(budgetBtn).toBeInTheDocument();
+    fireEvent.click(budgetBtn);
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({ maxPriceLei: 50 })
+    );
+
+    // Rerender with active secondary filters: badge should show count
+    rerender(
+      <TripFilterBar
+        filters={{
+          ...DEFAULT_TRIP_FILTERS,
+          providers: ['CFR Călători'],
+          maxPriceLei: 50,
+        }}
+        onChange={handleChange}
+        activeCount={2}
+      />
+    );
+
+    const badge = screen.getByTestId('active-secondary-count-badge');
+    expect(badge).toHaveTextContent('2');
+
+    // Drawer is open, so Reset filters button is visible in the secondary island
+    const resetBtn = screen.getByTestId('reset-filters');
+    expect(resetBtn).toBeInTheDocument();
+    fireEvent.click(resetBtn);
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providers: [],
+        maxPriceLei: undefined,
+      })
+    );
+
+    // Collapse drawer
+    fireEvent.click(screen.getByTestId('toggle-more-filters'));
+    expect(screen.queryByTestId('more-filters-panel')).not.toBeInTheDocument();
   });
 
   it('renders BookingTripCard with ML delay pill and connection guarantee when isMlComputed is true', () => {
@@ -274,11 +480,20 @@ describe('Next.js UI Components', () => {
       },
     };
 
-    render(<BookingTripCard plan={planWithMl} />);
+    const { rerender } = render(<BookingTripCard plan={planWithMl} />);
     expect(screen.getByText(/⏱️ \+4m expected delay/i)).toBeInTheDocument();
-    expect(screen.getByText(/🛡️ 97% connection guarantee/i)).toBeInTheDocument();
+    // Direct route has transfersCount === 0
+    expect(screen.getByText(/Direct route/i)).toBeInTheDocument();
     // Rule-based Shield percentage is replaced by ML indicators
     expect(screen.queryByText(/Shield: \d+%/i)).not.toBeInTheDocument();
+
+    // Connecting route renders transfer chance
+    const connectingPlan = {
+      ...planWithMl,
+      transfersCount: 1,
+    };
+    rerender(<BookingTripCard plan={connectingPlan} />);
+    expect(screen.getByText(/🛡️ 97% transfer chance/i)).toBeInTheDocument();
   });
 
   it('renders BookingTripCard with On Time pill when expectedDelayMinutes is zero', () => {
@@ -295,7 +510,7 @@ describe('Next.js UI Components', () => {
 
     render(<BookingTripCard plan={planWithMl} />);
     expect(screen.getByText(/✅ On Time/i)).toBeInTheDocument();
-    expect(screen.getByText(/🛡️ 99% connection guarantee/i)).toBeInTheDocument();
+    expect(screen.getByText(/Direct route/i)).toBeInTheDocument();
   });
 
   it('renders RouteFinderCard preview plans with ML badges and handles selection', () => {

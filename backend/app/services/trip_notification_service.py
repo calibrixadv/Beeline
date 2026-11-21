@@ -14,6 +14,7 @@ from app.core.database import AsyncSessionLocal
 from app.core.redis import get_redis
 from app.models.booking import Booking, Ticket
 from app.models.route import SavedRoute
+from app.models.transit import Train
 from app.models.user import User
 from app.services.email_service import email_service
 
@@ -129,6 +130,70 @@ async def clear_dedup_cache() -> None:
         pass
 
 
+async def lookup_train_delay(
+    train_number: str,
+    travel_date: Optional[str] = None,
+    db: Optional[AsyncSession] = None,
+    plan_data: Optional[Dict[str, Any]] = None,
+) -> int:
+    """
+    Retrieves the current live delay in minutes for a given train journey using:
+    1. plan_data / leg risk metrics
+    2. Database Train status / delay_minutes records
+    3. In-memory timetable datasets (TRAINS_DATA)
+    4. InfoFer telematics adapter snapshots
+    """
+    delay = 0
+
+    if plan_data:
+        delay = max(delay, int(plan_data.get("delayMinutes") or plan_data.get("delay_minutes") or 0))
+        for leg in plan_data.get("legs", []):
+            delay = max(delay, int(leg.get("delayMinutes") or leg.get("delay_minutes") or 0))
+            risk_obj = leg.get("risk")
+            if isinstance(risk_obj, dict):
+                delay = max(delay, int(risk_obj.get("expectedDelayMinutes") or 0))
+
+    if db is not None and train_number:
+        clean_num = train_number.strip().upper()
+        digits = "".join(ch for ch in clean_num if ch.isdigit())
+        try:
+            from sqlalchemy import or_
+            conds = [Train.train_number == clean_num]
+            if digits:
+                conds.append(Train.train_number.like(f"%{digits}%"))
+            stmt = select(Train).where(or_(*conds))
+            res = await db.execute(stmt)
+            db_trains = res.scalars().all()
+            for db_t in db_trains:
+                if db_t.delay_minutes:
+                    delay = max(delay, int(db_t.delay_minutes))
+        except Exception as e:
+            logger.debug(f"DB train delay lookup exception: {e}")
+
+    if train_number:
+        try:
+            from app.services.train_service import TRAINS_DATA, matches_train_code
+            for t in TRAINS_DATA:
+                if matches_train_code(t.trainNumber, train_number):
+                    delay = max(delay, int(getattr(t, "delayMinutes", 0) or 0))
+        except Exception:
+            pass
+
+    if train_number and travel_date:
+        try:
+            from scraper.collectors.train_api import InfoFerLiveAdapter
+            adapter = InfoFerLiveAdapter.get_shared_instance()
+            rec = adapter.fetch_train_sync(train_number, travel_date[:10])
+            if rec and getattr(rec, "target_labels", None):
+                actual = getattr(rec.target_labels, "actual_delay_minutes", 0)
+                if actual:
+                    delay = max(delay, int(round(actual)))
+        except Exception:
+            pass
+
+    return delay
+
+
 class TripNotificationService:
     """
     Service responsible for querying upcoming passenger journeys (Bookings & SavedRoutes)
@@ -218,6 +283,12 @@ class TripNotificationService:
 
             for s_route in saved_routes:
                 stats["checked"] += 1
+
+                # If alert_muted is True: SKIP both departure reminder and live delay alert
+                if getattr(s_route, "alert_muted", False) is True:
+                    stats["skipped_muted"] = stats.get("skipped_muted", 0) + 1
+                    continue
+
                 try:
                     plan_data = json.loads(s_route.plan_data)
                 except Exception:
@@ -232,15 +303,27 @@ class TripNotificationService:
                 if not dep_dt:
                     continue
 
-                if now <= dep_dt <= window_end:
-                    mins_until = max(1, int((dep_dt - now).total_seconds() / 60))
-                    train_number = "IR 1572"
-                    if legs:
-                        train_number = legs[0].get("trainNumber") or legs[0].get("lineCode") or train_number
+                # Only evaluate active/upcoming trips (not journeys completed in the distant past)
+                if dep_dt < now - timedelta(minutes=15):
+                    continue
 
-                    trip_ref = f"saved_{s_route.id}_{train_number}"
-                    dedup_key = f"beeline:notif:sent:{user.id}:{trip_ref}:departure"
+                train_number = "IR 1572"
+                if legs:
+                    train_number = legs[0].get("trainNumber") or legs[0].get("lineCode") or train_number
+                elif plan_data.get("summary"):
+                    parts = plan_data["summary"].split("•")
+                    if parts:
+                        train_number = parts[0].strip()
 
+                lead_minutes = getattr(s_route, "alert_lead_minutes", 30) or 30
+
+                # 3a. Departure Reminder:
+                # Check if remaining minutes until departure satisfies 0 < minutes_until_departure <= saved_route.alert_lead_minutes
+                diff_seconds = (dep_dt - now).total_seconds()
+                mins_until = int(round(diff_seconds / 60.0)) if diff_seconds > 0 else 0
+
+                if 0 < mins_until <= lead_minutes:
+                    dedup_key = f"beeline:notif:sent:{user.id}:{s_route.id}:departure:{lead_minutes}"
                     if await _is_dedup_sent(dedup_key):
                         stats["skipped_duplicate"] += 1
                     else:
@@ -253,7 +336,7 @@ class TripNotificationService:
                                 origin=s_route.origin_name,
                                 destination=s_route.destination_name,
                                 departure_time=str(dep_val),
-                                minutes_until_departure=mins_until,
+                                minutes_until_departure=max(1, mins_until),
                                 platform=None,
                                 delay_minutes=0,
                                 transfer_note=transfer_note,
@@ -262,6 +345,36 @@ class TripNotificationService:
                             stats["sent"] += 1
                         except Exception as exc:
                             logger.error(f"Error sending departure reminder for saved route {s_route.id}: {exc}")
+
+                # 3b. Automatic Live Delay Check:
+                # Check current live delay for that trip's train number / date. If delay_minutes >= 10, dispatch live delay alert email.
+                travel_date = str(dep_val)[:10] if dep_val else None
+                delay_minutes = await lookup_train_delay(
+                    train_number=train_number,
+                    travel_date=travel_date,
+                    db=db,
+                    plan_data=plan_data
+                )
+
+                if delay_minutes >= 10:
+                    delay_dedup_key = f"beeline:notif:sent:{user.id}:{s_route.id}:delay:{delay_minutes}"
+                    if await _is_dedup_sent(delay_dedup_key):
+                        stats["skipped_duplicate"] += 1
+                    else:
+                        await _mark_dedup_sent(delay_dedup_key, ttl_seconds=86400)
+                        try:
+                            await email_service.send_train_delay_alert_email(
+                                to_email=user.email,
+                                train_number=train_number,
+                                origin=s_route.origin_name,
+                                destination=s_route.destination_name,
+                                departure_time=str(dep_val),
+                                delay_minutes=delay_minutes,
+                                user_name=user.full_name
+                            )
+                            stats["sent"] += 1
+                        except Exception as exc:
+                            logger.error(f"Error sending live delay alert for saved route {s_route.id}: {exc}")
 
         return stats
 

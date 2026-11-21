@@ -9,7 +9,6 @@ import {
   Train, 
   Briefcase, 
   LogOut, 
-  Sparkles,
   Menu,
   X
 } from 'lucide-react';
@@ -27,7 +26,7 @@ const NAV_LINKS = [
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const { trips } = useTrip();
-  const { user, logout, continueAsGuest } = useAuth();
+  const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -81,17 +80,24 @@ export const Navbar: React.FC = () => {
           <div className="hidden md:flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-2.5 bg-stone-800/90 border border-stone-700/60 rounded-full py-1.5 px-3">
-                <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs">
-                  {user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <div className="flex flex-col text-left text-xs">
-                  <span className="font-medium text-stone-200 truncate max-w-[110px]">
-                    {user.full_name || (user.email ? user.email.split('@')[0] : 'Traveler')}
-                  </span>
-                  <span className="text-[10px] text-amber-400 font-semibold">
-                    {user.is_guest ? 'Guest Pass' : 'Traveler'}
-                  </span>
-                </div>
+                <Link
+                  href="/profile"
+                  data-testid="navbar-profile-link"
+                  className="flex items-center gap-2.5 hover:opacity-85 transition-opacity"
+                  title="View Profile & Travel Savings"
+                >
+                  <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-xs">
+                    {user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="flex flex-col text-left text-xs">
+                    <span className="font-medium text-stone-200 truncate max-w-[110px]">
+                      {user.full_name || (user.email ? user.email.split('@')[0] : 'Traveler')}
+                    </span>
+                    <span className="text-[10px] text-amber-400 font-semibold">
+                      {user.is_guest ? 'Guest Pass' : 'Traveler'}
+                    </span>
+                  </div>
+                </Link>
                 <button
                   onClick={() => logout()}
                   title="Logout"
@@ -104,17 +110,10 @@ export const Navbar: React.FC = () => {
               <div className="flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="text-xs font-bold text-stone-200 hover:text-white px-3 py-2 rounded-xl hover:bg-stone-800 transition-colors"
+                  className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-bold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm"
                 >
                   Sign In
                 </Link>
-                <button
-                  onClick={() => continueAsGuest()}
-                  className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-stone-950 font-semibold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Explore as Guest</span>
-                </button>
               </div>
             )}
           </div>
@@ -160,7 +159,14 @@ export const Navbar: React.FC = () => {
           })}
           {user ? (
             <div className="pt-3 border-t border-stone-800 flex items-center justify-between text-xs">
-              <span className="text-stone-300 font-medium">Logged in as {user.email || 'Guest Traveler'}</span>
+              <Link
+                href="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className="text-stone-300 font-medium hover:text-amber-400 underline underline-offset-2"
+                data-testid="navbar-mobile-profile-link"
+              >
+                Profile: {user.full_name || user.email || 'Traveler'}
+              </Link>
               <button
                 onClick={() => {
                   logout();
@@ -176,19 +182,10 @@ export const Navbar: React.FC = () => {
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block text-center w-full border border-stone-700 hover:bg-stone-800 text-stone-200 font-semibold py-2 rounded-xl text-sm"
+                className="block text-center w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold py-2 rounded-xl text-sm transition-colors"
               >
                 Sign In / Register
               </Link>
-              <button
-                onClick={() => {
-                  continueAsGuest();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full bg-amber-500 text-stone-950 font-semibold py-2 rounded-xl text-sm"
-              >
-                Explore as Guest
-              </button>
             </div>
           )}
         </div>

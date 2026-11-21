@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import json
 import pytest
 from httpx import AsyncClient
@@ -13,6 +14,7 @@ from app.services.trip_notification_service import (
     clear_dedup_cache,
     trip_notification_service,
 )
+from tests.conftest import signup_and_verify, verify_user_for_test
 
 
 @pytest.mark.asyncio
@@ -32,13 +34,20 @@ async def test_auth_and_recovery_emails(client: AsyncClient):
     })
     assert signup_res.status_code == 201
 
+    verif_msg = email_service.get_last_email_for(signup_email)
+    assert verif_msg is not None
+    assert "Verify your Beeline account" in verif_msg.subject
+    assert "Honey Traveler" in verif_msg.html_body
+
+    # Verify email
+    await verify_user_for_test(client, signup_email)
+
     welcome_msg = email_service.get_last_email_for(signup_email)
     assert welcome_msg is not None
     assert "Welcome to Beeline" in welcome_msg.subject
-    assert "recovery codes" in welcome_msg.subject.lower()
     assert "The Cozy Hive" in welcome_msg.html_body
     assert "Honey Traveler" in welcome_msg.html_body
-    assert "recovery codes" in welcome_msg.text_body.lower()
+    assert "recovery codes" not in welcome_msg.subject.lower()
 
     # 2. Guest Convert
     guest_login_res = await client.post("/api/v1/auth/guest", json={"device_info": "Safari Test"})
@@ -99,21 +108,22 @@ async def test_booking_confirmation_and_cancellation_emails(client: AsyncClient,
 
     # 1. Register & login
     user_email = "booking.traveler@beeline.io"
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": user_email,
         "password": "SecureBooking2026!",
         "full_name": "Railway Explorer"
     })
-    assert signup_res.status_code == 201
-    auth_token = signup_res.json()["access_token"]
+    auth_token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {auth_token}"}
+
+    future_date = (datetime.now(ZoneInfo("Europe/Bucharest")).date() + timedelta(days=7)).isoformat()
 
     # 2. Create Booking
     booking_req = {
         "items": [
             {
                 "journeyId": "ir-1572-bv-buc",
-                "travelDate": "2026-03-29",
+                "travelDate": future_date,
                 "selectedClass": "FIRST",
                 "passengers": [
                     {
@@ -286,6 +296,7 @@ async def test_trip_notification_service_departure_scheduler(db_session: AsyncSe
         origin_name="București Nord",
         destination_name="Constanța",
         plan_data=json.dumps(saved_plan),
+        alert_lead_minutes=60,
         created_at=now
     )
     db_session.add(saved_a)
@@ -331,13 +342,12 @@ async def test_notifications_api_endpoints(client: AsyncClient, db_session: Asyn
 
     # 2. As a Registered user
     user_email = "test.pilot@beeline.io"
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": user_email,
         "password": "TestPilotPassword2026!",
         "full_name": "Test Pilot"
     })
-    assert signup_res.status_code == 201
-    user_token = signup_res.json()["access_token"]
+    user_token = signup_data["access_token"]
     user_headers = {"Authorization": f"Bearer {user_token}"}
 
     # Status endpoint
@@ -425,13 +435,12 @@ async def test_all_lifecycle_and_security_notification_templates(client: AsyncCl
     and delay alerts dispatch correctly across domain events.
     """
     user_email = "lifecycle.traveler@beeline.io"
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": user_email,
         "password": "SecureLifecycle2026!",
         "full_name": "Lifecycle Traveler"
     })
-    assert signup_res.status_code == 201
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # 1. Password change dispatch

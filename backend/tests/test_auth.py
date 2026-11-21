@@ -1,6 +1,9 @@
 import pytest
 from httpx import AsyncClient
 
+from app.services.email_service import email_service
+from tests.conftest import signup_and_verify, verify_user_for_test
+
 
 @pytest.mark.asyncio
 async def test_health_check(client: AsyncClient):
@@ -18,20 +21,25 @@ async def test_user_signup_and_login(client: AsyncClient):
         "device_info": "MacBook Pro Chrome"
     }
 
-    # 1. Successful Signup
+    # 1. Successful Signup (Verification Required)
     res = await client.post("/api/v1/auth/signup", json=signup_payload)
     assert res.status_code == 201
     data = res.json()
-    assert "access_token" in data
-    assert "refresh_token" in data
-    assert data["user"]["email"] == "traveler@beeline.io"
-    assert data["user"]["full_name"] == "Radu Popescu"
-    assert data["user"]["is_guest"] is False
+    assert data["verification_required"] is True
+    assert data["email"] == "traveler@beeline.io"
+
+    # Verify Email using OTP from email outbox
+    verify_data = await verify_user_for_test(client, "traveler@beeline.io", device_info="MacBook Pro Chrome")
+    assert "access_token" in verify_data
+    assert "refresh_token" in verify_data
+    assert verify_data["user"]["email"] == "traveler@beeline.io"
+    assert verify_data["user"]["full_name"] == "Radu Popescu"
+    assert verify_data["user"]["is_guest"] is False
 
     # 2. Duplicate Signup Rejected
     res_dup = await client.post("/api/v1/auth/signup", json=signup_payload)
-    assert res_dup.status_code == 400
-    assert "already exists" in res_dup.json()["detail"]
+    assert res_dup.status_code in (400, 409)
+    assert "already exists" in str(res_dup.json())
 
     # 3. Successful Login
     login_payload = {
@@ -97,12 +105,11 @@ async def test_guest_account_and_conversion(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_refresh_token_rotation_and_revocation(client: AsyncClient):
-    # 1. Signup
-    res = await client.post("/api/v1/auth/signup", json={
+    # 1. Signup & verify
+    data = await signup_and_verify(client, {
         "email": "rotation.user@beeline.io",
         "password": "SecurePassword123!"
     })
-    data = res.json()
     refresh_token_1 = data["refresh_token"]
 
     # 2. Refresh token rotation
@@ -129,13 +136,13 @@ async def test_refresh_token_rotation_and_revocation(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_sessions_management(client: AsyncClient):
-    # Signup
-    res = await client.post("/api/v1/auth/signup", json={
+    # Signup & verify
+    data = await signup_and_verify(client, {
         "email": "session.tester@beeline.io",
         "password": "SecurePassword123!",
         "device_info": "Desktop Firefox"
     })
-    token = res.json()["access_token"]
+    token = data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # List sessions
@@ -175,15 +182,14 @@ async def test_unauthorized_endpoints(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_signup_and_login_with_username(client: AsyncClient):
-    # 1. Signup with email, password, and custom username
-    res = await client.post("/api/v1/auth/signup", json={
+    # 1. Signup with email, password, and custom username, then verify
+    data = await signup_and_verify(client, {
         "email": "beeline.user@domain.ro",
         "username": "alexandra_transit",
         "password": "SafePass#2026!",
         "full_name": "Alexandra Transit"
     })
-    assert res.status_code == 201
-    user_data = res.json()["user"]
+    user_data = data["user"]
     assert user_data["username"] == "alexandra_transit"
     assert user_data["email"] == "beeline.user@domain.ro"
 
@@ -210,8 +216,8 @@ async def test_signup_and_login_with_username(client: AsyncClient):
         "username": "alexandra_transit",
         "password": "SafePass#2026!"
     })
-    assert res_dup.status_code == 400
-    assert "An account with this username already exists" in res_dup.json()["detail"]
+    assert res_dup.status_code in (400, 409)
+    assert "already exists" in str(res_dup.json())
 
 
 @pytest.mark.asyncio

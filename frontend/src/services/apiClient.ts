@@ -1,6 +1,9 @@
 import {
   UserProfile,
   TokenResponse,
+  SignUpResponse,
+  VerifyEmailRequest,
+  ResendVerificationResponse,
   MFALoginChallengeResponse,
   MFASetupResponse,
   SessionResponse,
@@ -11,6 +14,8 @@ import {
   TestDepartureAlertRequest,
   TestDepartureAlertResponse,
   UserPreferences,
+  UserTravelStats,
+  BookingResponse,
 } from '../types/auth';
 import { TransitRoutePlan, TransitRouteQuery, BookingWindow, CuratedPillar, TrainItineraryResponse } from '../types/routePlan';
 import { TrainJourney } from '../types/train';
@@ -35,6 +40,31 @@ export interface RailOperatorSummary {
   name: string;
   dailyTrains: number;
   routes: number;
+}
+
+export interface CreateBookingPassengerPayload {
+  fullName: string;
+  passengerType?: 'ADULT' | 'CHILD' | 'STUDENT' | 'SENIOR';
+  idNumber?: string;
+}
+
+export interface CreateBookingItemPayload {
+  journeyId: string;
+  selectedClass?: 'STANDARD' | 'FIRST' | 'BUSINESS' | 'SLEEPER';
+  travelDate: string;
+  departureTime?: string;
+  departure_time?: string;
+  seatPreferences?: {
+    position?: 'WINDOW' | 'AISLE' | 'MIDDLE';
+    quietZone?: boolean;
+  };
+  passengers: CreateBookingPassengerPayload[];
+}
+
+export interface CreateBookingPayload {
+  items: CreateBookingItemPayload[];
+  contactEmail: string;
+  contactPhone?: string;
 }
 
 export interface OperatorsSummaryResponse {
@@ -162,7 +192,7 @@ export class ApiClient {
   // AUTH METHODS
   // ==========================================
 
-  async signup(data: { email: string; password: string; username?: string; full_name?: string }): Promise<TokenResponse> {
+  async signup(data: { email: string; password: string; username?: string; full_name?: string }): Promise<SignUpResponse> {
     const res = await this.fetchWithAuth('/auth/signup', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -170,12 +200,47 @@ export class ApiClient {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Registration failed' }));
-      throw new Error(err.detail || 'Registration failed');
+      const msg = typeof err.detail === 'object' ? err.detail?.message : (err.detail || 'Registration failed');
+      throw new Error(msg);
+    }
+
+    return res.json();
+  }
+
+  async verifyEmail(data: VerifyEmailRequest): Promise<TokenResponse> {
+    const res = await this.fetchWithAuth('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }, false);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Verification failed' }));
+      const msg = typeof err.detail === 'object' ? err.detail?.message : (err.detail || 'Verification failed');
+      const errorObj = new Error(msg) as any;
+      errorObj.status = res.status;
+      throw errorObj;
     }
 
     const json: TokenResponse = await res.json();
     tokenStorage.setTokens(json.access_token, json.refresh_token);
     return json;
+  }
+
+  async resendVerification(email: string): Promise<ResendVerificationResponse> {
+    const res = await this.fetchWithAuth('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }, false);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Resend failed' }));
+      const msg = typeof err.detail === 'object' ? err.detail?.message : (err.detail || 'Could not resend verification code');
+      const errorObj = new Error(msg) as any;
+      errorObj.status = res.status;
+      throw errorObj;
+    }
+
+    return res.json();
   }
 
   async login(data: { email?: string; username?: string; password: string }): Promise<TokenResponse | MFALoginChallengeResponse> {
@@ -186,7 +251,12 @@ export class ApiClient {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Invalid credentials' }));
-      throw new Error(err.detail || 'Invalid credentials');
+      const msg = typeof err.detail === 'object' ? err.detail?.message : (err.detail || 'Invalid credentials');
+      const errorObj = new Error(msg) as any;
+      errorObj.status = res.status;
+      errorObj.code = err.code || err.error?.code || (typeof err.detail === 'object' ? err.detail?.code : undefined);
+      errorObj.email = err.email || (typeof err.detail === 'object' ? err.detail?.email : undefined);
+      throw errorObj;
     }
 
     const json = await res.json();
@@ -338,6 +408,90 @@ export class ApiClient {
   async getMe(): Promise<UserProfile> {
     const res = await this.fetchWithAuth('/users/me');
     if (!res.ok) throw new Error('Failed to fetch user profile');
+    return res.json();
+  }
+
+  async updateProfile(data: {
+    full_name?: string;
+    username?: string;
+    email?: string;
+    phone_number?: string;
+    avatar_url?: string;
+    preferences?: any;
+  }): Promise<UserProfile> {
+    const res = await this.fetchWithAuth('/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update profile' }));
+      const msg = typeof err.detail === 'object' ? err.detail?.message : (err.detail || 'Failed to update profile');
+      const errorObj = new Error(msg) as any;
+      errorObj.status = res.status;
+      throw errorObj;
+    }
+    return res.json();
+  }
+
+  async getTravelStats(): Promise<UserTravelStats> {
+    const res = await this.fetchWithAuth('/users/me/travel-stats');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch travel stats' }));
+      const msg = typeof err.detail === 'object' ? err.detail?.message : (err.detail || 'Failed to fetch travel stats');
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  async getBookings(params?: {
+    page?: number;
+    pageSize?: number;
+    status?: string;
+  }): Promise<{ data: BookingResponse[]; pagination: any }> {
+    const urlParams = new URLSearchParams();
+    if (params?.page) urlParams.append('page', String(params.page));
+    if (params?.pageSize) urlParams.append('pageSize', String(params.pageSize));
+    if (params?.status) urlParams.append('status', params.status);
+    const qs = urlParams.toString();
+    const endpoint = `/bookings${qs ? `?${qs}` : ''}`;
+    const res = await this.fetchWithAuth(endpoint);
+    if (!res.ok) throw new Error('Failed to fetch bookings');
+    return res.json();
+  }
+
+  async createBooking(data: CreateBookingPayload, idempotencyKey?: string): Promise<BookingResponse> {
+    const headers: Record<string, string> = {};
+    if (idempotencyKey) {
+      headers['Idempotency-Key'] = idempotencyKey;
+    }
+
+    const payload = {
+      ...data,
+      items: data.items.map((item) => ({
+        ...item,
+        departureTime: item.departureTime || item.departure_time || undefined,
+      })),
+    };
+
+    const res = await this.fetchWithAuth('/bookings', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create booking' }));
+      const errorMsg =
+        typeof err.detail === 'object'
+          ? err.detail?.message || err.detail?.code || 'Failed to create booking'
+          : err.detail || err.error?.message || 'Failed to create booking';
+      const errorObj: any = new Error(errorMsg);
+      errorObj.status = res.status;
+      errorObj.code = err.code || err.detail?.code || err.error?.code;
+      errorObj.detail = err.detail || err.error;
+      throw errorObj;
+    }
+
     return res.json();
   }
 
@@ -598,6 +752,26 @@ export class ApiClient {
     return res.json();
   }
 
+  async updateSavedRouteAlerts(
+    savedRouteId: string,
+    payload: { alertMuted?: boolean; alertLeadMinutes?: 5 | 10 | 30 | 60 }
+  ): Promise<SavedRouteResponse> {
+    const res = await this.fetchWithAuth(`/routes/saved/${savedRouteId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      let errorMsg = 'Failed to update alert settings';
+      try {
+        const err = await res.json();
+        if (err.detail) errorMsg = typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail);
+      } catch {}
+      throw new Error(errorMsg);
+    }
+    return res.json();
+  }
+
   async fetchStationAutocompleteCatalog(): Promise<StationAutocompleteCatalogResponse> {
     const res = await this.fetchWithAuth('/stations/autocomplete-catalog');
     if (!res.ok) throw new Error('Failed to fetch station autocomplete catalog');
@@ -711,3 +885,41 @@ export async function updatePreferences(
 export async function getPreferences(): Promise<UserPreferences> {
   return apiClient.getPreferences();
 }
+
+export async function getTravelStats(): Promise<UserTravelStats> {
+  return apiClient.getTravelStats();
+}
+
+export async function updateProfile(data: {
+  full_name?: string;
+  username?: string;
+  email?: string;
+  phone_number?: string;
+  avatar_url?: string;
+  preferences?: any;
+}): Promise<UserProfile> {
+  return apiClient.updateProfile(data);
+}
+
+export async function getBookings(params?: {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+}): Promise<{ data: BookingResponse[]; pagination: any }> {
+  return apiClient.getBookings(params);
+}
+
+export async function createBooking(
+  data: CreateBookingPayload,
+  idempotencyKey?: string
+): Promise<BookingResponse> {
+  return apiClient.createBooking(data, idempotencyKey);
+}
+
+export async function updateSavedRouteAlerts(
+  savedRouteId: string,
+  payload: { alertMuted?: boolean; alertLeadMinutes?: 5 | 10 | 30 | 60 }
+): Promise<SavedRouteResponse> {
+  return apiClient.updateSavedRouteAlerts(savedRouteId, payload);
+}
+
