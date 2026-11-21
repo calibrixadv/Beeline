@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="12 16 96 96" width="100%" height="100%">
+  <defs>
+    <!-- Rich Golden Honey Gradients -->
+    <linearGradient id="beelineBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047" />
+      <stop offset="45%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#F59E0B" />
+    </linearGradient>
+
+    <!-- Translucent Sky Wings -->
+    <linearGradient id="beelineWingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#BAE6FD" stop-opacity="0.8" />
+    </linearGradient>
+  </defs>
+
+  <!-- WINGS (Translucent sky-blue accents) -->
+  <g>
+    <!-- Left Wing -->
+    <ellipse cx="38" cy="34" rx="21" ry="13" fill="url(#beelineWingGrad)" stroke="#38BDF8" stroke-width="2" />
+    <path d="M 38 34 Q 28 30 22 32" stroke="#7DD3FC" stroke-width="1.5" fill="none" opacity="0.85" />
+    <!-- Right Wing -->
+    <ellipse cx="82" cy="34" rx="21" ry="13" fill="url(#beelineWingGrad)" stroke="#38BDF8" stroke-width="2" />
+    <path d="M 82 34 Q 92 30 98 32" stroke="#7DD3FC" stroke-width="1.5" fill="none" opacity="0.85" />
+  </g>
+
+  <!-- STINGER (Espresso / Dark Charcoal Accent) -->
+  <path d="M 57 100 Q 60 109 60 109 Q 60 109 63 100 Z" fill="#1C1917" stroke-linejoin="round" />
+
+  <!-- BEE BODY (Golden-Amber Honey Gradient) -->
+  <ellipse cx="60" cy="68" rx="33" ry="35" fill="url(#beelineBodyGrad)" stroke="#D97706" stroke-width="2" />
+
+  <!-- CHARCOAL STRIPES (3D Curved Volume) -->
+  <path d="M 32 58 Q 60 64 88 58" stroke="#1C1917" stroke-width="6" stroke-linecap="round" fill="none" />
+  <path d="M 30 72 Q 60 79 90 72" stroke="#1C1917" stroke-width="6.5" stroke-linecap="round" fill="none" />
+  <path d="M 36 86 Q 60 92 84 86" stroke="#1C1917" stroke-width="5.5" stroke-linecap="round" fill="none" />
+
+  <!-- ANTENNAE with Golden Bulbs -->
+  <path d="M 52 38 Q 45 23 37 27" stroke="#1C1917" stroke-width="2.5" stroke-linecap="round" fill="none" />
+  <circle cx="37" cy="27" r="3.5" fill="#F59E0B" stroke="#1C1917" stroke-width="1.5" />
+
+  <path d="M 68 38 Q 75 23 83 27" stroke="#1C1917" stroke-width="2.5" stroke-linecap="round" fill="none" />
+  <circle cx="83" cy="27" r="3.5" fill="#F59E0B" stroke="#1C1917" stroke-width="1.5" />
+
+  <!-- CHEEKS (Soft Coral Glow) -->
+  <ellipse cx="43" cy="54" rx="4.5" ry="2.5" fill="#FB7185" opacity="0.75" />
+  <ellipse cx="77" cy="54" rx="4.5" ry="2.5" fill="#FB7185" opacity="0.75" />
+
+  <!-- BIG GLOSSY EYES -->
+  <circle cx="49" cy="48" r="5" fill="#1C1917" />
+  <circle cx="50.8" cy="46.2" r="1.8" fill="#FFFFFF" />
+  <circle cx="47.5" cy="49.5" r="0.9" fill="#FFFFFF" />
+
+  <circle cx="71" cy="48" r="5" fill="#1C1917" />
+  <circle cx="72.8" cy="46.2" r="1.8" fill="#FFFFFF" />
+  <circle cx="69.5" cy="49.5" r="0.9" fill="#FFFFFF" />
+
+  <!-- CHEERFUL SMILE -->
+  <path d="M 54 55 Q 60 61 66 55" stroke="#1C1917" stroke-width="2.5" stroke-linecap="round" fill="none" />
+  <path d="M 56 56 Q 60 61 64 56 Z" fill="#F43F5E" />
+</svg>

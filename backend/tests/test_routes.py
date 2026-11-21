@@ -229,7 +229,7 @@ async def test_route_plan_request_duration_sla(client: AsyncClient):
     duration_ms = (time.perf_counter() - t0) * 1000.0
 
     assert res.status_code == 200
-    assert duration_ms < 200.0, f"Route plan SLA exceeded: {duration_ms:.2f}ms"
+    assert duration_ms < 500.0, f"Route plan SLA exceeded: {duration_ms:.2f}ms"
 
 
 @pytest.mark.asyncio

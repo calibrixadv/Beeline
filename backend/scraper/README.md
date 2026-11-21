@@ -1,6 +1,6 @@
 # Beeline Transit Delay & Reliability Scraper (`backend/scraper/`)
 
-Acest modul implementează colectarea, maparea și asamblarea seturilor de date pentru modelul Machine Learning de predicție a întârzierilor și riscurilor de transfer feroviar în România (`risk_model.onnx` / LightGBM), respectând strict specificația din [`freeze_contract.md`](../../freeze_contract.md).
+Acest modul implementează colectarea, maparea și asamblarea seturilor de date pentru modelul Machine Learning de predicție a întârzierilor și riscurilor de transfer feroviar în România (`risk_model.onnx` / LightGBM), respectând strict specificația din [`freeze_contract.md`](../../docs/architecture/freeze_contract.md).
 
 ---
 

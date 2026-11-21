@@ -1,0 +1,17 @@
+{
+  "name": "Beeline",
+  "short_name": "Beeline",
+  "description": "Multi-modal transit booking and journey planning across Romania with the Romanian Transfer Shield and dynamic route optimization.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1C1917",
+  "theme_color": "#F59E0B",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

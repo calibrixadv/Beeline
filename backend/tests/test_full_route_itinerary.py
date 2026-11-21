@@ -41,7 +41,7 @@ async def test_direct_route_itinerary_galati_to_bucharest(client: AsyncClient):
         json={
             "origin": {"name": "Galați", "city": "Galați"},
             "destination": {"name": "București Nord", "city": "București"},
-            "departureTime": "2026-11-20T08:00:00+02:00",
+            "departureTime": "2026-11-21T08:00:00+02:00",
             "allowedModes": ["TRAIN"],
             "optimizationPreference": "MOST_RELIABLE",
         },
@@ -125,7 +125,7 @@ async def test_one_transfer_route_itinerary_and_transfers_timeline(client: Async
         json={
             "origin": {"name": "Galați", "city": "Galați"},
             "destination": {"name": "Brașov", "city": "Brașov"},
-            "departureTime": "2026-11-20T08:00:00+02:00",
+            "departureTime": "2026-11-21T08:00:00+02:00",
             "allowedModes": ["TRAIN"],
             "optimizationPreference": "FASTEST",
         },
@@ -182,7 +182,7 @@ async def test_overnight_train_itinerary_timestamp_rollover(client: AsyncClient)
     Verifies that trains crossing midnight (e.g. night train IR 1641) cleanly
     roll over date to X+1 with strictly monotonic ISO timestamps and non-negative dwell times.
     """
-    res = await client.get("/api/v1/trains/IR-1641/itinerary?date=2026-11-20")
+    res = await client.get("/api/v1/trains/IR-1641/itinerary?date=2026-11-21")
     assert res.status_code == 200, f"Expected 200, got {res.status_code}: {res.text}"
     itin = res.json()
 
@@ -192,11 +192,14 @@ async def test_overnight_train_itinerary_timestamp_rollover(client: AsyncClient)
     first_stop = stops[0]
     last_stop = stops[-1]
 
-    # Departs in evening on 2026-11-20
-    assert first_stop["departureTime"].startswith("2026-11-20T21:")
+    # Departs in evening
+    assert "21:" in first_stop["departureTime"]
 
-    # Arrives following morning on 2026-11-21
-    assert last_stop["arrivalTime"].startswith("2026-11-21T11:")
+    # Arrives following morning (verifies overnight rollover)
+    assert "11:" in last_stop["arrivalTime"]
+    dt_first = datetime.fromisoformat(first_stop["departureTime"])
+    dt_last = datetime.fromisoformat(last_stop["arrivalTime"])
+    assert (dt_last.date() - dt_first.date()).days == 1
 
     # Verify strictly monotonic timestamps across all stops
     for i in range(len(stops) - 1):
@@ -224,7 +227,7 @@ async def test_train_itinerary_endpoint_success_and_errors(client: AsyncClient):
     - Returns HTTP 422 for past or out-of-booking-window dates
     """
     # 1. Normalization check: IR-1572
-    res_hyphen = await client.get("/api/v1/trains/IR-1572/itinerary?date=2026-11-20")
+    res_hyphen = await client.get("/api/v1/trains/IR-1572/itinerary?date=2026-11-21")
     assert res_hyphen.status_code == 200
     data_hyphen = res_hyphen.json()
     assert data_hyphen["trainNumber"] == "IR 1572"
@@ -237,12 +240,12 @@ async def test_train_itinerary_endpoint_success_and_errors(client: AsyncClient):
     assert data_hyphen["liveSource"] == "INFOFER_LIVE_ONLY"
 
     # 2. Normalization check: digits only ('1572')
-    res_digits = await client.get("/api/v1/trains/1572/itinerary?date=2026-11-20")
+    res_digits = await client.get("/api/v1/trains/1572/itinerary?date=2026-11-21")
     assert res_digits.status_code == 200
     assert res_digits.json()["trainNumber"] == "IR 1572"
 
     # 3. Non-existent train returns HTTP 404
-    res_fake = await client.get("/api/v1/trains/FAKE-99999/itinerary?date=2026-11-20")
+    res_fake = await client.get("/api/v1/trains/FAKE-99999/itinerary?date=2026-11-21")
     assert res_fake.status_code == 404
     assert "not found" in res_fake.json()["detail"].lower()
 
@@ -280,10 +283,10 @@ def test_schema_backward_compatibility():
             geometry=GeoJSONLineString(type="LineString", coordinates=[(28.0583, 45.4418), (27.9622, 45.2715)]),
         ),
         timings=LegTimings(
-            scheduledDeparture="2026-11-20T08:00:00+02:00",
-            scheduledArrival="2026-11-20T08:35:00+02:00",
-            estimatedDeparture="2026-11-20T08:00:00+02:00",
-            estimatedArrival="2026-11-20T08:35:00+02:00",
+            scheduledDeparture="2026-11-21T08:00:00+02:00",
+            scheduledArrival="2026-11-21T08:35:00+02:00",
+            estimatedDeparture="2026-11-21T08:00:00+02:00",
+            estimatedArrival="2026-11-21T08:35:00+02:00",
             durationMinutes=35,
         ),
         risk=LegRiskProfile(legRiskScore=5.0, historicalPunctualityPercent=95.0),
@@ -308,8 +311,8 @@ def test_schema_backward_compatibility():
             destination=LocationQuery(name="Brăila"),
         ),
         summary="R 7360 Direct",
-        departureTime="2026-11-20T08:00:00+02:00",
-        arrivalTime="2026-11-20T08:35:00+02:00",
+        departureTime="2026-11-21T08:00:00+02:00",
+        arrivalTime="2026-11-21T08:35:00+02:00",
         totalDurationMinutes=35,
         totalWalkMinutes=0,
         totalWalkDistanceMeters=0,
@@ -332,8 +335,8 @@ def test_schema_backward_compatibility():
             treeDaysEquivalent=0.5,
         ),
         legs=[leg],
-        createdAt="2026-11-20T08:00:00Z",
-        validUntil="2026-11-20T10:00:00Z",
+        createdAt="2026-11-21T08:00:00Z",
+        validUntil="2026-11-21T10:00:00Z",
     )
 
     assert plan.transfers == []
@@ -387,7 +390,7 @@ async def test_route_plan_galati_to_brasov_no_impossible_trains(client: AsyncCli
         json={
             "origin": {"name": "Galați", "city": "Galați"},
             "destination": {"name": "Brașov", "city": "Brașov"},
-            "departureTime": "2026-11-20T05:00:00+02:00",
+            "departureTime": "2026-11-21T05:00:00+02:00",
             "allowedModes": ["TRAIN"],
             "optimizationPreference": "MOST_RELIABLE",
         },
@@ -426,7 +429,7 @@ async def test_invalid_and_gibberish_stations_return_zero_trains(client: AsyncCl
         json={
             "origin": {"name": "da Nordgalaaa", "city": "da Nordgalaaa"},
             "destination": {"name": "Brașov", "city": "Brașov"},
-            "departureTime": "2026-11-20T08:00:00+02:00",
+            "departureTime": "2026-11-21T08:00:00+02:00",
             "allowedModes": ["TRAIN"],
             "optimizationPreference": "FASTEST",
         },
@@ -442,7 +445,7 @@ async def test_invalid_and_gibberish_stations_return_zero_trains(client: AsyncCl
         json={
             "origin": {"name": "București Nord", "city": "București"},
             "destination": {"name": "Atlantis XYZ", "city": "Atlantis XYZ"},
-            "departureTime": "2026-11-20T08:00:00+02:00",
+            "departureTime": "2026-11-21T08:00:00+02:00",
             "allowedModes": ["TRAIN"],
             "optimizationPreference": "FASTEST",
         },
@@ -458,7 +461,7 @@ async def test_invalid_and_gibberish_stations_return_zero_trains(client: AsyncCl
         json={
             "origin": {"name": "Brăila", "city": "Brăila"},
             "destination": {"name": "București Nord", "city": "București"},
-            "departureTime": "2026-11-20T08:00:00+02:00",
+            "departureTime": "2026-11-21T08:00:00+02:00",
             "allowedModes": ["TRAIN"],
             "optimizationPreference": "FASTEST",
         },
@@ -472,7 +475,7 @@ async def test_invalid_and_gibberish_stations_return_zero_trains(client: AsyncCl
         json={
             "origin": {"name": "Galați", "city": "Galați"},
             "destination": {"name": "Brașov", "city": "Brașov"},
-            "departureTime": "2026-11-20T08:00:00+02:00",
+            "departureTime": "2026-11-21T08:00:00+02:00",
             "allowedModes": ["TRAIN"],
             "optimizationPreference": "MOST_RELIABLE",
         },
