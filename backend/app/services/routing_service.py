@@ -1316,18 +1316,96 @@ class RoutingService:
         direct_plans: List[TransitRoutePlan] = []
         if direct_records:
             for rec in direct_records:
-                if getattr(rec, "is_multi_leg", False) and getattr(rec, "transfer_legs", None):
-                    t_legs = rec.transfer_legs
-                    legs = []
-                    transfer_wait = getattr(rec, "transfer_wait_minutes", 20)
-                    transfer_st = getattr(rec, "transfer_station", "")
-                    for idx, l_rec in enumerate(t_legs):
-                        is_last = (idx == len(t_legs) - 1)
-                        buf = transfer_wait if not is_last else None
-                        hub = transfer_st if not is_last else None
-                        legs.append(cls._build_rail_leg(l_rec, idx, travel_date, transfer_buffer_after=buf, hub_name=hub))
-                    plan = cls._create_rail_plan(query, legs, None, travel_date)
-                    official_plans.append(plan)
+                is_multi = (
+                    getattr(rec, "is_multi_leg", False)
+                    or (getattr(rec, "transfer_legs", None) is not None and len(rec.transfer_legs) > 1)
+                    or ("+" in rec.source_train_api.train_number)
+                    or ("->" in rec.source_train_api.train_number)
+                    or ("/" in rec.source_train_api.train_number and len(rec.source_train_api.train_number.split("/")) > 1 and any(char.isdigit() for char in rec.source_train_api.train_number.split("/")[0]) and any(char.isdigit() for char in rec.source_train_api.train_number.split("/")[1]))
+                )
+                if is_multi:
+                    t_legs = getattr(rec, "transfer_legs", None) or []
+                    if len(t_legs) >= 2:
+                        legs = []
+                        for idx, l_rec in enumerate(t_legs):
+                            is_last = (idx == len(t_legs) - 1)
+                            if not is_last:
+                                next_l = t_legs[idx + 1]
+                                l_arr = getattr(l_rec, "arrival_seconds", 0)
+                                next_dep = getattr(next_l, "departure_seconds", 0)
+                                diff_sec = next_dep - l_arr
+                                if diff_sec < 0:
+                                    diff_sec += 86400
+                                buf = diff_sec // 60
+                                dest_c = l_rec.source_train_api.destination_station_code
+                                hub = (
+                                    getattr(l_rec, "destination_station_name", None)
+                                    or getattr(next_l, "origin_station_name", None)
+                                    or getattr(rec, "transfer_station", None)
+                                    or STATION_DICTIONARY.get(dest_c, {}).get("name", dest_c)
+                                )
+                            else:
+                                buf = None
+                                hub = None
+                            legs.append(cls._build_rail_leg(l_rec, idx, travel_date, transfer_buffer_after=buf, hub_name=hub))
+                        plan = cls._create_rail_plan(query, legs, None, travel_date)
+                        official_plans.append(plan)
+                    else:
+                        # Fallback synthesis: split train_number by +, -> or / into multiple legs
+                        raw_tnum = rec.source_train_api.train_number
+                        raw_parts = [p.strip() for p in re.split(r"\s*(?:\+|->|/)\s*", raw_tnum) if p.strip()]
+                        if len(raw_parts) >= 2:
+                            t_station = getattr(rec, "transfer_station", None) or (orig_station if orig_station else "Transfer Hub")
+                            t_wait = getattr(rec, "transfer_wait_minutes", 20)
+                            synth_legs = []
+                            for idx, p_num in enumerate(raw_parts):
+                                is_last = (idx == len(raw_parts) - 1)
+                                is_first = (idx == 0)
+                                l_orig_code = rec.source_train_api.origin_station_code if is_first else canonical_station_code(t_station)
+                                l_dest_code = canonical_station_code(t_station) if not is_last else rec.source_train_api.destination_station_code
+                                l_orig_name = getattr(rec, "origin_station_name", orig_station) if is_first else t_station
+                                l_dest_name = t_station if not is_last else getattr(rec, "destination_station_name", dest_station)
+                                
+                                tot_dur = rec.source_train_api.scheduled_duration_minutes
+                                leg_dur = max(10.0, tot_dur / len(raw_parts))
+                                dep_s = getattr(rec, "departure_seconds", 0) + int(idx * (leg_dur * 60 + t_wait * 60))
+                                arr_s = dep_s + int(leg_dur * 60)
+                                
+                                from scraper.models import TargetLabels, TrainApiFeatures
+                                synth_rec = TrainScrapeRecord(
+                                    source_train_api=TrainApiFeatures(
+                                        train_number=p_num,
+                                        operator=rec.source_train_api.operator,
+                                        train_category=rec.source_train_api.train_category,
+                                        origin_station_code=l_orig_code,
+                                        destination_station_code=l_dest_code,
+                                        scheduled_duration_minutes=leg_dur,
+                                        distance_km=round(rec.source_train_api.distance_km / len(raw_parts), 1),
+                                        stop_count=max(2, rec.source_train_api.stop_count // len(raw_parts)),
+                                        delay_at_origin_minutes=rec.source_train_api.delay_at_origin_minutes if is_first else 0,
+                                        traction_type=rec.source_train_api.traction_type,
+                                        has_transfer=0 if is_last else 1,
+                                        transfer_buffer_minutes=float(t_wait) if not is_last else 0.0,
+                                    ),
+                                    target_labels=TargetLabels(
+                                        actual_delay_minutes=rec.target_labels.actual_delay_minutes,
+                                        missed_connection=rec.target_labels.missed_connection,
+                                    ),
+                                    provider="InfoFerLiveAdapter",
+                                    scraped_at=datetime.now(timezone.utc).isoformat(),
+                                )
+                                synth_rec.origin_station_name = l_orig_name
+                                synth_rec.destination_station_name = l_dest_name
+                                synth_rec.departure_seconds = dep_s
+                                synth_rec.arrival_seconds = arr_s
+                                synth_rec.full_operator = getattr(rec, "full_operator", None)
+                                
+                                buf = t_wait if not is_last else None
+                                hub = t_station if not is_last else None
+                                synth_legs.append(cls._build_rail_leg(synth_rec, idx, travel_date, transfer_buffer_after=buf, hub_name=hub))
+                            
+                            plan = cls._create_rail_plan(query, synth_legs, None, travel_date)
+                            official_plans.append(plan)
                 else:
                     leg = cls._build_rail_leg(rec, 0, travel_date)
                     plan = cls._create_rail_plan(query, [leg], None, travel_date)
@@ -1337,7 +1415,9 @@ class RoutingService:
             # Direct domination guard:
             # If plenty of direct trains exist (e.g. len(direct_plans) >= 3), filter out transfer plans
             # that depart close to a direct train (within 45 min) but arrive later or equal, with transfers.
-            if len(direct_plans) >= 3:
+            # EXCEPTION: When query.maxTransfers is explicitly set and >= 1, DO NOT hide valid transfer plans
+            # even if there are >= 3 direct trains, so the user's manual transfer selector in the UI actually works!
+            if len(direct_plans) >= 3 and (query.maxTransfers is None or query.maxTransfers < 1):
                 filtered_official: List[TransitRoutePlan] = []
                 for p in official_plans:
                     if p.transfersCount > 0:
@@ -1364,10 +1444,13 @@ class RoutingService:
 
             raw_candidates.extend(official_plans)
 
-        # 2. Valid, non-dominated 1-transfer connections via Romanian rail hubs (only when direct rail is sparse)
+        # 2. Valid, non-dominated 1-transfer connections via Romanian rail hubs (only when direct rail is sparse or transfers explicitly requested)
         min_buf_min = max(10, query.minimumBufferMinutes or 20)
         transfer_plans: List[TransitRoutePlan] = []
-        if len(direct_plans) < 15 and not any(p.transfersCount > 0 for p in official_plans) and len(official_plans) < 3:
+        if (query.maxTransfers is None or query.maxTransfers >= 1) and (
+            (len(direct_plans) < 15 and not any(p.transfersCount > 0 for p in official_plans) and len(official_plans) < 3)
+            or (query.maxTransfers is not None and query.maxTransfers >= 1 and not any(p.transfersCount > 0 for p in official_plans))
+        ):
             for hub in ROMANIAN_RAIL_HUBS:
                 if hub.lower() in orig_station.lower() or hub.lower() in dest_station.lower():
                     continue
@@ -1448,6 +1531,9 @@ class RoutingService:
         raw_candidates.extend(transfer_plans)
 
         # 3. Fallback: if no route could be found, return empty list (ZERO fabrication)
+        if query.maxTransfers is not None:
+            raw_candidates = [p for p in raw_candidates if p.transfersCount <= query.maxTransfers]
+
         if not raw_candidates:
             return []
 
@@ -1472,12 +1558,21 @@ class RoutingService:
                 seen_signatures.add(sig)
                 deduped_plans.append(plan)
 
+        if query.maxTransfers is not None:
+            deduped_plans = [p for p in deduped_plans if p.transfersCount <= query.maxTransfers]
+
         return deduped_plans
 
     @classmethod
     def _assign_pillars_and_sort(cls, plans: List[TransitRoutePlan], query: TransitRouteQuery) -> List[TransitRoutePlan]:
         if not plans:
             return plans
+
+        # Strict requirement: maxTransfers filtering runs BEFORE computing curatedPillars
+        if query.maxTransfers is not None:
+            plans = [p for p in plans if p.transfersCount <= query.maxTransfers]
+        if not plans:
+            return []
 
         # If it's a single multimodal legacy plan (e.g. Micro 19), ensure pillars are populated
         if len(plans) == 1 and plans[0].curatedPillar:
@@ -1512,13 +1607,19 @@ class RoutingService:
             )
         )
 
-        # Metric 3: BEST_VALUE: lowest fare.totalAmountLei
-        # Tie-breaks: lowest risk score, then lowest duration
-        min_fare = min(p.fare.totalAmountLei for p in plans)
-        value_candidates = [p for p in plans if abs(p.fare.totalAmountLei - min_fare) < 1e-4]
+        # Metric 3: BEST_VALUE: strictly minimum fare.totalAmountLei (compared at 2-decimal / integer-bani precision)
+        # Tie-breaks for primary_winner: fewest transfers, lowest risk score, then lowest duration
+        valid_fares_bani = [
+            round(p.fare.totalAmountLei * 100)
+            for p in plans
+            if p.fare and p.fare.totalAmountLei is not None and p.fare.totalAmountLei > 0
+        ]
+        min_fare_bani = min(valid_fares_bani) if valid_fares_bani else min(round(p.fare.totalAmountLei * 100) for p in plans)
+        value_candidates = [p for p in plans if round(p.fare.totalAmountLei * 100) == min_fare_bani]
         primary_value = min(
             value_candidates,
             key=lambda p: (
+                p.transfersCount,
                 p.riskAnalysis.overallRiskScore,
                 p.totalDurationMinutes,
             )
@@ -1530,6 +1631,7 @@ class RoutingService:
             won_map[p.id].add("MOST_RELIABLE")
         for p in fastest_candidates:
             won_map[p.id].add("FASTEST")
+        # Award Flora (BEST_VALUE) badge to ALL routes tied for the strict lowest price
         for p in value_candidates:
             won_map[p.id].add("BEST_VALUE")
 
@@ -1549,14 +1651,44 @@ class RoutingService:
         )
 
         for p in plans:
+            fare_bani = round(p.fare.totalAmountLei * 100)
             p.curatedPillars = [pill for pill in pillar_order if pill in won_map[p.id]]
 
-            if pref_pillar and pref_pillar in p.curatedPillars:
-                p.curatedPillar = CuratedPillar(pref_pillar)
-            elif p.curatedPillars:
-                p.curatedPillar = CuratedPillar(p.curatedPillars[0])
+            cur_pill_val = p.curatedPillar.value if hasattr(p.curatedPillar, "value") else str(p.curatedPillar or "")
+
+            if fare_bani == min_fare_bani:
+                if "BEST_VALUE" not in p.curatedPillars:
+                    p.curatedPillars.append("BEST_VALUE")
+
+                if pref_pillar == "FASTEST" and "FASTEST" in p.curatedPillars:
+                    p.curatedPillar = CuratedPillar.FASTEST
+                elif pref_pillar == "MOST_RELIABLE" and "MOST_RELIABLE" in p.curatedPillars:
+                    p.curatedPillar = CuratedPillar.MOST_RELIABLE
+                elif cur_pill_val in ("MOST_RELIABLE", "FASTEST") and cur_pill_val in p.curatedPillars:
+                    p.curatedPillar = CuratedPillar(cur_pill_val)
+                elif "MOST_RELIABLE" in p.curatedPillars:
+                    p.curatedPillar = CuratedPillar.MOST_RELIABLE
+                elif "FASTEST" in p.curatedPillars:
+                    p.curatedPillar = CuratedPillar.FASTEST
+                else:
+                    p.curatedPillar = CuratedPillar.BEST_VALUE
             else:
-                p.curatedPillar = None
+                p.curatedPillars = [pill for pill in p.curatedPillars if pill != "BEST_VALUE"]
+                if cur_pill_val == "BEST_VALUE":
+                    if "MOST_RELIABLE" in p.curatedPillars:
+                        p.curatedPillar = CuratedPillar.MOST_RELIABLE
+                    elif "FASTEST" in p.curatedPillars:
+                        p.curatedPillar = CuratedPillar.FASTEST
+                    else:
+                        p.curatedPillar = None
+                elif cur_pill_val in ("MOST_RELIABLE", "FASTEST") and cur_pill_val in p.curatedPillars:
+                    p.curatedPillar = CuratedPillar(cur_pill_val)
+                elif pref_pillar and pref_pillar in p.curatedPillars:
+                    p.curatedPillar = CuratedPillar(pref_pillar)
+                elif p.curatedPillars:
+                    p.curatedPillar = CuratedPillar(p.curatedPillars[0])
+                else:
+                    p.curatedPillar = None
 
             # Set companion mascot
             if p.curatedPillar == CuratedPillar.FASTEST or ("FASTEST" in p.curatedPillars and pref_pillar == "FASTEST"):
@@ -1599,13 +1731,41 @@ class RoutingService:
     async def plan_routes(cls, query: TransitRouteQuery) -> List[TransitRoutePlan]:
         candidate_plans = cls._build_candidate_plans(query)
         enriched_plans = await risk_service.enrich_route_plans(candidate_plans)
-        return cls._assign_pillars_and_sort(enriched_plans, query)
+        sorted_plans = cls._assign_pillars_and_sort(enriched_plans, query)
+        for p in sorted_plans:
+            if p.transfers and p.riskAnalysis:
+                p_miss = p.riskAnalysis.missedConnectionProbability or 0.0
+                for t in p.transfers:
+                    t.missedConnectionProbability = round(float(p_miss), 3)
+                    if t.waitMinutes >= 20 and p_miss < 0.10:
+                        t.bufferStatus = "SAFE"
+                    elif (10 <= t.waitMinutes < 20) or (0.10 <= p_miss < 0.25):
+                        t.bufferStatus = "TIGHT"
+                    else:
+                        t.bufferStatus = "RISKY"
+        if query.maxTransfers is not None:
+            sorted_plans = [p for p in sorted_plans if p.transfersCount <= query.maxTransfers]
+        return sorted_plans
 
     @classmethod
     def plan_routes_sync(cls, query: TransitRouteQuery) -> List[TransitRoutePlan]:
         candidate_plans = cls._build_candidate_plans(query)
         enriched_plans = risk_service.enrich_route_plans_sync(candidate_plans)
-        return cls._assign_pillars_and_sort(enriched_plans, query)
+        sorted_plans = cls._assign_pillars_and_sort(enriched_plans, query)
+        for p in sorted_plans:
+            if p.transfers and p.riskAnalysis:
+                p_miss = p.riskAnalysis.missedConnectionProbability or 0.0
+                for t in p.transfers:
+                    t.missedConnectionProbability = round(float(p_miss), 3)
+                    if t.waitMinutes >= 20 and p_miss < 0.10:
+                        t.bufferStatus = "SAFE"
+                    elif (10 <= t.waitMinutes < 20) or (0.10 <= p_miss < 0.25):
+                        t.bufferStatus = "TIGHT"
+                    else:
+                        t.bufferStatus = "RISKY"
+        if query.maxTransfers is not None:
+            sorted_plans = [p for p in sorted_plans if p.transfersCount <= query.maxTransfers]
+        return sorted_plans
 
 
 routing_service = RoutingService()

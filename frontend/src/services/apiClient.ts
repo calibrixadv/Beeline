@@ -18,6 +18,7 @@ import {
   BookingResponse,
 } from '../types/auth';
 import { TransitRoutePlan, TransitRouteQuery, BookingWindow, CuratedPillar, TrainItineraryResponse } from '../types/routePlan';
+import { roundPercent } from '../utils/formatters';
 import { TrainJourney } from '../types/train';
 import {
   StationAutocompleteCatalogResponse,
@@ -831,7 +832,7 @@ export function formatConnectionGuarantee(
   if (missedProb === undefined || missedProb === null) {
     return `100% ${label}`;
   }
-  const pct = Math.max(0, Math.min(100, Math.round((1 - missedProb) * 100)));
+  const pct = roundPercent((1 - missedProb) * 100);
   return `${pct}% ${label}`;
 }
 
@@ -855,7 +856,7 @@ export function formatConnectionGuaranteeBadge(
   if (missedProb === undefined || missedProb === null) {
     return `🛡️ 100% ${label}`;
   }
-  const pct = Math.max(0, Math.min(100, Math.round((1 - missedProb) * 100)));
+  const pct = roundPercent((1 - missedProb) * 100);
   return `🛡️ ${pct}% ${label}`;
 }
 

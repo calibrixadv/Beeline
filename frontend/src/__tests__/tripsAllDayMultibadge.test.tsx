@@ -458,6 +458,9 @@ describe('BookingTripCard Engraved and Filled Pillar Badges Focused Suite', () =
     expect(trainCode).toHaveTextContent('RE 11631');
     const trigger = screen.getByTestId('train-itinerary-trigger');
     expect(trigger).toBeInTheDocument();
+    expect(trigger.tagName).toBe('A');
+    expect(trigger).toHaveAttribute('href', expect.stringContaining('/Tren/11631?Date='));
+    expect(trigger).toHaveAttribute('target', '_blank');
 
     // 2. Borderless inline collapsed summary
     const summary = screen.getByTestId('trip-collapsed-summary');
@@ -586,5 +589,64 @@ describe('BookingTripCard Accurate Connection & Transfer Chance Labels', () => {
     expect(label).toBeInTheDocument();
     expect(label).toHaveTextContent('65% transfer chance');
     expect(label).toHaveClass('text-amber-700');
+  });
+
+  it('guarantees Flora (BEST_VALUE) strictly on the cheapest route when client filters narrow down trips', () => {
+    const plans: TransitRoutePlan[] = [
+      createMockPlan('p-1', 'IR 100', '06:00', '08:00', 120, 80, ['BEST_VALUE'], 'BEST_VALUE'),
+      createMockPlan('p-2', 'IR 200', '07:00', '09:00', 120, 45, [], null),
+      createMockPlan('p-3', 'IR 300', '08:00', '10:00', 120, 60, [], null),
+    ];
+
+    // Filter without pillar: Flora MUST be reassigned to p-2 (45 LEI) because 45 < 80
+    const filtered = tripBookingService.filterAndSortTrips(plans, { ...tripBookingService.DEFAULT_TRIP_FILTERS });
+    const cheapest = filtered.find((p) => p.id === 'p-2');
+    const expensive = filtered.find((p) => p.id === 'p-1');
+
+    expect(cheapest?.curatedPillars).toContain('BEST_VALUE');
+    expect(expensive?.curatedPillars).not.toContain('BEST_VALUE');
+  });
+
+  it('awards active Flora (BEST_VALUE) badge to ALL routes tied for the strict lowest price (e.g. 39.12 LEI)', () => {
+    const tiedPlan1 = createMockPlan('tie-1', 'IR 100', '06:00', '08:00', 120, 39.12, [], null);
+    const tiedPlan2 = createMockPlan('tie-2', 'IR 200', '07:30', '09:30', 120, 39.12, [], null);
+    const pricierPlan = createMockPlan('pricier', 'IC 300', '09:00', '11:00', 120, 55.0, ['BEST_VALUE'], 'BEST_VALUE');
+
+    // 1. Reconcile via filterAndSortTrips
+    const filtered = tripBookingService.filterAndSortTrips(
+      [tiedPlan1, tiedPlan2, pricierPlan],
+      { ...tripBookingService.DEFAULT_TRIP_FILTERS }
+    );
+
+    const res1 = filtered.find((p) => p.id === 'tie-1');
+    const res2 = filtered.find((p) => p.id === 'tie-2');
+    const resPricier = filtered.find((p) => p.id === 'pricier');
+
+    expect(res1?.curatedPillars).toContain('BEST_VALUE');
+    expect(res2?.curatedPillars).toContain('BEST_VALUE');
+    expect(resPricier?.curatedPillars).not.toContain('BEST_VALUE');
+    expect(resPricier?.curatedPillar).not.toBe('BEST_VALUE');
+
+    // 2. Render both tied trip cards and verify Flora is active on both
+    const { rerender } = render(<BookingTripCard plan={res1!} />);
+    const badge1 = screen.getByTestId('badge-BEST_VALUE');
+    expect(badge1).toBeInTheDocument();
+    expect(badge1).toHaveAttribute('data-badge-state', 'active');
+    expect(badge1).toHaveTextContent(/Flora/i);
+    expect(screen.queryByTestId('badge-engraved-BEST_VALUE')).not.toBeInTheDocument();
+
+    rerender(<BookingTripCard plan={res2!} />);
+    const badge2 = screen.getByTestId('badge-BEST_VALUE');
+    expect(badge2).toBeInTheDocument();
+    expect(badge2).toHaveAttribute('data-badge-state', 'active');
+    expect(badge2).toHaveTextContent(/Flora/i);
+    expect(screen.queryByTestId('badge-engraved-BEST_VALUE')).not.toBeInTheDocument();
+
+    // 3. Render pricier trip card and verify Flora is engraved (not active)
+    rerender(<BookingTripCard plan={resPricier!} />);
+    expect(screen.queryByTestId('badge-BEST_VALUE')).not.toBeInTheDocument();
+    const engravedBadge = screen.getByTestId('badge-engraved-BEST_VALUE');
+    expect(engravedBadge).toBeInTheDocument();
+    expect(engravedBadge).toHaveAttribute('data-badge-state', 'engraved');
   });
 });

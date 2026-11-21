@@ -531,61 +531,7 @@ describe('Trips Live & 2026-2027 Date Sync Test Suite', () => {
     expect(screen.queryByTestId('booking-trip-card')).not.toBeInTheDocument();
   });
 
-  it('allows testing loading state via Debug Tools popup and restores results upon stopping', async () => {
-    jest.spyOn(tripBookingService, 'fetchDayTripsFromBackend').mockResolvedValue({
-      plans: [mockTripPlan],
-      allDayDepartures: [],
-      status: 'OK',
-    });
-
-    render(
-      <TripProvider>
-        <TripsPage />
-      </TripProvider>
-    );
-
-    // Wait for /trips to finish initial loading and render real trips
-    await waitFor(() => {
-      expect(screen.queryByTestId('trips-ghost-skeleton')).not.toBeInTheDocument();
-    });
-    expect(screen.getByTestId('booking-trip-card')).toBeInTheDocument();
-    expect(screen.queryByTestId('no-trains-error-state')).not.toBeInTheDocument();
-
-    // Click Open Debug Tools button
-    const debugTrigger = screen.getByRole('button', { name: /Open Debug Tools/i });
-    expect(debugTrigger).toBeInTheDocument();
-    fireEvent.click(debugTrigger);
-
-    // Assert Debug modal is visible
-    expect(screen.getByText(/Mascot Gear Override Panel/i)).toBeInTheDocument();
-
-    // Click data-testid="debug-toggle-loading-state" ("Test Loading State")
-    const testLoadingBtn = screen.getByTestId('debug-toggle-loading-state');
-    expect(testLoadingBtn).toHaveTextContent('Test Loading State');
-    fireEvent.click(testLoadingBtn);
-
-    // Assert data-testid="trips-ghost-skeleton" appears immediately with 3 ghost summary cards and 4 ghost trip cards,
-    // 0 trip cards are rendered, and no-trains-error-state is NOT shown
-    const skeleton = screen.getByTestId('trips-ghost-skeleton');
-    expect(skeleton).toBeInTheDocument();
-    expect(screen.getAllByTestId('ghost-summary-card')).toHaveLength(3);
-    expect(screen.getAllByTestId('ghost-trip-card')).toHaveLength(4);
-    expect(screen.queryByTestId('booking-trip-card')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('no-trains-error-state')).not.toBeInTheDocument();
-
-    // Re-open Debug Tools and click "Stop Loading State"
-    fireEvent.click(debugTrigger);
-    const stopLoadingBtn = screen.getByTestId('debug-toggle-loading-state');
-    expect(stopLoadingBtn).toHaveTextContent('Stop Loading State');
-    fireEvent.click(stopLoadingBtn);
-
-    // Assert trips-ghost-skeleton disappears and the real trip cards reappear cleanly
-    expect(screen.queryByTestId('trips-ghost-skeleton')).not.toBeInTheDocument();
-    expect(screen.getByTestId('booking-trip-card')).toBeInTheDocument();
-    expect(screen.queryByTestId('no-trains-error-state')).not.toBeInTheDocument();
-  });
-
-  it('resets forced loading state when clicking Reset to Automatic Route Mode in Debug Tools', async () => {
+  it('does not render Debug Tools button or debug modal on /trips', async () => {
     jest.spyOn(tripBookingService, 'fetchDayTripsFromBackend').mockResolvedValue({
       plans: [mockTripPlan],
       allDayDepartures: [],
@@ -604,22 +550,9 @@ describe('Trips Live & 2026-2027 Date Sync Test Suite', () => {
     });
     expect(screen.getByTestId('booking-trip-card')).toBeInTheDocument();
 
-    // Open Debug Tools and start forced loading
-    const debugTrigger = screen.getByRole('button', { name: /Open Debug Tools/i });
-    fireEvent.click(debugTrigger);
-    fireEvent.click(screen.getByTestId('debug-toggle-loading-state'));
-
-    // Verify loading ghost skeleton is visible
-    expect(screen.getByTestId('trips-ghost-skeleton')).toBeInTheDocument();
-    expect(screen.queryByTestId('booking-trip-card')).not.toBeInTheDocument();
-
-    // Re-open Debug Tools and click Reset to Automatic Route Mode
-    fireEvent.click(debugTrigger);
-    const resetBtn = screen.getByRole('button', { name: /Reset to Automatic Route Mode/i });
-    fireEvent.click(resetBtn);
-
-    // Loading should be stopped and trip cards restored
-    expect(screen.queryByTestId('trips-ghost-skeleton')).not.toBeInTheDocument();
-    expect(screen.getByTestId('booking-trip-card')).toBeInTheDocument();
+    // Debug Tools must NOT be rendered in production UI
+    expect(screen.queryByRole('button', { name: /Open Debug Tools/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Debug Tools/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mascot Gear Override Panel/i)).not.toBeInTheDocument();
   });
 });

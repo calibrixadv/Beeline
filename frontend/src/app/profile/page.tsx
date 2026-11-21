@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../services/apiClient';
 import { UserTravelStats, RouteCorridorSummary } from '../../types/auth';
+import { formatCurrency } from '../../utils/formatters';
 
 function formatMinutesSaved(minutes: number): string {
   if (minutes <= 0) return '0 min';
@@ -265,7 +266,7 @@ export default function ProfilePage() {
                 data-testid="stat-money-saved"
                 className="text-2xl sm:text-3xl font-black text-amber-700 tracking-tight mt-1 block"
               >
-                {moneySaved.toFixed(2)} RON
+                {formatCurrency(moneySaved)} RON
               </span>
             </div>
 
@@ -383,7 +384,7 @@ export default function ProfilePage() {
                         {r.tripCount} {r.tripCount === 1 ? 'trip' : 'trips'}
                       </span>
                       <span className="text-[11px] text-amber-700 font-semibold block">
-                        +{r.moneySavedLei.toFixed(2)} RON saved
+                        +{formatCurrency(r.moneySavedLei)} RON saved
                       </span>
                     </div>
                     <ChevronRight className="w-4 h-4 text-stone-400 group-hover:text-stone-700 group-hover:translate-x-0.5 transition-all" />

@@ -1250,23 +1250,14 @@ export function filterAndSortTrips(
 ): TransitRoutePlan[] {
   let result = [...trips];
 
-  // 1. Curated Pillar filter
-  if (filters.pillar && filters.pillar !== 'ALL') {
-    result = result.filter(
-      (t) =>
-        t.curatedPillars?.includes(filters.pillar as CuratedPillar) ||
-        t.curatedPillar === filters.pillar
-    );
-  }
-
-  // 2. Transport modes filter
+  // 1. Transport modes filter
   if (filters.modes && filters.modes.length > 0) {
     result = result.filter((t) =>
       t.legs.some((leg) => filters.modes.includes(leg.transportType))
     );
   }
 
-  // 3. Provider/Operator filter
+  // 2. Provider/Operator filter
   if (filters.providers && filters.providers.length > 0) {
     result = result.filter((t) =>
       t.legs.some((leg) => {
@@ -1282,27 +1273,89 @@ export function filterAndSortTrips(
     );
   }
 
-  // 4. Max price filter (LEI)
+  // 3. Max price filter (LEI)
   if (filters.maxPriceLei !== undefined && filters.maxPriceLei > 0) {
     result = result.filter((t) => t.fare.totalAmountLei <= filters.maxPriceLei!);
   }
 
-  // 5. Max duration filter (Minutes)
+  // 4. Max duration filter (Minutes)
   if (filters.maxDurationMinutes !== undefined && filters.maxDurationMinutes > 0) {
     result = result.filter((t) => t.totalDurationMinutes <= filters.maxDurationMinutes!);
   }
 
-  // 6. Max transfers filter
+  // 5. Max transfers filter
   if (filters.maxTransfers !== undefined && filters.maxTransfers !== null && filters.maxTransfers >= 0) {
     result = result.filter((t) => {
-      const transfers =
-        typeof t.transfersCount === 'number'
-          ? t.transfersCount
-          : t.legs && t.legs.length > 0
-          ? Math.max(0, t.legs.length - 1)
-          : 0;
+      const lineCodes = (t.legs || []).map((l) => l.names?.lineCode || '').join(' ');
+      const hasMultiCode =
+        lineCodes.includes('+') ||
+        lineCodes.includes('->') ||
+        (t.summary ? t.summary.includes('+') || t.summary.includes('->') : false);
+      const transfers = Math.max(
+        typeof t.transfersCount === 'number' ? t.transfersCount : 0,
+        (t.legs?.length || 1) - 1,
+        t.transfers?.length || 0,
+        hasMultiCode ? 1 : 0
+      );
       return transfers <= filters.maxTransfers!;
     });
+  }
+
+  // 6. Guarantee Flora (BEST_VALUE) = ALL routes tied for strictly lowest price among active filtered routes
+  if (result.length > 0) {
+    const validFaresBani = result
+      .map((t) => Math.round((t.fare?.totalAmountLei ?? 0) * 100))
+      .filter((fareBani) => fareBani > 0);
+    const minFareBani =
+      validFaresBani.length > 0
+        ? Math.min(...validFaresBani)
+        : Math.min(...result.map((t) => Math.round((t.fare?.totalAmountLei ?? 0) * 100)));
+
+    result = result.map((plan) => {
+      const fareBani = Math.round((plan.fare?.totalAmountLei ?? 0) * 100);
+      const isCheapest = fareBani === minFareBani;
+
+      if (isCheapest) {
+        const nextPillars = plan.curatedPillars ? [...plan.curatedPillars] : [];
+        if (!nextPillars.includes('BEST_VALUE')) {
+          nextPillars.push('BEST_VALUE');
+        }
+        const currentPillar = plan.curatedPillar;
+        const nextPillar =
+          currentPillar === 'MOST_RELIABLE' || currentPillar === 'FASTEST'
+            ? currentPillar
+            : 'BEST_VALUE';
+
+        return {
+          ...plan,
+          curatedPillars: nextPillars,
+          curatedPillar: nextPillar,
+        };
+      } else {
+        const nextPillars = (plan.curatedPillars || []).filter(
+          (p) => p !== 'BEST_VALUE'
+        );
+        const nextPillar =
+          plan.curatedPillar === 'BEST_VALUE'
+            ? nextPillars[0] || null
+            : plan.curatedPillar;
+
+        return {
+          ...plan,
+          curatedPillars: nextPillars,
+          curatedPillar: nextPillar,
+        };
+      }
+    });
+  }
+
+  // 7. Curated Pillar filter (runs after Flora is reconciled to true cheapest)
+  if (filters.pillar && filters.pillar !== 'ALL') {
+    result = result.filter(
+      (t) =>
+        t.curatedPillars?.includes(filters.pillar as CuratedPillar) ||
+        t.curatedPillar === filters.pillar
+    );
   }
 
   // 7. Sorting
@@ -1548,30 +1601,35 @@ export function convertTrainJourneyToRoutePlan(
     },
   };
 
-  return {
-    id: `plan-${journey.id}`,
-    date,
-    query: {
-      origin: { name: journey.origin.name, city: journey.origin.city },
-      destination: { name: journey.destination.name, city: journey.destination.city },
+    const hasMultiCode = journey.trainNumber.includes('+') || journey.trainNumber.includes('->') || journey.trainNumber.includes(' / ');
+    const transfersCount = hasMultiCode ? 1 : 0;
+
+    return {
+      id: `plan-${journey.id}`,
+      date,
+      query: {
+        origin: { name: journey.origin.name, city: journey.origin.city },
+        destination: { name: journey.destination.name, city: journey.destination.city },
+        departureTime: departureIso,
+        allowedModes: ['TRAIN'],
+        optimizationPreference: pillar === 'ECO_HERO' ? 'BEST_VALUE' : pillar,
+      },
+      summary: `${journey.trainNumber} ${hasMultiCode ? 'Connecting Route' : 'Direct Express'}`,
       departureTime: departureIso,
-      allowedModes: ['TRAIN'],
-      optimizationPreference: pillar === 'ECO_HERO' ? 'BEST_VALUE' : pillar,
-    },
-    summary: `${journey.trainNumber} Direct Express`,
-    departureTime: departureIso,
-    arrivalTime: arrivalIso,
-    totalDurationMinutes: journey.durationMinutes,
-    totalWalkMinutes: 4,
-    totalWalkDistanceMeters: 150,
-    transfersCount: 0,
-    curatedPillar: pillar,
-    curatedPillars: pillar ? [pillar] : [],
-    mascotRecommendation: {
-      persona,
-      badgeLabel,
-      advice: `Direct rail connection operated by ${journey.operator}.`,
-    },
+      arrivalTime: arrivalIso,
+      totalDurationMinutes: journey.durationMinutes,
+      totalWalkMinutes: 4,
+      totalWalkDistanceMeters: 150,
+      transfersCount,
+      curatedPillar: pillar,
+      curatedPillars: pillar ? [pillar] : [],
+      mascotRecommendation: {
+        persona,
+        badgeLabel,
+        advice: hasMultiCode
+          ? `Transfer rail connection operated by ${journey.operator}.`
+          : `Direct rail connection operated by ${journey.operator}.`,
+      },
     riskAnalysis: journey.riskAnalysis || {
       overallRiskScore: 10,
       riskLevel: 'LOW',
@@ -1746,30 +1804,44 @@ export async function fetchDayTripsFromBackend(
       }
     }
 
-    // Attach travel date, preserve stops & transfers, and ensure curatedPillars are initialized
-    plans = plans.map((p) => ({
-      ...p,
-      date: travelDate,
-      transfers: p.transfers || [],
-      legs: (p.legs || []).map((l) => ({
-        ...l,
-        stops: l.stops || [],
-        intermediateStopCount:
-          l.intermediateStopCount ??
-          (l.stops && l.stops.length >= 2 ? l.stops.length - 2 : 0),
-        distanceKm: l.distanceKm,
-        trainCategory: l.trainCategory,
-        fullTrainOrigin: l.fullTrainOrigin,
-        fullTrainDestination: l.fullTrainDestination,
-      })),
-      curatedPillars: Array.isArray(p.curatedPillars)
-        ? p.curatedPillars
-        : p.curatedPillar
-        ? [p.curatedPillar]
-        : [],
-    }));
+    // Attach travel date, derive transfersCount consistently, preserve stops & transfers, and ensure curatedPillars are initialized
+    plans = plans.map((p) => {
+      const lineCodes = (p.legs || []).map((l) => l.names?.lineCode || '').join(' ');
+      const hasMultiCode =
+        lineCodes.includes('+') ||
+        lineCodes.includes('->') ||
+        (p.summary ? p.summary.includes('+') || p.summary.includes('->') : false);
+      const transfers = Math.max(
+        typeof p.transfersCount === 'number' ? p.transfersCount : 0,
+        (p.legs?.length || 1) - 1,
+        p.transfers?.length || 0,
+        hasMultiCode ? 1 : 0
+      );
+      return {
+        ...p,
+        date: travelDate,
+        transfersCount: transfers,
+        transfers: p.transfers || [],
+        legs: (p.legs || []).map((l) => ({
+          ...l,
+          stops: l.stops || [],
+          intermediateStopCount:
+            l.intermediateStopCount ??
+            (l.stops && l.stops.length >= 2 ? l.stops.length - 2 : 0),
+          distanceKm: l.distanceKm,
+          trainCategory: l.trainCategory,
+          fullTrainOrigin: l.fullTrainOrigin,
+          fullTrainDestination: l.fullTrainDestination,
+        })),
+        curatedPillars: Array.isArray(p.curatedPillars)
+          ? p.curatedPillars
+          : p.curatedPillar
+          ? [p.curatedPillar]
+          : [],
+      };
+    });
 
-    // Merge any real departures from allDayDepartures not already present in plans
+    // Merge any real direct departures from allDayDepartures not already present in plans
     const computeClientPlanSig = (p: TransitRoutePlan): string =>
       p.legs
         .map(
@@ -1782,6 +1854,13 @@ export async function fetchDayTripsFromBackend(
     const normalizeTrainKey = (num: string) =>
       num.toUpperCase().replace(/\s+/g, '').replace(/[^A-Z0-9]/g, '');
 
+    // Track every train number present anywhere across plans (direct or connecting leg)
+    const existingTrainNumbers = new Set(
+      plans.flatMap((p) =>
+        (p.legs || []).map((l) => normalizeTrainKey(l.names?.lineCode || ''))
+      )
+    );
+
     const existingDirectTrainKeys = new Set(
       plans
         .filter((p) => p.transfersCount === 0 && p.legs.length > 0)
@@ -1790,17 +1869,35 @@ export async function fetchDayTripsFromBackend(
 
     if (allDayDepartures && allDayDepartures.length > 0) {
       for (const journey of allDayDepartures) {
-        const directKey = `${normalizeTrainKey(journey.trainNumber)}|${travelDate}`;
-        if (!existingDirectTrainKeys.has(directKey)) {
-          const journeyPlan = convertTrainJourneyToRoutePlan(journey, travelDate);
-          journeyPlan.curatedPillars = [];
-          journeyPlan.curatedPillar = null;
-          const sig = computeClientPlanSig(journeyPlan);
-          if (!existingSigs.has(sig)) {
-            existingSigs.add(sig);
-            existingDirectTrainKeys.add(directKey);
-            plans.push(journeyPlan);
-          }
+        // Defensive: NEVER merge multi-leg transfer combinations (+ or -> or /) from allDayDepartures as fake direct cards
+        const isMultiJourney =
+          journey.trainNumber.includes('+') ||
+          journey.trainNumber.includes('->') ||
+          (journey.trainNumber.includes('/') &&
+            journey.trainNumber.split('/').length > 1 &&
+            /\d/.test(journey.trainNumber.split('/')[0]) &&
+            /\d/.test(journey.trainNumber.split('/')[1]));
+        if (isMultiJourney) {
+          continue;
+        }
+
+        const normKey = normalizeTrainKey(journey.trainNumber);
+        const directKey = `${normKey}|${travelDate}`;
+
+        // If this train already exists anywhere in plans (direct or part of a transfer itinerary), skip
+        if (existingDirectTrainKeys.has(directKey) || existingTrainNumbers.has(normKey)) {
+          continue;
+        }
+
+        const journeyPlan = convertTrainJourneyToRoutePlan(journey, travelDate);
+        journeyPlan.curatedPillars = [];
+        journeyPlan.curatedPillar = null;
+        const sig = computeClientPlanSig(journeyPlan);
+        if (!existingSigs.has(sig)) {
+          existingSigs.add(sig);
+          existingDirectTrainKeys.add(directKey);
+          existingTrainNumbers.add(normKey);
+          plans.push(journeyPlan);
         }
       }
     }

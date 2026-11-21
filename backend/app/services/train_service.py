@@ -722,6 +722,15 @@ class TrainService:
             records = infofer_adapter.fetch_itinerary_sync(eff_orig, eff_dest, date_str=effective_date)
             if records:
                 for r in records:
+                    is_rec_multi = (
+                        getattr(r, "is_multi_leg", False)
+                        or (getattr(r, "transfer_legs", None) and len(r.transfer_legs) > 1)
+                        or ("+" in r.source_train_api.train_number)
+                        or ("->" in r.source_train_api.train_number)
+                        or ("/" in r.source_train_api.train_number)
+                    )
+                    if is_rec_multi:
+                        continue
                     t_num = normalize_train_number(r.source_train_api.train_number)
                     dedup_key = (t_num, effective_date)
                     if dedup_key not in seen_train_keys:

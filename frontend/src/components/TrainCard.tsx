@@ -6,7 +6,8 @@ import { TrainJourney } from '../types/train';
 import { getLowestFare, formatTimeOnly } from '../utils/trainFilters';
 import { useTrip } from '../context/TripContext';
 import { isTrainDeparted } from '../utils/departureTime';
-import { buildOfficialTicketUrl, buildLegTrainLinks, SAFE_EXTERNAL_LINK_ATTRS } from '../utils/officialTicketUrl';
+import { buildOfficialTicketUrl, buildInfoferTrainUrl, buildLegTrainLinks, SAFE_EXTERNAL_LINK_ATTRS } from '../utils/officialTicketUrl';
+import { formatCurrency, formatPercent } from '../utils/formatters';
 import BaseCard from './BaseCard';
 import BaseButton from './BaseButton';
 import BaseBadge from './BaseBadge';
@@ -68,18 +69,30 @@ export const TrainCard: React.FC<TrainCardProps> = ({ journey, onPressDetails })
     <BaseCard variant="elevated" className="p-5 mb-4 border border-amber-100 bg-white">
       <div className="flex items-center justify-between pb-3 border-b border-stone-100">
         <div>
-          <span
-            className="font-black text-base text-stone-900 tracking-tight mr-2"
-            title={
-              /^(IC|IR)/i.test(journey.trainNumber)
-                ? 'Queen Vira · Express Mainline'
-                : /^(RE|R)/i.test(journey.trainNumber)
-                ? 'Queen Flora · Regional'
-                : undefined
-            }
+          <a
+            href={buildInfoferTrainUrl(
+              journey.trainNumber,
+              journey.departureTime ? journey.departureTime.slice(0, 10) : undefined
+            )}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="font-black text-base text-stone-900 hover:text-amber-600 transition-colors tracking-tight mr-2 inline-flex items-center gap-1 group"
+            title={`Deschide trenul ${journey.trainNumber} pe InfoFer / Bilet online`}
           >
-            {journey.trainNumber}
-          </span>
+            <span
+              title={
+                /^(IC|IR)/i.test(journey.trainNumber)
+                  ? 'Queen Vira · Express Mainline'
+                  : /^(RE|R)/i.test(journey.trainNumber)
+                  ? 'Queen Flora · Regional'
+                  : undefined
+              }
+            >
+              {journey.trainNumber}
+            </span>
+            <ExternalLink className="w-3.5 h-3.5 text-stone-400 group-hover:text-amber-600 transition-colors" />
+          </a>
           <span className="text-xs font-semibold text-stone-500">{journey.operator}</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -117,6 +130,15 @@ export const TrainCard: React.FC<TrainCardProps> = ({ journey, onPressDetails })
             <Leaf className="w-3 h-3 text-emerald-600" />
             <span>-{Math.round((journey.carbonFootprintKg || 12) * 5)}kg CO₂</span>
           </div>
+          {journey.riskAnalysis && (
+            <div data-testid="train-risk-shield" className="flex items-center gap-1.5 mt-1 text-[11px] font-medium text-emerald-700">
+              {journey.riskAnalysis.missedConnectionProbability !== undefined ? (
+                <span>🛡️ {formatPercent((1 - journey.riskAnalysis.missedConnectionProbability) * 100)} transfer chance</span>
+              ) : journey.riskAnalysis.overallRiskScore !== undefined ? (
+                <span>🛡️ Shield: {formatPercent(100 - journey.riskAnalysis.overallRiskScore)}</span>
+              ) : null}
+            </div>
+          )}
         </div>
 
         {/* Destination */}
@@ -132,7 +154,7 @@ export const TrainCard: React.FC<TrainCardProps> = ({ journey, onPressDetails })
         <div>
           <span className="text-xs text-stone-400 block font-medium">From</span>
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-black text-amber-600">{lowestPrice.toFixed(2)}</span>
+            <span className="text-xl font-black text-amber-600">{formatCurrency(lowestPrice)}</span>
             <span className="text-xs font-bold text-stone-500 uppercase">LEI</span>
           </div>
         </div>

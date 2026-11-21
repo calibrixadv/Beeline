@@ -6,6 +6,7 @@ import { TrainJourney } from '../types/train';
 import { formatTimeOnly } from '../utils/trainFilters';
 import { isTrainDeparted } from '../utils/departureTime';
 import { buildOfficialTicketUrl, SAFE_EXTERNAL_LINK_ATTRS } from '../utils/officialTicketUrl';
+import { formatCurrency } from '../utils/formatters';
 import { useTrip } from '../context/TripContext';
 import BaseButton from './BaseButton';
 
@@ -85,7 +86,7 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({ journey, isO
                 >
                   <span className="text-xs font-semibold text-stone-700">{fare.classType}</span>
                   <div className="mt-1 flex items-baseline justify-between">
-                    <span className="font-bold text-base text-amber-700">{fare.price.toFixed(2)} LEI</span>
+                    <span className="font-bold text-base text-amber-700">{formatCurrency(fare.price)} LEI</span>
                     <span className="text-[10px] text-stone-400">{fare.seatsAvailable} seats</span>
                   </div>
                 </div>

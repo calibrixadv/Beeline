@@ -7,10 +7,22 @@ frontend/.expo/
 
 # Build and Compilation Artifacts
 dist/
+out/
 frontend/dist/
 frontend/.next/
 *.tsbuildinfo
 frontend/tsconfig.tsbuildinfo
+
+# Video, Presentation & Pitch Rendering Artifacts
+pitch-video/
+video/
+renders/
+record_demo.*
+*.mov
+*.mp4
+*.webm
+*.mkv
+*.avi
 
 # Test and Coverage Artifacts
 coverage/
@@ -41,27 +53,35 @@ backend/scraper/.cache/*.json
 backend/scraper/.cache/weekly_stations_catalog.json
 backend/scraper/.cache/trains/
 
-# Local Databases & Secrets
+# Local Databases, Environments & Secrets
 *.db
 *.sqlite
 *.sqlite3
 .env
 .env.local
 .env.*.local
-*.log
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+!**/.env.example
 
-# OS & Editor Junk
+# Temporary Reports, Debug Scripts, Logs & OS/Tool Caches
 .DS_Store
 **/.DS_Store
+*.log
+*.bak
+*.tmp
 *.swp
 .*.swp
 .system_generated/
 npm-debug.*
 
-# Mobile Credentials
+# Mobile Credentials & Patch Backups
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.orig
 *.orig.*

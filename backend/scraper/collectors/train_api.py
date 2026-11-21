@@ -854,6 +854,10 @@ def _serialize_live_records(records: List[TrainScrapeRecord]) -> str:
         d = r.model_dump()
         d["departure_seconds"] = getattr(r, "departure_seconds", 0)
         d["arrival_seconds"] = getattr(r, "arrival_seconds", 0)
+        d["departure_iso"] = getattr(r, "departure_iso", None)
+        d["arrival_iso"] = getattr(r, "arrival_iso", None)
+        d["origin_station_name"] = getattr(r, "origin_station_name", None)
+        d["destination_station_name"] = getattr(r, "destination_station_name", None)
         d["route_stops"] = getattr(r, "route_stops", None)
         d["full_operator"] = getattr(r, "full_operator", None)
         d["is_multi_leg"] = getattr(r, "is_multi_leg", False)
@@ -866,6 +870,10 @@ def _serialize_live_records(records: List[TrainScrapeRecord]) -> str:
                     **tl.model_dump(),
                     "departure_seconds": getattr(tl, "departure_seconds", 0),
                     "arrival_seconds": getattr(tl, "arrival_seconds", 0),
+                    "departure_iso": getattr(tl, "departure_iso", None),
+                    "arrival_iso": getattr(tl, "arrival_iso", None),
+                    "origin_station_name": getattr(tl, "origin_station_name", None),
+                    "destination_station_name": getattr(tl, "destination_station_name", None),
                     "route_stops": getattr(tl, "route_stops", None),
                     "full_operator": getattr(tl, "full_operator", None),
                 }
@@ -884,6 +892,10 @@ def _deserialize_live_records(raw_json: str) -> List[TrainScrapeRecord]:
         for it in items:
             dep_s = it.pop("departure_seconds", 0)
             arr_s = it.pop("arrival_seconds", 0)
+            dep_iso = it.pop("departure_iso", None)
+            arr_iso = it.pop("arrival_iso", None)
+            orig_name = it.pop("origin_station_name", None)
+            dest_name = it.pop("destination_station_name", None)
             stops = it.pop("route_stops", None)
             full_op = it.pop("full_operator", None)
             is_multi = it.pop("is_multi_leg", False)
@@ -893,6 +905,14 @@ def _deserialize_live_records(raw_json: str) -> List[TrainScrapeRecord]:
             rec = TrainScrapeRecord.model_validate(it)
             rec.departure_seconds = dep_s
             rec.arrival_seconds = arr_s
+            if dep_iso:
+                rec.departure_iso = dep_iso
+            if arr_iso:
+                rec.arrival_iso = arr_iso
+            if orig_name:
+                rec.origin_station_name = orig_name
+            if dest_name:
+                rec.destination_station_name = dest_name
             rec.route_stops = stops
             rec.full_operator = full_op
             rec.is_multi_leg = is_multi
@@ -903,11 +923,23 @@ def _deserialize_live_records(raw_json: str) -> List[TrainScrapeRecord]:
                 for tl_dict in raw_t_legs:
                     tl_dep_s = tl_dict.pop("departure_seconds", 0)
                     tl_arr_s = tl_dict.pop("arrival_seconds", 0)
+                    tl_dep_iso = tl_dict.pop("departure_iso", None)
+                    tl_arr_iso = tl_dict.pop("arrival_iso", None)
+                    tl_orig_name = tl_dict.pop("origin_station_name", None)
+                    tl_dest_name = tl_dict.pop("destination_station_name", None)
                     tl_stops = tl_dict.pop("route_stops", None)
                     tl_full_op = tl_dict.pop("full_operator", None)
                     tl = TrainScrapeRecord.model_validate(tl_dict)
                     tl.departure_seconds = tl_dep_s
                     tl.arrival_seconds = tl_arr_s
+                    if tl_dep_iso:
+                        tl.departure_iso = tl_dep_iso
+                    if tl_arr_iso:
+                        tl.arrival_iso = tl_arr_iso
+                    if tl_orig_name:
+                        tl.origin_station_name = tl_orig_name
+                    if tl_dest_name:
+                        tl.destination_station_name = tl_dest_name
                     tl.route_stops = tl_stops
                     tl.full_operator = tl_full_op
                     t_legs.append(tl)

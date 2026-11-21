@@ -480,6 +480,12 @@ class TransitRouteQuery(BaseModel):
     )
     optimizationPreference: Literal["FASTEST", "BEST_VALUE", "SAFE_BUFFERS", "LEAST_TRANSFERS", "MOST_RELIABLE"] = "SAFE_BUFFERS"
     minimumBufferMinutes: Optional[int] = 20
+    maxTransfers: Optional[int] = Field(
+        default=None,
+        ge=0,
+        validation_alias=AliasChoices("maxTransfers", "max_transfers"),
+        description="Max allowed transfers (0=direct only, 1=max 1 transfer, etc.)"
+    )
 
     @field_validator("origin", "destination", mode="before")
     @classmethod

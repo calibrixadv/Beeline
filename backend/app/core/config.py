@@ -1,5 +1,7 @@
+import json
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -9,9 +11,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Beeline VoyageRail API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
+    ENVIRONMENT: str = "development"
     
     # Security & JWT
     SECRET_KEY: str = "beeline-super-secret-key-development-vault-change-in-prod-32chars"
+    JWT_SECRET_KEY: Optional[str] = None
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
@@ -71,6 +75,32 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "*"
     ]
+    ALLOWED_ORIGINS: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def handle_environment_aliases(cls, data):
+        if isinstance(data, dict):
+            jwt_key = data.get("JWT_SECRET_KEY")
+            if jwt_key and not data.get("SECRET_KEY"):
+                data["SECRET_KEY"] = jwt_key
+            allowed = data.get("ALLOWED_ORIGINS")
+            if allowed and not data.get("CORS_ORIGINS"):
+                data["CORS_ORIGINS"] = allowed
+        return data
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if v.startswith("[") and v.endswith("]"):
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
 
     model_config = SettingsConfigDict(
         env_file=".env",

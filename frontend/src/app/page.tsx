@@ -10,7 +10,6 @@ import {
   ArrowUp
 } from 'lucide-react';
 import MascotBee, { MascotGear } from '../components/MascotBee';
-import MascotDebugModal from '../components/MascotDebugModal';
 import BaseButton from '../components/BaseButton';
 import BaseCard from '../components/BaseCard';
 import StationAutocompleteInput from '../components/StationAutocompleteInput';
@@ -313,11 +312,10 @@ export default function HomePage() {
     setMaxDateStr(maxD.toISOString().slice(0, 10));
   }, []);
 
-  // First-Render Initial Loading & Debug Forced Loading State
+  // First-Render Initial Loading State
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(
     () => process.env.NODE_ENV !== 'test'
   );
-  const [isDebugLoadingForced, setIsDebugLoadingForced] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isInitialLoading) return;
@@ -361,26 +359,23 @@ export default function HomePage() {
     };
   }, [isInitialLoading]);
 
-  const showGhostLayout = isInitialLoading || isDebugLoadingForced;
+  const showGhostLayout = isInitialLoading;
 
   // Mascot & Route Gear State ('default' initially, then 'fast' | 'safe' | 'economy')
   const [activeGear, setActiveGear] = useState<MascotGear>('default');
   const [selectedRouteType, setSelectedRouteType] = useState<'fast' | 'safe' | 'economy'>('safe');
   const [queenSectionGear, setQueenSectionGear] = useState<'safe' | 'fast' | 'economy'>('safe');
-  const [isManualOverride, setIsManualOverride] = useState<boolean>(false);
-  const [isDebugModalOpen, setIsDebugModalOpen] = useState<boolean>(false);
 
   // Passive 60fps Scroll Tour Engine
   const { activeChapter, prefersReducedMotion } = useScrollHiveTour();
 
   // Pure derived gear: dynamically resolves gear for hero, queens, and transit without cascading renders
-  const effectiveGear: MascotGear = isManualOverride
-    ? activeGear
-    : activeChapter === 'queens'
-    ? queenSectionGear
-    : activeChapter === 'providers'
-    ? 'default'
-    : activeGear;
+  const effectiveGear: MascotGear =
+    activeChapter === 'queens'
+      ? queenSectionGear
+      : activeChapter === 'providers'
+      ? 'default'
+      : activeGear;
 
   const handleSwap = () => {
     setOrigin(destination);
@@ -391,7 +386,6 @@ export default function HomePage() {
   const handleSelectPreference = (type: 'fast' | 'safe' | 'economy') => {
     setSelectedRouteType(type);
     setActiveGear(type);
-    setIsManualOverride(false);
   };
 
   const handlePreferenceKeyDown = (
@@ -476,31 +470,9 @@ export default function HomePage() {
     router.push(`/trips?${queryParams.toString()}`);
   };
 
-  const handleSelectManualGear = (gear: MascotGear) => {
-    setActiveGear(gear);
-    setIsManualOverride(true);
-    if (gear !== 'default') {
-      setSelectedRouteType(gear);
-    }
-  };
-
-  const handleResetAutoMode = () => {
-    setIsManualOverride(false);
-    setIsDebugLoadingForced(false);
-    if (activeChapter === 'queens') {
-      setActiveGear(queenSectionGear);
-    } else if (activeChapter === 'providers') {
-      setActiveGear('default');
-    } else {
-      setActiveGear('default');
-    }
-  };
-
   const handleSelectQueen = (gear: 'safe' | 'fast' | 'economy') => {
     setQueenSectionGear(gear);
-    if (!isManualOverride) {
-      setActiveGear(gear);
-    }
+    setActiveGear(gear);
   };
 
   const handleScrollToHero = () => {
@@ -807,44 +779,6 @@ export default function HomePage() {
       </div>
     </div>
   )}
-
-      {/* Discrete Testing/Debug Tools Trigger */}
-      <div className="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-40">
-        <button
-          type="button"
-          onClick={() => setIsDebugModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-stone-900/85 hover:bg-stone-950 text-stone-200 border border-stone-700/60 shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-amber-500/50 cursor-pointer"
-          title="Open Mascot Testing / Debug Tools"
-          aria-label="Open Debug Tools"
-          aria-haspopup="dialog"
-          aria-expanded={isDebugModalOpen}
-        >
-          <span className="text-amber-400">🛠️</span>
-          <span>Debug Tools</span>
-          {(isManualOverride || isDebugLoadingForced) && (
-            <span
-              className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"
-              title="Manual override active"
-            />
-          )}
-        </button>
-      </div>
-
-      {/* Testing / Debug Modal */}
-      <MascotDebugModal
-        isOpen={isDebugModalOpen}
-        onClose={() => setIsDebugModalOpen(false)}
-        currentGear={effectiveGear}
-        onSelectGear={handleSelectManualGear}
-        onResetAuto={handleResetAutoMode}
-        isManualOverride={isManualOverride || isDebugLoadingForced}
-        isLoadingForced={isDebugLoadingForced}
-        onToggleForceLoading={() => {
-          setIsDebugLoadingForced((prev) => !prev);
-          setIsDebugModalOpen(false);
-        }}
-        onResetLoading={() => setIsDebugLoadingForced(false)}
-      />
     </div>
   );
 }

@@ -94,7 +94,7 @@ describe('Glassy Ghost Layouts & Complete Schedules Removal Test Suite', () => {
       expect(container.querySelectorAll('.leaflet-container').length).toBe(0);
     });
 
-    it('renders TripsGhostSkeleton during backend fetch and via Debug Tools', async () => {
+    it('renders TripsGhostSkeleton during backend fetch and confirms Debug Tools is not rendered', async () => {
       let resolveFetch!: (data: any) => void;
       const pendingPromise = new Promise((resolve) => {
         resolveFetch = resolve;
@@ -125,21 +125,9 @@ describe('Glassy Ghost Layouts & Complete Schedules Removal Test Suite', () => {
         expect(screen.queryByTestId('trips-ghost-skeleton')).not.toBeInTheDocument();
       });
 
-      // Open Debug Tools and force loading
-      const debugBtn = screen.getByRole('button', { name: /Open Debug Tools/i });
-      fireEvent.click(debugBtn);
-
-      const toggleForceBtn = screen.getByTestId('debug-toggle-loading-state');
-      fireEvent.click(toggleForceBtn);
-
-      // Skeleton immediately appears
-      expect(screen.getByTestId('trips-ghost-skeleton')).toBeInTheDocument();
-
-      // Stop loading via Debug Tools
-      fireEvent.click(debugBtn);
-      const stopBtn = screen.getByTestId('debug-toggle-loading-state');
-      fireEvent.click(stopBtn);
-      expect(screen.queryByTestId('trips-ghost-skeleton')).not.toBeInTheDocument();
+      // Confirm Debug Tools is not rendered in production UI
+      expect(screen.queryByRole('button', { name: /Open Debug Tools/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Debug Tools/i })).not.toBeInTheDocument();
     });
   });
 
