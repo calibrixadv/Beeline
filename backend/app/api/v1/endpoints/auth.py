@@ -96,35 +96,46 @@ def set_auth_cookies(
     remember_me: bool = False,
     max_age_seconds: Optional[int] = None,
 ) -> None:
-    """Sets secure, HttpOnly, SameSite=Lax session cookies for browser clients."""
+    """Sets secure, HttpOnly, SameSite session cookies for browser clients."""
     if max_age_seconds is None:
         max_age_seconds = 30 * 86400 if remember_me else 86400
+
+    cookie_kwargs: dict = {
+        "max_age": max_age_seconds,
+        "httponly": True,
+        "samesite": settings.cookie_samesite,
+        "path": "/",
+        "secure": settings.cookie_secure,
+    }
+    if settings.cookie_domain:
+        cookie_kwargs["domain"] = settings.cookie_domain
 
     response.set_cookie(
         key="beeline_auth_token",
         value=auth_token,
-        max_age=max_age_seconds,
-        httponly=True,
-        samesite="lax",
-        path="/",
-        secure=False,
+        **cookie_kwargs,
     )
     if device_proof:
         response.set_cookie(
             key="beeline_device_proof",
             value=device_proof,
-            max_age=max_age_seconds,
-            httponly=True,
-            samesite="lax",
-            path="/",
-            secure=False,
+            **cookie_kwargs,
         )
 
 
 def clear_auth_cookies(response: Response) -> None:
     """Clears session and device proof cookies."""
-    response.delete_cookie(key="beeline_auth_token", path="/")
-    response.delete_cookie(key="beeline_device_proof", path="/")
+    delete_kwargs: dict = {
+        "path": "/",
+        "httponly": True,
+        "samesite": settings.cookie_samesite,
+        "secure": settings.cookie_secure,
+    }
+    if settings.cookie_domain:
+        delete_kwargs["domain"] = settings.cookie_domain
+
+    response.delete_cookie(key="beeline_auth_token", **delete_kwargs)
+    response.delete_cookie(key="beeline_device_proof", **delete_kwargs)
 
 
 @router.post("/signup", response_model=SignUpResponse, status_code=status.HTTP_201_CREATED)

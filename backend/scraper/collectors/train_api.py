@@ -955,27 +955,52 @@ def _deserialize_live_records(raw_json: str) -> List[TrainScrapeRecord]:
 
 _cached_sync_redis = None
 _cached_async_redis = None
+_last_train_api_redis_warning = 0.0
+_train_api_redis_down = False
+
+
+def _resolve_train_api_redis_url() -> str:
+    url = os.environ.get("REDIS_URL")
+    if not url:
+        try:
+            from app.core.config import settings
+            url = settings.REDIS_URL
+        except Exception:
+            url = "redis://localhost:6379/0"
+    return url or "redis://localhost:6379/0"
+
+
+def _log_train_api_redis_warning(url: str, exc: Exception, context: str = "Redis connection") -> None:
+    global _last_train_api_redis_warning, _train_api_redis_down
+    now = time.time()
+    if not _train_api_redis_down or (now - _last_train_api_redis_warning) > 60.0:
+        safe_url = re.sub(r"://([^:@]+):([^@]+)@", r"://\1:***@", url) if url else "redis://***"
+        logger.warning(
+            f"{context} failed for '{safe_url}': {type(exc).__name__}: {exc}. Operating in degraded mode."
+        )
+        _last_train_api_redis_warning = now
+        _train_api_redis_down = True
 
 
 def _get_sync_redis_client():
     global _cached_sync_redis
     if _cached_sync_redis is not None:
         return _cached_sync_redis
+    url = _resolve_train_api_redis_url()
     try:
         import redis
-        client = redis.Redis(host="localhost", port=6379, db=0, socket_connect_timeout=0.2)
+        client = redis.Redis.from_url(
+            url,
+            socket_connect_timeout=2.0,
+            socket_timeout=2.0,
+            retry_on_timeout=False,
+        )
         client.ping()
         _cached_sync_redis = client
         return client
-    except Exception:
-        try:
-            import redis
-            client = redis.Redis(host="redis", port=6379, db=0, socket_connect_timeout=0.2)
-            client.ping()
-            _cached_sync_redis = client
-            return client
-        except Exception:
-            return None
+    except Exception as exc:
+        _log_train_api_redis_warning(url, exc, context="Sync Redis client")
+        return None
 
 
 async def _get_async_redis_client():
@@ -983,20 +1008,27 @@ async def _get_async_redis_client():
     if _cached_async_redis is not None:
         return _cached_async_redis
     try:
+        from app.core.redis import _custom_redis_client
+        if _custom_redis_client is not None:
+            return _custom_redis_client
+    except Exception:
+        pass
+    url = _resolve_train_api_redis_url()
+    try:
         import redis.asyncio as aioredis
-        client = aioredis.Redis(host="localhost", port=6379, db=0, socket_connect_timeout=0.2)
+        client = aioredis.Redis.from_url(
+            url,
+            decode_responses=False,
+            socket_connect_timeout=2.0,
+            socket_timeout=2.0,
+            retry_on_timeout=False,
+        )
         await client.ping()
         _cached_async_redis = client
         return client
-    except Exception:
-        try:
-            import redis.asyncio as aioredis
-            client = aioredis.Redis(host="redis", port=6379, db=0, socket_connect_timeout=0.2)
-            await client.ping()
-            _cached_async_redis = client
-            return client
-        except Exception:
-            return None
+    except Exception as exc:
+        _log_train_api_redis_warning(url, exc, context="Async Redis client")
+        return None
 
 
 def _load_snapshot_itinerary(orig_code: str, dest_code: str, date_str: str) -> Optional[str]:

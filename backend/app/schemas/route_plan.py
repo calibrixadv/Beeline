@@ -760,3 +760,33 @@ class SavedRouteUpdate(BaseModel):
     @property
     def alert_lead_minutes(self) -> Optional[int]:
         return self.alertLeadMinutes
+
+
+class RecentSearchItem(BaseModel):
+    origin: str
+    destination: str
+    date: str
+    cacheKey: str
+    resultCount: int
+    lastSearchedAt: str
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+
+class CacheStats(BaseModel):
+    backend: Literal["redis", "memory"]
+    redisConnected: bool
+    recentRouteSearchesCount: int
+    recentTrainSearchesCount: int
+    hits: int
+    misses: int
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+
+class RecentSearchesResponse(BaseModel):
+    recentSearches: List[RecentSearchItem]
+    stats: CacheStats
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+

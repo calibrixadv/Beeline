@@ -163,14 +163,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await close_redis_pool()
 
 
-is_production = settings.ENVIRONMENT.lower() == "production"
+enable_docs = settings.enable_api_docs
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    openapi_url=None if is_production else f"{settings.API_V1_STR}/openapi.json",
-    docs_url=None if is_production else f"{settings.API_V1_STR}/docs",
-    redoc_url=None if is_production else f"{settings.API_V1_STR}/redoc",
+    openapi_url=f"{settings.API_V1_STR}/openapi.json" if enable_docs else None,
+    docs_url=f"{settings.API_V1_STR}/docs" if enable_docs else None,
+    redoc_url=f"{settings.API_V1_STR}/redoc" if enable_docs else None,
     lifespan=lifespan
 )
 
@@ -241,9 +241,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Beeline-Cache", "X-Beeline-Cache-Source"],
 )
 
 
@@ -314,8 +316,16 @@ async def session_security_and_rotation_middleware(request: Request, call_next):
                         "detail": "Device context mismatch or hijack attempt detected. Session revoked.",
                     }
                 )
-                resp.delete_cookie(key="beeline_auth_token", path="/")
-                resp.delete_cookie(key="beeline_device_proof", path="/")
+                cookie_delete_kwargs: dict = {
+                    "path": "/",
+                    "httponly": True,
+                    "samesite": settings.cookie_samesite,
+                    "secure": settings.cookie_secure,
+                }
+                if settings.cookie_domain:
+                    cookie_delete_kwargs["domain"] = settings.cookie_domain
+                resp.delete_cookie(key="beeline_auth_token", **cookie_delete_kwargs)
+                resp.delete_cookie(key="beeline_device_proof", **cookie_delete_kwargs)
                 return resp
 
             # 2. Redis Instant Revocation Check
@@ -332,8 +342,16 @@ async def session_security_and_rotation_middleware(request: Request, call_next):
                             "detail": "Revoked or expired session",
                         }
                     )
-                    resp.delete_cookie(key="beeline_auth_token", path="/")
-                    resp.delete_cookie(key="beeline_device_proof", path="/")
+                    cookie_delete_kwargs = {
+                        "path": "/",
+                        "httponly": True,
+                        "samesite": settings.cookie_samesite,
+                        "secure": settings.cookie_secure,
+                    }
+                    if settings.cookie_domain:
+                        cookie_delete_kwargs["domain"] = settings.cookie_domain
+                    resp.delete_cookie(key="beeline_auth_token", **cookie_delete_kwargs)
+                    resp.delete_cookie(key="beeline_device_proof", **cookie_delete_kwargs)
                     return resp
 
             # 3. Transparent Auto-Rotation when 15-minute rot_exp passes
@@ -354,14 +372,19 @@ async def session_security_and_rotation_middleware(request: Request, call_next):
 
     # Attach transparently rotated cookie if eligible
     if rotated_auth_token and rotated_max_age is not None:
+        cookie_set_kwargs: dict = {
+            "max_age": rotated_max_age,
+            "httponly": True,
+            "samesite": settings.cookie_samesite,
+            "path": "/",
+            "secure": settings.cookie_secure,
+        }
+        if settings.cookie_domain:
+            cookie_set_kwargs["domain"] = settings.cookie_domain
         response.set_cookie(
             key="beeline_auth_token",
             value=rotated_auth_token,
-            max_age=rotated_max_age,
-            httponly=True,
-            samesite="lax",
-            path="/",
-            secure=False,
+            **cookie_set_kwargs,
         )
 
     return response
@@ -410,17 +433,20 @@ async def auth_rate_limit_middleware(request: Request, call_next):
 
 
 @app.get("/", tags=["Health"])
+@app.head("/", include_in_schema=False)
 async def root():
     return {
         "status": "healthy",
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "docs": f"{settings.API_V1_STR}/docs"
+        "docs": f"{settings.API_V1_STR}/docs" if settings.enable_api_docs else None
     }
 
 
 @app.get("/health", tags=["Health"])
+@app.head("/health", include_in_schema=False)
 @app.get(f"{settings.API_V1_STR}/health", tags=["Health"])
+@app.head(f"{settings.API_V1_STR}/health", include_in_schema=False)
 async def health_check():
     return {"status": "ok"}
 

@@ -4,11 +4,13 @@ from datetime import datetime, timezone
 import email.message
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.utils import formatdate, make_msgid
+from email.utils import formataddr, formatdate, make_msgid
 import html
+import httpx
 import json
 import logging
 import smtplib
+import ssl
 import time
 from typing import Any, Dict, List, Optional, Tuple
 import uuid
@@ -1590,6 +1592,8 @@ class EmailService:
         )
 
         mode = getattr(settings, "EMAIL_MODE", "dev_sink").lower()
+        if mode in ("brevo", "brevo_api", "brevo-api"):
+            mode = "brevo_api"
 
         if mode == "dev_sink":
             record.status = "sent"
@@ -1611,7 +1615,32 @@ class EmailService:
 
             return record
 
-        # SMTP mode
+        if mode == "brevo_api":
+            can_exec = await self.circuit_breaker.can_execute()
+            if not can_exec:
+                record.status = "fallback_dev_sink"
+                record.error = "Circuit breaker OPEN: transport paused"
+                async with self._lock:
+                    self._outbox.append(record)
+                logger.warning(f"Email fallback to dev_sink for {to_email} due to OPEN circuit breaker")
+                return record
+
+            try:
+                await self._send_via_brevo_api(record)
+                await self.circuit_breaker.record_success()
+                record.status = "sent"
+                async with self._lock:
+                    self._outbox.append(record)
+            except Exception as exc:
+                await self.circuit_breaker.record_failure()
+                record.status = "fallback_dev_sink"
+                record.error = f"Brevo API dispatch failed: {exc.__class__.__name__}: {exc}"
+                async with self._lock:
+                    self._outbox.append(record)
+                logger.error(f"Brevo API dispatch failed: {exc}. Falling back to dev_sink.")
+            return record
+
+        # SMTP mode (with automatic Brevo API fallback)
         can_exec = await self.circuit_breaker.can_execute()
         if not can_exec:
             record.status = "fallback_dev_sink"
@@ -1622,15 +1651,32 @@ class EmailService:
             return record
 
         try:
-            await asyncio.to_thread(self._dispatch_smtp_sync, record)
+            await self._send_via_smtp(record)
             await self.circuit_breaker.record_success()
             record.status = "sent"
             async with self._lock:
                 self._outbox.append(record)
         except Exception as exc:
+            # Check if Brevo API fallback is available
+            brevo_key = getattr(settings, "BREVO_API_KEY", "")
+            if brevo_key:
+                logger.warning(
+                    f"SMTP dispatch failed ({exc.__class__.__name__}: {exc}). Attempting automatic Brevo API fallback..."
+                )
+                try:
+                    await self._send_via_brevo_api(record)
+                    await self.circuit_breaker.record_success()
+                    record.status = "sent"
+                    record.error = None
+                    async with self._lock:
+                        self._outbox.append(record)
+                    return record
+                except Exception as api_exc:
+                    logger.error(f"Brevo API fallback also failed: {api_exc}")
+
             await self.circuit_breaker.record_failure()
             record.status = "fallback_dev_sink"
-            record.error = str(exc)
+            record.error = f"SMTP dispatch failed: {exc.__class__.__name__}: {exc}"
             async with self._lock:
                 self._outbox.append(record)
             logger.error(f"SMTP dispatch failed: {exc}. Falling back to dev_sink.")
@@ -1644,8 +1690,9 @@ class EmailService:
         """
         msg = MIMEMultipart("alternative")
         msg["Subject"] = record.subject
-        from_email = getattr(settings, "SMTP_FROM_EMAIL", "noreply@beeline.voyagerail.com")
-        msg["From"] = from_email
+        from_name = getattr(settings, "SMTP_FROM_NAME", "Beeline VoyageRail")
+        from_email = getattr(settings, "SMTP_FROM_EMAIL", "noreply@beeline.local")
+        msg["From"] = formataddr((from_name, from_email))
         msg["To"] = record.to_email
         msg["Date"] = formatdate(localtime=True)
         msg["Message-ID"] = make_msgid(domain="beeline.local")
@@ -1656,6 +1703,10 @@ class EmailService:
         msg.attach(part_html)
         return msg
 
+    async def _send_via_smtp(self, record: EmailMessageRecord) -> None:
+        """Asynchronous wrapper for synchronous SMTP dispatch."""
+        await asyncio.to_thread(self._dispatch_smtp_sync, record)
+
     def _dispatch_smtp_sync(self, record: EmailMessageRecord) -> None:
         """Synchronous SMTP helper executed in threadpool worker."""
         msg = self._build_mime_message(record)
@@ -1664,12 +1715,71 @@ class EmailService:
         port = int(getattr(settings, "SMTP_PORT", 1025))
         user = getattr(settings, "SMTP_USER", "")
         password = getattr(settings, "SMTP_PASSWORD", "")
+        timeout = int(getattr(settings, "SMTP_TIMEOUT_SECONDS", 12))
+        from_email = getattr(settings, "SMTP_FROM_EMAIL", "noreply@beeline.local")
 
-        with smtplib.SMTP(host, port, timeout=10) as server:
-            if user and password:
-                server.starttls()
-                server.login(user, password)
-            server.send_message(msg)
+        use_ssl = getattr(settings, "effective_smtp_use_ssl", False)
+        use_tls = getattr(settings, "effective_smtp_use_tls", False)
+
+        try:
+            if use_ssl:
+                ssl_context = ssl.create_default_context()
+                with smtplib.SMTP_SSL(host, port, timeout=timeout, context=ssl_context) as server:
+                    if user and password:
+                        server.login(user, password)
+                    server.sendmail(from_email, [record.to_email], msg.as_string())
+            else:
+                with smtplib.SMTP(host, port, timeout=timeout) as server:
+                    server.ehlo()
+                    if use_tls:
+                        ssl_context = ssl.create_default_context()
+                        server.starttls(context=ssl_context)
+                        server.ehlo()
+                    if user and password:
+                        server.login(user, password)
+                    server.sendmail(from_email, [record.to_email], msg.as_string())
+        except (smtplib.SMTPException, OSError, TimeoutError) as exc:
+            code = getattr(exc, "smtp_code", None) or getattr(exc, "code", "N/A")
+            logger.error(
+                f"SMTP delivery failed to {host}:{port} for {record.to_email}: "
+                f"{exc.__class__.__name__} (code: {code})"
+            )
+            raise
+
+    async def _send_via_brevo_api(self, record: EmailMessageRecord) -> None:
+        """Dispatches transactional email via Brevo HTTP API v3."""
+        api_key = getattr(settings, "BREVO_API_KEY", "")
+        if not api_key:
+            raise ValueError("BREVO_API_KEY is not configured")
+
+        api_url = getattr(settings, "BREVO_API_URL", "https://api.brevo.com/v3/smtp/email")
+        from_name = getattr(settings, "SMTP_FROM_NAME", "Beeline VoyageRail")
+        from_email = getattr(settings, "SMTP_FROM_EMAIL", "noreply@beeline.local")
+        timeout = float(getattr(settings, "SMTP_TIMEOUT_SECONDS", 12))
+
+        headers = {
+            "api-key": api_key,
+            "accept": "application/json",
+            "content-type": "application/json",
+        }
+        payload = {
+            "sender": {
+                "name": from_name,
+                "email": from_email,
+            },
+            "to": [{"email": record.to_email}],
+            "subject": record.subject,
+            "htmlContent": record.html_body,
+            "textContent": record.text_body,
+        }
+
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(api_url, headers=headers, json=payload)
+            if resp.status_code >= 400:
+                logger.error(
+                    f"Brevo API error: HTTP status {resp.status_code}, response: {resp.text[:300]}"
+                )
+                resp.raise_for_status()
 
     # ==========================================
     # Asynchronous Queue & Worker Pool

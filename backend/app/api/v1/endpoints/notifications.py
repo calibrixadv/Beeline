@@ -74,9 +74,10 @@ async def get_notification_status(
 
     email_mode = getattr(settings, "EMAIL_MODE", "dev_sink")
     smtp_host = getattr(settings, "SMTP_HOST", "localhost")
+    is_prod = getattr(settings, "ENVIRONMENT", "").lower() == "production"
 
     mailpit_url: Optional[str] = None
-    if email_mode in ("smtp", "dev_sink") and smtp_host in ("localhost", "127.0.0.1", "mailpit"):
+    if not is_prod and email_mode in ("smtp", "dev_sink") and smtp_host in ("localhost", "127.0.0.1", "mailpit"):
         mailpit_url = "http://localhost:8025"
 
     sent_count = len(email_service.get_outbox())

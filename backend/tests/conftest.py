@@ -50,18 +50,10 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 async def reset_rate_limits():
     await auth_rate_limiter.reset()
     try:
-        from app.core.redis import get_redis
-        redis = get_redis()
-        bf_keys = await redis.keys("auth:*_bf*")
-        if bf_keys:
-            await redis.delete(*bf_keys)
-        notif_keys = await redis.keys("beeline:notif:*")
-        if notif_keys:
-            await redis.delete(*notif_keys)
+        from app.services.search_cache_service import search_cache_service
+        await search_cache_service.clear_all()
     except Exception:
         pass
-    yield
-    await auth_rate_limiter.reset()
     try:
         from app.core.redis import get_redis
         redis = get_redis()
@@ -71,8 +63,36 @@ async def reset_rate_limits():
         notif_keys = await redis.keys("beeline:notif:*")
         if notif_keys:
             await redis.delete(*notif_keys)
+        cache_keys = await redis.keys("beeline:cache:*")
+        if cache_keys:
+            await redis.delete(*cache_keys)
+        recent_keys = await redis.keys("beeline:recent_searches:*")
+        if recent_keys:
+            await redis.delete(*recent_keys)
+    except Exception:
+        pass
+    yield
+    await auth_rate_limiter.reset()
+    try:
+        from app.services.search_cache_service import search_cache_service
+        await search_cache_service.clear_all()
+    except Exception:
+        pass
+    try:
+        from app.core.redis import get_redis
+        redis = get_redis()
+        bf_keys = await redis.keys("auth:*_bf*")
         if bf_keys:
             await redis.delete(*bf_keys)
+        notif_keys = await redis.keys("beeline:notif:*")
+        if notif_keys:
+            await redis.delete(*notif_keys)
+        cache_keys = await redis.keys("beeline:cache:*")
+        if cache_keys:
+            await redis.delete(*cache_keys)
+        recent_keys = await redis.keys("beeline:recent_searches:*")
+        if recent_keys:
+            await redis.delete(*recent_keys)
     except Exception:
         pass
 
