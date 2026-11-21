@@ -1,3 +1,4 @@
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
@@ -34,10 +35,12 @@ from app.schemas.route_plan import (
 from app.services.risk_service import risk_service
 from app.services.timetable_sync_service import BUCHAREST_TZ
 from scraper.collectors.train_api import (
-    DataGovXMLAdapter,
+    InfoFerLiveAdapter,
     STATION_DICTIONARY,
     canonical_station_code,
     clean_romanian_station_name,
+    normalize_text,
+    normalize_train_number,
     resolve_known_station,
 )
 
@@ -314,6 +317,27 @@ def compute_risk_analysis(legs: List[TransitLeg], min_buffer_required: int = 20)
         riskFactors=[summary],
         isMlComputed=False,
     )
+
+
+def _train_serves_station_live(rec: Any, station_name: str) -> bool:
+    if not rec:
+        return False
+    st_match = resolve_known_station(station_name)
+    st_code = (st_match.code if st_match else canonical_station_code(station_name)).upper()
+    st_norm = normalize_text(station_name)
+
+    if getattr(rec.source_train_api, "origin_station_code", "").upper() == st_code:
+        return True
+    if getattr(rec.source_train_api, "destination_station_code", "").upper() == st_code:
+        return True
+
+    raw_stops = getattr(rec, "route_stops", None) or []
+    for s in raw_stops:
+        s_code = s.get("code", "").upper()
+        s_name = normalize_text(s.get("name", ""))
+        if s_code == st_code or (st_norm and st_norm in s_name):
+            return True
+    return False
 
 
 class RoutingService:
@@ -913,8 +937,10 @@ class RoutingService:
     ) -> TransitLeg:
         orig_code = rec.source_train_api.origin_station_code
         dest_code = rec.source_train_api.destination_station_code
-        orig_name = clean_romanian_station_name(orig_code, STATION_DICTIONARY.get(orig_code, {}).get("name", orig_code))
-        dest_name = clean_romanian_station_name(dest_code, STATION_DICTIONARY.get(dest_code, {}).get("name", dest_code))
+        orig_raw = getattr(rec, "origin_station_name", None) or STATION_DICTIONARY.get(orig_code, {}).get("name", orig_code)
+        dest_raw = getattr(rec, "destination_station_name", None) or STATION_DICTIONARY.get(dest_code, {}).get("name", dest_code)
+        orig_name = clean_romanian_station_name(orig_code, orig_raw)
+        dest_name = clean_romanian_station_name(dest_code, dest_raw)
 
         dep_sec = getattr(rec, "departure_seconds", 0)
         arr_sec = getattr(
@@ -1253,7 +1279,7 @@ class RoutingService:
             query.allowedModes is not None
             and any(m in query.allowedModes for m in [TransitMode.BUS, TransitMode.METRO])
         )
-        if is_explicit_urban and ("micro 19" in orig or "micro19" in orig or "gala" in orig_city) and ("uniri" in dest or "bucur" in dest_city):
+        if is_explicit_urban and ("micro 19" in orig or "micro19" in orig) and "uniri" in dest:
             return [cls.generate_micro19_to_unirii_plan(query)]
 
         orig_q = query.origin.name or query.origin.city or ""
@@ -1262,12 +1288,15 @@ class RoutingService:
         # Strict station validation guard: both origin and destination MUST resolve to real operating rail stations
         orig_match = resolve_known_station(orig_q)
         dest_match = resolve_known_station(dest_q)
-        if orig_match is None or dest_match is None:
+        if orig_match is None and not orig_q:
+            return []
+        if dest_match is None and not dest_q:
             return []
 
-        travel_date = query.departureTime[:10] if query.departureTime else datetime.now(BUCHAREST_TZ).strftime("%Y-%m-%d")
+        orig_station = orig_match.name if orig_match else orig_q
+        dest_station = dest_match.name if dest_match else dest_q
 
-        xml_adapter = DataGovXMLAdapter.get_shared_instance()
+        travel_date = query.departureTime[:10] if query.departureTime else datetime.now(BUCHAREST_TZ).strftime("%Y-%m-%d")
 
         raw_candidates: List[TransitRoutePlan] = []
 
@@ -1279,28 +1308,74 @@ class RoutingService:
                 mock_p.totalDurationMinutes = 130
                 raw_candidates.append(mock_p)
 
-        # 1. Direct trains lookup across all operating Romanian carriers (00:00 to 23:59)
-        direct_records = xml_adapter.fetch_itinerary_sync(orig_q, dest_q, date_str=travel_date)
+        # 1. Direct & official transfer itineraries lookup across all operating Romanian carriers (strictly InfoFer live only, zero XML fallback)
+        infofer_adapter = InfoFerLiveAdapter.get_shared_instance()
+        direct_records = infofer_adapter.fetch_itinerary_sync(orig_station, dest_station, date_str=travel_date)
+
+        official_plans: List[TransitRoutePlan] = []
         direct_plans: List[TransitRoutePlan] = []
         if direct_records:
             for rec in direct_records:
-                leg = cls._build_rail_leg(rec, 0, travel_date)
-                plan = cls._create_rail_plan(query, [leg], None, travel_date)
-                direct_plans.append(plan)
-            raw_candidates.extend(direct_plans)
+                if getattr(rec, "is_multi_leg", False) and getattr(rec, "transfer_legs", None):
+                    t_legs = rec.transfer_legs
+                    legs = []
+                    transfer_wait = getattr(rec, "transfer_wait_minutes", 20)
+                    transfer_st = getattr(rec, "transfer_station", "")
+                    for idx, l_rec in enumerate(t_legs):
+                        is_last = (idx == len(t_legs) - 1)
+                        buf = transfer_wait if not is_last else None
+                        hub = transfer_st if not is_last else None
+                        legs.append(cls._build_rail_leg(l_rec, idx, travel_date, transfer_buffer_after=buf, hub_name=hub))
+                    plan = cls._create_rail_plan(query, legs, None, travel_date)
+                    official_plans.append(plan)
+                else:
+                    leg = cls._build_rail_leg(rec, 0, travel_date)
+                    plan = cls._create_rail_plan(query, [leg], None, travel_date)
+                    official_plans.append(plan)
+                    direct_plans.append(plan)
+
+            # Direct domination guard:
+            # If plenty of direct trains exist (e.g. len(direct_plans) >= 3), filter out transfer plans
+            # that depart close to a direct train (within 45 min) but arrive later or equal, with transfers.
+            if len(direct_plans) >= 3:
+                filtered_official: List[TransitRoutePlan] = []
+                for p in official_plans:
+                    if p.transfersCount > 0:
+                        try:
+                            p_dep_dt = datetime.fromisoformat(p.departureTime)
+                            p_arr_dt = datetime.fromisoformat(p.arrivalTime)
+                            p_dep_s = p_dep_dt.hour * 3600 + p_dep_dt.minute * 60
+                            p_arr_s = p_arr_dt.hour * 3600 + p_arr_dt.minute * 60 + (p_arr_dt.date() - p_dep_dt.date()).days * 86400
+                            is_dom = False
+                            for d in direct_plans:
+                                d_dep_dt = datetime.fromisoformat(d.departureTime)
+                                d_arr_dt = datetime.fromisoformat(d.arrivalTime)
+                                d_dep_s = d_dep_dt.hour * 3600 + d_dep_dt.minute * 60
+                                d_arr_s = d_arr_dt.hour * 3600 + d_arr_dt.minute * 60 + (d_arr_dt.date() - d_dep_dt.date()).days * 86400
+                                if abs(d_dep_s - p_dep_s) <= 45 * 60 and d_arr_s <= p_arr_s:
+                                    is_dom = True
+                                    break
+                            if is_dom:
+                                continue
+                        except Exception:
+                            pass
+                    filtered_official.append(p)
+                official_plans = filtered_official
+
+            raw_candidates.extend(official_plans)
 
         # 2. Valid, non-dominated 1-transfer connections via Romanian rail hubs (only when direct rail is sparse)
         min_buf_min = max(10, query.minimumBufferMinutes or 20)
         transfer_plans: List[TransitRoutePlan] = []
-        if len(direct_plans) < 15:
+        if len(direct_plans) < 15 and not any(p.transfersCount > 0 for p in official_plans) and len(official_plans) < 3:
             for hub in ROMANIAN_RAIL_HUBS:
-                if hub.lower() in orig_q.lower() or hub.lower() in dest_q.lower():
+                if hub.lower() in orig_station.lower() or hub.lower() in dest_station.lower():
                     continue
 
-                leg1_recs = xml_adapter.fetch_itinerary_sync(orig_q, hub, date_str=travel_date)
+                leg1_recs = infofer_adapter.fetch_itinerary_sync(orig_station, hub, date_str=travel_date)
                 if not leg1_recs:
                     continue
-                leg2_recs = xml_adapter.fetch_itinerary_sync(hub, dest_q, date_str=travel_date)
+                leg2_recs = infofer_adapter.fetch_itinerary_sync(hub, dest_station, date_str=travel_date)
                 if not leg2_recs:
                     continue
 
@@ -1310,7 +1385,25 @@ class RoutingService:
                     base_dt = datetime.strptime(travel_date, "%Y-%m-%d").date()
                     l1_arr_date = base_dt + timedelta(days=1) if l1_arr < l1_dep else base_dt
 
+                    l1_num = l1.source_train_api.train_number
+
+                    # Strict Origin/Destination Redundancy Guard for Leg 0:
+                    # Reject if leg0 already reaches or stops at user's destination station
+                    if _train_serves_station_live(l1, dest_station):
+                        continue
+
                     for l2 in leg2_recs[:5]:
+                        l2_num = l2.source_train_api.train_number
+
+                        # Strict Redundancy Guards:
+                        # 1. Same train number
+                        if l1_num == l2_num or normalize_train_number(l1_num) == normalize_train_number(l2_num):
+                            continue
+
+                        # 2. leg1 (second train's full route) ALREADY stops at or originates from user's origin station
+                        if _train_serves_station_live(l2, orig_station):
+                            continue
+
                         l2_dep = getattr(l2, "departure_seconds", 0)
                         diff_sec = l2_dep - l1_arr
                         if diff_sec < 0:
@@ -1326,11 +1419,19 @@ class RoutingService:
                             l2_leg = cls._build_rail_leg(l2, 1, l2_travel_date)
                             t_plan = cls._create_rail_plan(query, [l1_leg, l2_leg], None, travel_date)
 
-                            # Domination filter: drop if any direct train departs at or after, arrives at or before, and costs less or equal
+                            # Dominance filter:
+                            # 1. Reject any 1-transfer route that departs earlier than or equal to an existing direct train
+                            #    AND arrives later than or equal to that same direct train (strictly time-dominated on same day)
+                            # 2. Reject if Pareto-dominated by any direct train (slower/equal AND more expensive/equal)
                             is_dominated = False
                             if direct_plans:
                                 for d in direct_plans:
-                                    if (d.departureTime >= t_plan.departureTime and
+                                    # Strict time dominance
+                                    if d.departureTime >= t_plan.departureTime and d.arrivalTime <= t_plan.arrivalTime:
+                                        is_dominated = True
+                                        break
+                                    # Pareto dominance
+                                    if (d.departureTime <= t_plan.departureTime and
                                         d.arrivalTime <= t_plan.arrivalTime and
                                         d.fare.totalAmountLei <= t_plan.fare.totalAmountLei):
                                         is_dominated = True
@@ -1350,10 +1451,22 @@ class RoutingService:
         if not raw_candidates:
             return []
 
-        # 4. Strict physical deduplication using canonical leg signature
+        # 4. Strict physical deduplication:
+        # Direct trains are keyed strictly by (normalized train number, travel_date, orig_code, dest_code)
+        # to ensure physical uniqueness (never duplicate a train number on the same day).
+        seen_direct_trains = set()
         seen_signatures = set()
         deduped_plans: List[TransitRoutePlan] = []
         for plan in raw_candidates:
+            if plan.transfersCount == 0 and plan.legs:
+                first_leg = plan.legs[0]
+                t_num = normalize_train_number(first_leg.names.lineCode or "")
+                digits = re.sub(r"\D", "", t_num) or t_num
+                dir_key = (digits, travel_date)
+                if dir_key in seen_direct_trains:
+                    continue
+                seen_direct_trains.add(dir_key)
+
             sig = compute_plan_signature(plan)
             if sig not in seen_signatures:
                 seen_signatures.add(sig)

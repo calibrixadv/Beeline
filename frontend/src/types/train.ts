@@ -1,4 +1,4 @@
-import { RouteRiskAnalysis } from './routePlan';
+import { RouteRiskAnalysis, CuratedPillar } from './routePlan';
 
 export type TrainStatus = 'ON_TIME' | 'DELAYED' | 'CANCELLED' | 'BOARDING';
 
@@ -53,6 +53,8 @@ export interface TrainJourney {
   amenities: Amenity[];
   carbonFootprintKg: number;
   riskAnalysis?: RouteRiskAnalysis;
+  curatedPillars?: CuratedPillar[];
+  curatedPillar?: CuratedPillar;
   date?: string;
   commercialStops?: string[];
   timetableSource?: string;
@@ -63,6 +65,9 @@ export interface TrainJourney {
     activeTimetable: string;
     liveSource: string;
   };
+  legs?: any[];
+  transfersCount?: number;
+  transfers?: any[];
 }
 
 export interface TrainFilterState {

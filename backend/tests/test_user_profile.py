@@ -1,17 +1,17 @@
 import pytest
 from httpx import AsyncClient
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
 async def test_patch_user_profile(client: AsyncClient):
-    # 1. Signup
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # 1. Signup & verify
+    signup_data = await signup_and_verify(client, {
         "email": "patch.profile@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Initial Name"
     })
-    assert signup_res.status_code == 201
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # 2. Update profile

@@ -130,10 +130,14 @@ async def init_db() -> None:
         ("users", "phone_number VARCHAR(32)"),
         ("users", "avatar_url VARCHAR(512)"),
         ("users", "account_status VARCHAR(32) DEFAULT 'ACTIVE'"),
+        ("users", "email_verified BOOLEAN DEFAULT FALSE"),
+        ("users", "email_verified_at TIMESTAMPTZ" if is_postgres else "email_verified_at TIMESTAMP"),
         ("users", "frozen_at TIMESTAMPTZ" if is_postgres else "frozen_at TIMESTAMP"),
         ("users", "deletion_scheduled_at TIMESTAMPTZ" if is_postgres else "deletion_scheduled_at TIMESTAMP"),
         ("users", "deletion_reminder_15d_sent BOOLEAN DEFAULT FALSE"),
         ("saved_routes", "notes VARCHAR(500)"),
+        ("saved_routes", "alert_muted BOOLEAN DEFAULT FALSE"),
+        ("saved_routes", "alert_lead_minutes INTEGER DEFAULT 30"),
         ("bookings", "passenger_count INTEGER DEFAULT 1"),
         ("bookings", "seat_preference VARCHAR(32) DEFAULT 'WINDOW'"),
         ("user_sessions", "device_fingerprint VARCHAR(128)"),
@@ -154,6 +158,40 @@ async def init_db() -> None:
             pass
         try:
             await idx_conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_account_status ON users(account_status)"))
+        except Exception:
+            pass
+        try:
+            await idx_conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_email_verified ON users(email_verified)"))
+        except Exception:
+            pass
+        try:
+            await idx_conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS email_verification_tokens (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    code_hash VARCHAR(128) NOT NULL,
+                    token_hash VARCHAR(128) NOT NULL UNIQUE,
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+                    expires_at TIMESTAMPTZ NOT NULL,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_email_verification_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            """ if is_postgres else """
+                CREATE TABLE IF NOT EXISTS email_verification_tokens (
+                    id VARCHAR(36) PRIMARY KEY,
+                    user_id VARCHAR(36) NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    code_hash VARCHAR(128) NOT NULL,
+                    token_hash VARCHAR(128) NOT NULL UNIQUE,
+                    attempts INTEGER NOT NULL DEFAULT 0,
+                    is_used BOOLEAN NOT NULL DEFAULT FALSE,
+                    expires_at TIMESTAMP NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+            """))
         except Exception:
             pass
 

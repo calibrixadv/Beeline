@@ -28,9 +28,17 @@ from app.services.email_service import email_service
 from app.services.idempotency_service import IdempotencyService
 from app.services.routing_service import routing_service
 from app.services.timetable_sync_service import timetable_sync_service
+from app.schemas.train import TrainFare, TrainJourney, TrainStation, TrainStatus, TrainStop
 from app.services.train_service import _scrape_record_to_train_journey
+from app.services.trip_fingerprint import compute_trip_fingerprint_from_plan
 from app.services.trip_notification_service import user_allows_email_notifications
-from scraper.collectors.train_api import DataGovXMLAdapter
+from scraper.collectors.train_api import (
+    InfoFerLiveAdapter,
+    canonical_station_code,
+    normalize_train_number,
+    resolve_known_station,
+    to_bucharest_iso,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -111,12 +119,69 @@ async def plan_route(
 
     orig_q = query.origin.name or query.origin.city or ""
     dest_q = query.destination.name or query.destination.city or ""
+    om = resolve_known_station(orig_q)
+    dm = resolve_known_station(dest_q)
+    eff_orig = om.name if om else orig_q
+    eff_dest = dm.name if dm else dest_q
     date_str = query.departureTime[:10] if query.departureTime else min_date
     if plans:
-        direct_recs = DataGovXMLAdapter.get_shared_instance().fetch_itinerary_sync(orig_q, dest_q, date_str=date_str)
-        all_day_deps = [_scrape_record_to_train_journey(r, date_str) for r in direct_recs] if direct_recs else None
+        infofer_adapter = InfoFerLiveAdapter.get_shared_instance()
+        direct_recs = infofer_adapter.fetch_itinerary_sync(eff_orig, eff_dest, date_str=date_str) or []
+        rec_map = {}
+        for r in direct_recs:
+            rec_map[normalize_train_number(r.source_train_api.train_number)] = r
+            if getattr(r, "transfer_legs", None):
+                t_key = " + ".join(normalize_train_number(tl.source_train_api.train_number) for tl in r.transfer_legs)
+                rec_map[t_key] = r
+
+        all_day_deps = []
+        for p in plans:
+            tj = None
+            if p.legs:
+                first_line = normalize_train_number(p.legs[0].names.lineCode or "")
+                full_key = " + ".join(normalize_train_number(l.names.lineCode or "") for l in p.legs)
+                matched_rec = rec_map.get(full_key) or rec_map.get(first_line)
+                if matched_rec:
+                    tj = _scrape_record_to_train_journey(matched_rec, date_str)
+            if not tj and p.legs:
+                first_leg = p.legs[0]
+                last_leg = p.legs[-1]
+                t_num = " + ".join(l.names.lineCode for l in p.legs) if len(p.legs) > 1 else first_leg.names.lineCode
+                stops_data = [
+                    TrainStop(
+                        stopNumber=s.stopSequence,
+                        station=TrainStation(code=s.stationCode, name=s.stationName, city=s.city or s.stationName),
+                        scheduledArrival=to_bucharest_iso(s.arrivalTime, date_str),
+                        scheduledDeparture=to_bucharest_iso(s.departureTime, date_str),
+                        platform=s.platform or "1"
+                    )
+                    for s in (p.legs[0].stops or [])
+                ]
+                tj = TrainJourney(
+                    id=f"tr-{p.id}",
+                    trainNumber=t_num or "TRAIN",
+                    operator=first_leg.names.operatorName or "CFR Călători",
+                    origin=TrainStation(code=canonical_station_code(first_leg.names.originName), name=first_leg.names.originName, city=first_leg.names.originCity or first_leg.names.originName, platform="1"),
+                    destination=TrainStation(code=canonical_station_code(last_leg.names.destinationName), name=last_leg.names.destinationName, city=last_leg.names.destinationCity or last_leg.names.destinationName, platform="2"),
+                    departureTime=to_bucharest_iso(p.departureTime, date_str) or p.departureTime,
+                    arrivalTime=to_bucharest_iso(p.arrivalTime, date_str) or p.arrivalTime,
+                    durationMinutes=p.totalDurationMinutes,
+                    durationFormatted=f"{p.totalDurationMinutes // 60}h {p.totalDurationMinutes % 60}m",
+                    status="ON_TIME",
+                    delayMinutes=first_leg.timings.delayMinutes or 0,
+                    carbonFootprintKg=p.eco.routeEmissionsKgCO2 if p.eco else 12.0,
+                    amenities=["POWER_OUTLETS", "WHEELCHAIR_ACCESSIBLE"],
+                    fares=[
+                        TrainFare(classType="STANDARD", price=p.fare.totalAmountLei, currency="RON", seatsAvailable=50)
+                    ] if p.fare else [],
+                    stops=stops_data
+                )
+            if tj:
+                all_day_deps.append(tj)
     else:
-        all_day_deps = None
+        all_day_deps = []
+
+    bw["liveSource"] = "INFOFER_LIVE_ONLY"
 
     return RoutePlanResponse(
         plans=plans,
@@ -145,13 +210,53 @@ async def save_route(
             return SavedRouteResponse.model_validate(response_data)
 
     try:
+        # Strict zero-duplicate physical journey deduplication
+        incoming_fp = compute_trip_fingerprint_from_plan(data.plan)
+        existing_result = await db.execute(
+            select(SavedRoute)
+            .where(SavedRoute.user_id == current_user.id)
+            .order_by(SavedRoute.created_at.desc())
+        )
+        existing_routes = existing_result.scalars().all()
+        for existing in existing_routes:
+            try:
+                existing_plan = TransitRoutePlan.model_validate_json(existing.plan_data)
+                existing_fp = compute_trip_fingerprint_from_plan(existing_plan)
+                if existing_fp == incoming_fp:
+                    # Idempotent match: return existing SavedRoute record without inserting duplicate
+                    resp = SavedRouteResponse(
+                        id=existing.id,
+                        origin_name=existing.origin_name,
+                        destination_name=existing.destination_name,
+                        plan=existing_plan,
+                        notes=existing.notes,
+                        alertMuted=getattr(existing, "alert_muted", False),
+                        alertLeadMinutes=getattr(existing, "alert_lead_minutes", 30),
+                        created_at=existing.created_at.isoformat()
+                    )
+                    if idempotency_key:
+                        await IdempotencyService.complete_key(
+                            db,
+                            user_id=current_user.id,
+                            idempotency_key=idempotency_key,
+                            payload_hash=payload_hash,
+                            response_code=201,
+                            response_data=resp.model_dump()
+                        )
+                    return resp
+            except Exception as parse_err:
+                logger.warning(f"Failed parsing saved route {existing.id} plan_data: {parse_err}")
+                continue
+
         serialized = data.plan.model_dump_json()
         saved = SavedRoute(
             user_id=current_user.id,
             origin_name=data.plan.query.origin.name,
             destination_name=data.plan.query.destination.name,
             plan_data=serialized,
-            notes=data.notes
+            notes=data.notes,
+            alert_muted=bool(data.alertMuted) if data.alertMuted is not None else False,
+            alert_lead_minutes=data.alertLeadMinutes if data.alertLeadMinutes is not None else 30
         )
         db.add(saved)
         await db.commit()
@@ -163,6 +268,8 @@ async def save_route(
             destination_name=saved.destination_name,
             plan=data.plan,
             notes=saved.notes,
+            alertMuted=saved.alert_muted,
+            alertLeadMinutes=saved.alert_lead_minutes,
             created_at=saved.created_at.isoformat()
         )
 
@@ -221,6 +328,8 @@ async def list_saved_routes(
                 destination_name=r.destination_name,
                 plan=plan_obj,
                 notes=r.notes,
+                alertMuted=getattr(r, "alert_muted", False),
+                alertLeadMinutes=getattr(r, "alert_lead_minutes", 30),
                 created_at=r.created_at.isoformat()
             ))
         except Exception:
@@ -254,16 +363,13 @@ async def update_saved_route(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
-    """Update a saved itinerary label, destination, or plan details."""
-    result = await db.execute(
-        select(SavedRoute).where(
-            SavedRoute.id == route_id,
-            SavedRoute.user_id == current_user.id
-        )
-    )
+    """Update a saved itinerary label, destination, plan details, or alert preferences."""
+    result = await db.execute(select(SavedRoute).where(SavedRoute.id == route_id))
     route = result.scalar_one_or_none()
     if not route:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved route not found")
+    if route.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to modify this saved route")
 
     if update_data.origin_name is not None:
         route.origin_name = update_data.origin_name
@@ -271,6 +377,12 @@ async def update_saved_route(
         route.destination_name = update_data.destination_name
     if update_data.plan is not None:
         route.plan_data = update_data.plan.model_dump_json()
+    if update_data.notes is not None:
+        route.notes = update_data.notes
+    if update_data.alertMuted is not None:
+        route.alert_muted = update_data.alertMuted
+    if update_data.alertLeadMinutes is not None:
+        route.alert_lead_minutes = update_data.alertLeadMinutes
 
     await db.commit()
     await db.refresh(route)
@@ -281,6 +393,9 @@ async def update_saved_route(
         origin_name=route.origin_name,
         destination_name=route.destination_name,
         plan=plan_obj,
+        notes=route.notes,
+        alertMuted=route.alert_muted,
+        alertLeadMinutes=route.alert_lead_minutes,
         created_at=route.created_at.isoformat()
     )
 
@@ -292,15 +407,12 @@ async def delete_saved_route(
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """Delete a saved itinerary."""
-    result = await db.execute(
-        select(SavedRoute).where(
-            SavedRoute.id == route_id,
-            SavedRoute.user_id == current_user.id
-        )
-    )
+    result = await db.execute(select(SavedRoute).where(SavedRoute.id == route_id))
     route = result.scalar_one_or_none()
     if not route:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved route not found")
+    if route.user_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this saved route")
 
     await db.delete(route)
     await db.commit()

@@ -1,17 +1,18 @@
 import pytest
 from httpx import AsyncClient
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
 async def test_session_current_flag_and_scoped_revocation(client: AsyncClient):
-    # 1. Signup user on Device 1
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # 1. Signup and verify user on Device 1
+    signup_data = await signup_and_verify(client, {
         "email": "multi.device@beeline.io",
         "password": "SecurePassword123!",
         "device_info": "MacBook Chrome"
     })
-    token_1 = signup_res.json()["access_token"]
-    refresh_1 = signup_res.json()["refresh_token"]
+    token_1 = signup_data["access_token"]
+    refresh_1 = signup_data["refresh_token"]
     headers_1 = {"Authorization": f"Bearer {token_1}"}
 
     # 2. Login user on Device 2

@@ -18,7 +18,7 @@ from app.models.user import User, UserSession
 
 
 import pytest_asyncio
-from tests.conftest import TestAsyncSessionLocal
+from tests.conftest import TestAsyncSessionLocal, verify_user_for_test
 from app.core.database import set_custom_session_maker
 
 @pytest_asyncio.fixture(autouse=True)
@@ -58,6 +58,7 @@ async def test_login_standard_1day_session_and_cookies(client: AsyncClient, db_s
         headers=headers,
     )
     assert signup_res.status_code == 201
+    await verify_user_for_test(client, "traveler.1day@beeline.io")
 
     # 2. Login with remember_me=False
     login_res = await client.post(
@@ -132,6 +133,7 @@ async def test_login_remember_me_30days_session(client: AsyncClient, db_session:
         headers=headers,
     )
     assert signup_res.status_code == 201
+    await verify_user_for_test(client, "traveler.30days@beeline.io")
 
     # 2. Login with remember_me=True
     login_res = await client.post(
@@ -184,7 +186,8 @@ async def test_beeline_auth_token_fernet_encryption(client: AsyncClient):
         headers=headers,
     )
     assert signup_res.status_code == 201
-    auth_token = signup_res.cookies.get("beeline_auth_token")
+    await verify_user_for_test(client, "fernet.tester@beeline.io")
+    auth_token = client.cookies.get("beeline_auth_token")
     assert auth_token is not None
     clean_token = auth_token.strip('"')
 
@@ -229,6 +232,7 @@ async def test_anti_hijack_device_binding_enforcement(client: AsyncClient, db_se
         },
         headers=legit_headers,
     )
+    await verify_user_for_test(client, "victim.hijack@beeline.io")
     login_res = await client.post(
         "/api/v1/auth/login",
         json={
@@ -321,6 +325,7 @@ async def test_transparent_token_rotation_when_rot_exp_elapses(client: AsyncClie
         },
         headers=headers,
     )
+    await verify_user_for_test(client, "rotation.auto@beeline.io")
     login_res = await client.post(
         "/api/v1/auth/login",
         json={
@@ -376,7 +381,7 @@ async def test_sessions_management_listing_and_revocation(client: AsyncClient):
         "Accept-Language": "en-US",
     }
 
-    # 1. Signup and login on Device 1
+    # 1. Signup and verify on Device 1
     signup_res = await client.post(
         "/api/v1/auth/signup",
         json={
@@ -386,8 +391,10 @@ async def test_sessions_management_listing_and_revocation(client: AsyncClient):
         },
         headers=headers_1,
     )
-    auth_1 = signup_res.cookies["beeline_auth_token"]
-    proof_1 = signup_res.cookies["beeline_device_proof"]
+    assert signup_res.status_code == 201
+    await verify_user_for_test(client, "session.manager@beeline.io", device_info="Device1 Desktop Chrome", headers=headers_1)
+    auth_1 = client.cookies["beeline_auth_token"]
+    proof_1 = client.cookies["beeline_device_proof"]
     sid_1 = decrypt_auth_token(auth_1)["sid"]
 
     # 2. Login on Device 2
@@ -475,7 +482,8 @@ async def test_backend_only_refresh_vault_and_instant_redis_revocation(client: A
         headers=headers,
     )
     assert signup_res.status_code == 201
-    auth_token = signup_res.cookies["beeline_auth_token"]
+    await verify_user_for_test(client, "redis.vault@beeline.io", remember_me=True, headers=headers)
+    auth_token = client.cookies["beeline_auth_token"]
     payload = decrypt_auth_token(auth_token)
     session_id = payload["sid"]
 
@@ -526,8 +534,10 @@ async def test_throttled_session_activity_tracking(client: AsyncClient):
         },
         headers=headers,
     )
-    auth_token = signup_res.cookies["beeline_auth_token"]
-    proof = signup_res.cookies["beeline_device_proof"]
+    assert signup_res.status_code == 201
+    await verify_user_for_test(client, "activity.touch@beeline.io", headers=headers)
+    auth_token = client.cookies["beeline_auth_token"]
+    proof = client.cookies["beeline_device_proof"]
     session_id = decrypt_auth_token(auth_token)["sid"]
 
     # Make request

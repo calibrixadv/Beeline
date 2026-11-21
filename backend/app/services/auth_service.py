@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
 import hashlib
+import hmac
 import json
 import logging
 import secrets
@@ -26,7 +27,7 @@ from app.core.security import (
     hash_password,
     hash_token,
 )
-from app.models.user import PasswordResetToken, User, UserSession, utcnow
+from app.models.user import EmailVerificationToken, PasswordResetToken, User, UserSession, utcnow
 from app.services.email_service import email_service
 
 logger = logging.getLogger(__name__)
@@ -171,11 +172,12 @@ async def verify_password_policy_and_breach(password: str, email: Optional[str] 
 
 class AntiBruteForceShield:
     """
-    Rate limiting shield against credential and recovery code brute-force attacks.
-    Enforces a strict 3-strikes / 15-minute lockout per identifier and IP.
+    Rate limiting shield against credential, verification OTP, and recovery code brute-force attacks.
+    Enforces a strict max_attempts / 15-minute lockout per identifier and IP.
     """
-    def __init__(self, prefix: str = "recovery_bf"):
+    def __init__(self, prefix: str = "recovery_bf", max_attempts: int = 3):
         self.prefix = prefix
+        self.max_attempts = max_attempts
         self._memory_attempts: Dict[str, List[float]] = {}
         self._lock = asyncio.Lock()
 
@@ -214,11 +216,11 @@ class AntiBruteForceShield:
         try:
             redis = get_redis()
             val = await redis.get(key)
-            if val and int(val) >= 3:
+            if val and int(val) >= self.max_attempts:
                 return True
             if ip:
                 ip_val = await redis.get(f"auth:{self.prefix}_ip:{ip.strip()}")
-                if ip_val and int(ip_val) >= 3:
+                if ip_val and int(ip_val) >= self.max_attempts:
                     return True
         except Exception:
             pass
@@ -226,7 +228,7 @@ class AntiBruteForceShield:
         async with self._lock:
             timestamps = self._memory_attempts.get(clean_id, [])
             valid_timestamps = [t for t in timestamps if now - t < 900]
-            if len(valid_timestamps) >= 3:
+            if len(valid_timestamps) >= self.max_attempts:
                 return True
 
         return False
@@ -245,9 +247,54 @@ class AntiBruteForceShield:
             self._memory_attempts.pop(clean_id, None)
 
 
-recovery_shield = AntiBruteForceShield(prefix="recovery_bf")
-forgot_shield = AntiBruteForceShield(prefix="forgot_bf")
-mfa_verify_shield = AntiBruteForceShield(prefix="mfa_verify_bf")
+class ResendCooldownTracker:
+    """Enforces a 60-second cooldown per email for verification resend requests."""
+    def __init__(self, cooldown_seconds: int = 60):
+        self.cooldown_seconds = cooldown_seconds
+        self._memory_cooldown: Dict[str, float] = {}
+        self._lock = asyncio.Lock()
+
+    async def get_remaining_seconds(self, email: str) -> int:
+        clean = email.strip().lower()
+        now = time.monotonic()
+        try:
+            redis = get_redis()
+            ttl = await redis.ttl(f"auth:resend_cooldown:{clean}")
+            if ttl and ttl > 0:
+                return ttl
+        except Exception:
+            pass
+        async with self._lock:
+            last = self._memory_cooldown.get(clean)
+            if last is not None:
+                elapsed = now - last
+                if elapsed < self.cooldown_seconds:
+                    return int(self.cooldown_seconds - elapsed)
+        return 0
+
+    async def set_cooldown(self, email: str) -> None:
+        clean = email.strip().lower()
+        now = time.monotonic()
+        try:
+            redis = get_redis()
+            await redis.set(f"auth:resend_cooldown:{clean}", "1", ex=self.cooldown_seconds)
+        except Exception:
+            pass
+        async with self._lock:
+            self._memory_cooldown[clean] = now
+
+
+def hash_otp_code(user_id: str, code: str) -> str:
+    """HMAC-SHA256 hash of 6-digit numeric OTP scoped with user_id + SECRET_KEY."""
+    msg = f"{user_id}:{code.strip()}".encode("utf-8")
+    return hmac.new(settings.SECRET_KEY.encode("utf-8"), msg, hashlib.sha256).hexdigest()
+
+
+recovery_shield = AntiBruteForceShield(prefix="recovery_bf", max_attempts=3)
+forgot_shield = AntiBruteForceShield(prefix="forgot_bf", max_attempts=3)
+mfa_verify_shield = AntiBruteForceShield(prefix="mfa_verify_bf", max_attempts=3)
+verify_email_shield = AntiBruteForceShield(prefix="verify_email_bf", max_attempts=5)
+resend_cooldown = ResendCooldownTracker(cooldown_seconds=60)
 
 
 def is_expired(dt: datetime) -> bool:
@@ -326,19 +373,61 @@ class AuthService:
     ) -> User:
         clean_email = email.lower().strip()
         existing = await AuthService.get_user_by_email(db, clean_email)
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="An account with this email address already exists"
-            )
-
         clean_username = username.lower().strip() if username else None
+
         if clean_username:
             existing_user = await AuthService.get_user_by_username(db, clean_username)
-            if existing_user:
+            if existing_user and (not existing or existing_user.id != existing.id):
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_409_CONFLICT,
                     detail="An account with this username already exists"
+                )
+
+        if existing:
+            if existing.email_verified:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="An account with this email address already exists"
+                )
+            
+            # Unverified account exists: check if token expired or is older than 24h
+            res_tokens = await db.execute(
+                select(EmailVerificationToken)
+                .where(EmailVerificationToken.user_id == existing.id)
+                .order_by(EmailVerificationToken.created_at.desc())
+            )
+            latest_tok = res_tokens.scalars().first()
+            now_utc = utcnow()
+            is_expired_or_old = False
+            if latest_tok:
+                is_expired_or_old = (
+                    latest_tok.expires_at < now_utc
+                    or latest_tok.is_used
+                    or (now_utc - latest_tok.created_at >= timedelta(hours=24))
+                )
+            else:
+                is_expired_or_old = True
+
+            if is_expired_or_old:
+                # Clean / replace the abandoned unverified signup cleanly
+                existing.hashed_password = hash_password(password)
+                existing.full_name = full_name
+                if clean_username:
+                    existing.username = clean_username
+                existing.updated_at = now_utc
+                # Invalidate any old tokens
+                await db.execute(
+                    update(EmailVerificationToken)
+                    .where(EmailVerificationToken.user_id == existing.id)
+                    .values(is_used=True)
+                )
+                await db.commit()
+                await db.refresh(existing)
+                return existing
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="An account registration is already pending verification for this email address. Please verify your email or request a new code."
                 )
 
         hashed = hash_password(password)
@@ -349,6 +438,7 @@ class AuthService:
             full_name=full_name,
             is_guest=False,
             is_active=True,
+            email_verified=False,
             mfa_enabled=False
         )
         db.add(new_user)
@@ -415,6 +505,8 @@ class AuthService:
         if full_name:
             user.full_name = full_name
         user.is_guest = False
+        user.email_verified = True
+        user.email_verified_at = utcnow()
         user.updated_at = utcnow()
 
         await db.commit()
@@ -760,8 +852,8 @@ class AuthService:
         ip_address: Optional[str] = None
     ) -> Optional[str]:
         user = await AuthService.get_user_by_email(db, email)
-        if not user or user.is_guest:
-            # Silence not found to prevent user enumeration
+        if not user or user.is_guest or not user.email_verified:
+            # Silence not found / unverified to prevent user enumeration
             return None
 
         # Invalidate any previous unused reset tokens for that user

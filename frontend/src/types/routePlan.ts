@@ -335,6 +335,7 @@ export interface TransitRouteQuery {
   allowedModes: TransitMode[];
   optimizationPreference: 'FASTEST' | 'BEST_VALUE' | 'SAFE_BUFFERS' | 'LEAST_TRANSFERS' | 'MOST_RELIABLE';
   minimumBufferMinutes?: number;
+  maxTransfers?: number;
 }
 
 export interface BookingWindow {

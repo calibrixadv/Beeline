@@ -1,8 +1,9 @@
 import json
 import math
 import random
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import List, Optional, Tuple
+from zoneinfo import ZoneInfo
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.booking import Booking, Ticket
 from app.models.user import User
 from app.schemas.booking import (
+    BookingItemRequest,
     BookingResponse,
     BookingUpdate,
     CreateBookingRequest,
@@ -26,6 +28,84 @@ class BookingService:
         return f"BEE-{code}"
 
     @staticmethod
+    def validate_departure_times(items: List[BookingItemRequest]) -> None:
+        tz_ro = ZoneInfo("Europe/Bucharest")
+        now_ro = datetime.now(tz_ro)
+
+        for item in items:
+            travel_date: Optional[date] = None
+            if item.travelDate:
+                try:
+                    travel_date = date.fromisoformat(str(item.travelDate)[:10])
+                except Exception:
+                    pass
+
+            if travel_date is not None and travel_date < now_ro.date():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "TRAIN_ALREADY_DEPARTED",
+                        "message": "Cannot book a train that has already departed."
+                    }
+                )
+
+            resolved_departure_dt: Optional[datetime] = None
+            if item.departureTime:
+                try:
+                    s = str(item.departureTime).strip().replace("Z", "+00:00")
+                    parsed_dt = datetime.fromisoformat(s)
+                    if parsed_dt.tzinfo is None:
+                        resolved_departure_dt = parsed_dt.replace(tzinfo=tz_ro)
+                    else:
+                        resolved_departure_dt = parsed_dt.astimezone(tz_ro)
+                except Exception:
+                    pass
+            else:
+                journey = train_service.get_train_by_id(item.journeyId)
+                if not journey and item.travelDate:
+                    parts = item.journeyId.split("-")
+                    if len(parts) >= 4 and parts[0] == "tr":
+                        date_norm = item.travelDate.replace("-", "")
+                        alt_id = f"tr-{parts[1]}-{parts[2]}-{date_norm}"
+                        journey = train_service.get_train_by_id(alt_id)
+
+                if journey and journey.departureTime:
+                    try:
+                        j_s = str(journey.departureTime).strip().replace("Z", "+00:00")
+                        j_dt = datetime.fromisoformat(j_s)
+                        if travel_date:
+                            comb = datetime.combine(travel_date, j_dt.time())
+                            if j_dt.tzinfo is None:
+                                resolved_departure_dt = comb.replace(tzinfo=tz_ro)
+                            else:
+                                resolved_departure_dt = comb.replace(tzinfo=j_dt.tzinfo).astimezone(tz_ro)
+                        else:
+                            if j_dt.tzinfo is None:
+                                resolved_departure_dt = j_dt.replace(tzinfo=tz_ro)
+                            else:
+                                resolved_departure_dt = j_dt.astimezone(tz_ro)
+                    except Exception:
+                        pass
+
+            if travel_date is not None and travel_date < now_ro.date():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "TRAIN_ALREADY_DEPARTED",
+                        "message": "Cannot book a train that has already departed."
+                    }
+                )
+
+            if resolved_departure_dt is not None and resolved_departure_dt <= now_ro:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "TRAIN_ALREADY_DEPARTED",
+                        "message": "Cannot book a train that has already departed."
+                    }
+                )
+
+    @staticmethod
     async def create_booking(
         db: AsyncSession,
         user: User,
@@ -36,6 +116,8 @@ class BookingService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="At least one journey item is required to create a booking."
             )
+
+        BookingService.validate_departure_times(data.items)
 
         booking_ref = BookingService._generate_booking_ref()
         booking_id = f"bkg-ro-{datetime.now(timezone.utc).year}-{random.randint(10000, 99999)}"
@@ -54,7 +136,7 @@ class BookingService:
             origin_name = journey.origin.name if journey else "Origin Station"
             dest_name = journey.destination.name if journey else "Destination Station"
             train_num = journey.trainNumber if journey else "IR 1572"
-            dep_time = journey.departureTime if journey else f"{item.travelDate}T08:00:00+03:00"
+            dep_time = item.departureTime if item.departureTime else (journey.departureTime if journey else f"{item.travelDate}T08:00:00+03:00")
             arr_time = journey.arrivalTime if journey else f"{item.travelDate}T11:00:00+03:00"
 
             # Determine fare price
@@ -79,7 +161,7 @@ class BookingService:
                 seat_counter += 1
 
                 train_slug = train_num.replace(" ", "")
-                ticket_num = f"TK-{train_slug}-{car_num}A{seat_num}"
+                ticket_num = f"TK-{train_slug}-{booking_ref.replace('BEE-', '')}-{car_num}A{seat_num}"
                 qr_payload = f"https://beeline.io/t/{booking_ref}-{car_num}A{seat_num}"
 
                 ticket = Ticket(

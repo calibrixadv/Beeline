@@ -13,7 +13,7 @@ from app.models.user import User, UserSession, utcnow
 from app.services.account_lifecycle_service import AccountLifecycleService
 from app.services.email_service import email_service
 import pytest_asyncio
-from tests.conftest import TestAsyncSessionLocal
+from tests.conftest import TestAsyncSessionLocal, signup_and_verify
 
 
 @pytest_asyncio.fixture(autouse=True)
@@ -45,16 +45,15 @@ async def test_profile_self_service_and_password_change(client: AsyncClient, db_
         "User-Agent": "Device1-DesktopChrome",
         "Accept-Language": "en-US",
     }
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "step4.profile@beeline.io",
         "username": "step4_traveler",
         "password": "SecurePassword123!",
         "full_name": "Initial Profile Name"
     }, headers=headers1)
-    assert signup_res.status_code == 201
-    auth_1 = signup_res.cookies.get("beeline_auth_token")
-    proof_1 = signup_res.cookies.get("beeline_device_proof")
-    token1 = signup_res.json()["access_token"]
+    token1 = signup_data["access_token"]
+    auth_1 = client.cookies.get("beeline_auth_token")
+    proof_1 = client.cookies.get("beeline_device_proof")
     headers1["Authorization"] = f"Bearer {token1}"
 
     # 2. GET /users/me returns full profile details
@@ -84,6 +83,7 @@ async def test_profile_self_service_and_password_change(client: AsyncClient, db_
     assert patched["avatar_url"] == "https://beeline.voyagerail.com/avatars/bee.png"
 
     # 4. Register second user to test conflict guards
+    client.cookies.clear()
     signup2 = await client.post("/api/v1/auth/signup", json={
         "email": "step4.other@beeline.io",
         "username": "other_traveler",
@@ -205,13 +205,12 @@ async def test_travel_preferences_schema_and_partial_updates(client: AsyncClient
       min_transfer_buffer_minutes between 5 and 120, allowed pillar values.
     - Partial updates merge cleanly onto existing preferences.
     """
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "step4.prefs@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Preferences Traveler"
     })
-    assert signup_res.status_code == 201
-    headers = {"Authorization": f"Bearer {signup_res.json()['access_token']}"}
+    headers = {"Authorization": f"Bearer {signup_data['access_token']}"}
 
     # 1. GET default preferences
     pref_res = await client.get("/api/v1/users/me/preferences", headers=headers)
@@ -283,13 +282,12 @@ async def test_account_deletion_freeze_lifecycle(client: AsyncClient, db_session
     - Dispatches 30-Day Notice email.
     - Protected endpoints reject frozen user with 401.
     """
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "step4.freeze@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Freeze Traveler"
     })
-    assert signup_res.status_code == 201
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Wrong password reject when provided
@@ -356,12 +354,12 @@ async def test_frozen_login_challenge_and_unfreeze_flow(client: AsyncClient, db_
       and returns valid session token and cookies.
     """
     # 1. Register and freeze account
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "step4.unfreeze@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Unfreeze Traveler"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     await client.request("DELETE", "/api/v1/users/me", json={"password": "SecurePassword123!"}, headers=headers)
@@ -441,12 +439,12 @@ async def test_automated_lifecycle_sweep_30_15_0_days(client: AsyncClient, db_se
         CASCADE HARD DELETE removing user and all related records from PostgreSQL!
     """
     # 1. Register and freeze user
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    signup_data = await signup_and_verify(client, {
         "email": "step4.lifecycle@beeline.io",
         "password": "SecurePassword123!",
         "full_name": "Lifecycle Traveler"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     await client.request("DELETE", "/api/v1/users/me", json={"password": "SecurePassword123!"}, headers=headers)

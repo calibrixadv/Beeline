@@ -14,7 +14,7 @@ export interface BaseButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 }
 
 const VARIANT_STYLES: Record<ButtonVariant, string> = {
-  primary: 'bg-amber-500 hover:bg-amber-600 text-white font-medium shadow-sm active:scale-98',
+  primary: 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold shadow-xs active:scale-98',
   secondary: 'bg-amber-100 hover:bg-amber-200 text-amber-900 font-medium active:scale-98',
   outline: 'border border-amber-300 hover:bg-amber-50 text-amber-900 font-medium active:scale-98',
   ghost: 'hover:bg-amber-100/60 text-amber-900 font-medium',

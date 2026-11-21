@@ -13,10 +13,12 @@ import {
   ShieldCheck, 
   CheckCircle2, 
   AlertTriangle, 
-  Sparkles, 
   ArrowRight,
+  ArrowLeft,
   RefreshCw,
-  KeyRound
+  KeyRound,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { checkPasswordBreach, checkEmailBreach, PasswordBreachStatus, EmailBreachStatus } from '../../services/breachCheckerService';
@@ -30,7 +32,21 @@ type AuthTab = 'login' | 'signup';
 function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, login, signup, continueAsGuest, mfaChallenge, verifyMFA, cancelMFA, isLoading: authLoading } = useAuth();
+  const { 
+    user, 
+    isAuthenticated, 
+    login, 
+    signup, 
+    verifyEmail, 
+    resendVerification, 
+    mfaChallenge, 
+    verifyMFA, 
+    cancelMFA, 
+    isLoading: authLoading,
+    pendingRecoveryCodes,
+    clearPendingRecoveryCodes,
+  } = useAuth();
+  const isUserAuthenticated = Boolean(isAuthenticated || (user && !user.is_guest));
 
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(
     () => process.env.NODE_ENV !== 'test'
@@ -48,24 +64,10 @@ function AuthContent() {
   const [activeTab, setActiveTab] = useState<AuthTab>(initialTab);
   const prevTabParamRef = React.useRef(searchParams.get('tab'));
 
-  // Sync tab with URL query param if it changes externally
-  useEffect(() => {
-    const tabParam = searchParams.get('tab');
-    if (tabParam && tabParam !== prevTabParamRef.current) {
-      prevTabParamRef.current = tabParam;
-      if (tabParam === 'signup' || tabParam === 'login') {
-        setActiveTab(tabParam);
-      }
-    }
-  }, [searchParams]);
-
-  // If already logged in and not a guest, redirect to home or intended page
-  useEffect(() => {
-    if (user && !user.is_guest) {
-      const redirect = searchParams.get('redirect') || '/';
-      router.push(redirect);
-    }
-  }, [user, router, searchParams]);
+  // Synchronous lock refs to prevent any race condition during email verification and recovery codes modal
+  const isVerifyingEmailRef = React.useRef<boolean>(false);
+  const showRecoveryCodesRef = React.useRef<boolean>(false);
+  const hasRedirectedRef = React.useRef<boolean>(false);
 
   // ==========================================
   // LOGIN FORM STATE
@@ -95,6 +97,87 @@ function AuthContent() {
   const [signupLoading, setSignupLoading] = useState<boolean>(false);
   const [signupError, setSignupError] = useState<string | null>(null);
   const [signupSuccess, setSignupSuccess] = useState<string | null>(null);
+
+  // Email Verification State
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState<boolean>(false);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string>('');
+  const [verificationCode, setVerificationCode] = useState<string>('');
+  const [verificationLoading, setVerificationLoading] = useState<boolean>(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationSuccess, setVerificationSuccess] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const [resendLoading, setResendLoading] = useState<boolean>(false);
+
+  // Recovery Codes State (Shown ONCE after email verification succeeds)
+  const [oneTimeRecoveryCodes, setOneTimeRecoveryCodes] = useState<string[]>([]);
+  const [showRecoveryCodesModal, setShowRecoveryCodesModal] = useState<boolean>(false);
+  const [copiedCodeIndex, setCopiedCodeIndex] = useState<number | null>(null);
+  const [copiedAllCodes, setCopiedAllCodes] = useState<boolean>(false);
+
+  // Active recovery codes array from local state or AuthContext pending state
+  const displayedRecoveryCodes =
+    oneTimeRecoveryCodes.length > 0
+      ? oneTimeRecoveryCodes
+      : pendingRecoveryCodes && pendingRecoveryCodes.length > 0
+      ? pendingRecoveryCodes
+      : [];
+
+  const isDisplayingRecoveryCodes = Boolean(
+    (showRecoveryCodesModal || showRecoveryCodesRef.current) && displayedRecoveryCodes.length > 0
+  );
+
+  // Strict verification lock: when user is verifying email, verifyEmail is in flight,
+  // or recovery codes are displayed/pending acknowledgment, NEVER auto-redirect to /
+  // and NEVER let the render guard collapse the view to null.
+  const isLockedInVerification = Boolean(
+    isVerifyingEmail ||
+    isVerifyingEmailRef.current ||
+    verificationLoading ||
+    showRecoveryCodesModal ||
+    showRecoveryCodesRef.current ||
+    isDisplayingRecoveryCodes
+  );
+
+  // Sync tab with URL query param if it changes externally
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && tabParam !== prevTabParamRef.current) {
+      prevTabParamRef.current = tabParam;
+      if (tabParam === 'signup' || tabParam === 'login') {
+        setActiveTab(tabParam);
+        if (tabParam === 'login') {
+          isVerifyingEmailRef.current = false;
+          showRecoveryCodesRef.current = false;
+          clearPendingRecoveryCodes?.();
+          setOneTimeRecoveryCodes([]);
+          setShowRecoveryCodesModal(false);
+          setIsVerifyingEmail(false);
+        }
+      }
+    }
+  }, [searchParams, clearPendingRecoveryCodes]);
+
+  // If already logged in and not a guest, redirect to home or intended page.
+  // CRITICAL (Invariant A): NEVER auto-redirect if in email verification or displaying recovery codes!
+  useEffect(() => {
+    if (isLockedInVerification || hasRedirectedRef.current) {
+      return;
+    }
+    if (user && !user.is_guest) {
+      hasRedirectedRef.current = true;
+      const redirect = searchParams.get('redirect') || '/';
+      router.push(redirect);
+    }
+  }, [user, router, searchParams, isLockedInVerification]);
+
+  // 60-second cooldown timer for resending verification code
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setResendCooldown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [resendCooldown]);
 
   // Breach checking state
   const [passwordBreach, setPasswordBreach] = useState<PasswordBreachStatus | null>(null);
@@ -178,6 +261,12 @@ function AuthContent() {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
+    isVerifyingEmailRef.current = false;
+    showRecoveryCodesRef.current = false;
+    clearPendingRecoveryCodes?.();
+    setOneTimeRecoveryCodes([]);
+    setShowRecoveryCodesModal(false);
+    setIsVerifyingEmail(false);
 
     const identifier = loginIdentifier.trim();
     if (!identifier) {
@@ -193,10 +282,22 @@ function AuthContent() {
     try {
       const success = await login(identifier, loginPassword);
       if (success) {
+        hasRedirectedRef.current = true;
         const redirect = searchParams.get('redirect') || '/';
         router.push(redirect);
       }
     } catch (err: any) {
+      if (
+        err?.code === 'EMAIL_NOT_VERIFIED' ||
+        err?.status === 403 ||
+        (err?.message && err.message.toLowerCase().includes('verify your email'))
+      ) {
+        const emailToVerify = err?.email || (identifier.includes('@') ? identifier : '');
+        setPendingVerificationEmail(emailToVerify);
+        setIsVerifyingEmail(true);
+        setVerificationError(err?.message || 'Please verify your email address before signing in.');
+        return;
+      }
       setLoginError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoginLoading(false);
@@ -216,6 +317,7 @@ function AuthContent() {
     setMfaLoading(true);
     try {
       await verifyMFA(mfaCode.trim(), isBackupCode);
+      hasRedirectedRef.current = true;
       const redirect = searchParams.get('redirect') || '/';
       router.push(redirect);
     } catch (err: any) {
@@ -270,18 +372,127 @@ function AuthContent() {
 
     setSignupLoading(true);
     try {
-      await signup(email, signupPassword, username, username);
-      setSignupSuccess('Account created successfully! Welcome to Beeline.');
-      setTimeout(() => {
-        const redirect = searchParams.get('redirect') || '/';
-        router.push(redirect);
-      }, 1000);
+      const res = await signup(email, signupPassword, username, username);
+      setPendingVerificationEmail(email);
+      isVerifyingEmailRef.current = true;
+      setIsVerifyingEmail(true);
+      setVerificationSuccess(res?.message || 'Verification code sent to your email.');
+      setResendCooldown(60);
     } catch (err: any) {
       setSignupError(err.message || 'Registration failed. Please check your details.');
     } finally {
       setSignupLoading(false);
     }
   };
+
+  // Handle Email Verification Submit (6-Digit OTP)
+  const handleVerifyEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setVerificationError(null);
+    setVerificationSuccess(null);
+
+    const code = verificationCode.trim();
+    if (!code || code.length !== 6) {
+      setVerificationError('Please enter the 6-digit verification code.');
+      return;
+    }
+
+    isVerifyingEmailRef.current = true;
+    setVerificationLoading(true);
+    try {
+      const res = await verifyEmail({
+        email: pendingVerificationEmail,
+        code,
+      });
+      if (res.recovery_codes && res.recovery_codes.length > 0) {
+        showRecoveryCodesRef.current = true;
+        setOneTimeRecoveryCodes(res.recovery_codes);
+        setShowRecoveryCodesModal(true);
+        setIsVerifyingEmail(false);
+        isVerifyingEmailRef.current = false;
+      } else {
+        isVerifyingEmailRef.current = false;
+        showRecoveryCodesRef.current = false;
+        setIsVerifyingEmail(false);
+        clearPendingRecoveryCodes?.();
+        hasRedirectedRef.current = true;
+        const redirect = searchParams.get('redirect') || '/';
+        router.push(redirect);
+      }
+    } catch (err: any) {
+      setVerificationError(err.message || 'Verification failed. Please check your code.');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  // Handle Resend Verification Code
+  const handleResendCode = async () => {
+    if (resendCooldown > 0 || resendLoading || !pendingVerificationEmail) return;
+    setResendLoading(true);
+    setVerificationError(null);
+    try {
+      const res = await resendVerification(pendingVerificationEmail);
+      setVerificationSuccess(res.message || 'A fresh verification code was sent to your email.');
+      setResendCooldown(60);
+    } catch (err: any) {
+      setVerificationError(err.message || 'Could not resend verification code. Please try again later.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
+  // Handle Go Back from Verification to Sign Up
+  const handleGoBackToSignup = () => {
+    isVerifyingEmailRef.current = false;
+    showRecoveryCodesRef.current = false;
+    clearPendingRecoveryCodes?.();
+    setIsVerifyingEmail(false);
+    setVerificationCode('');
+    setVerificationError(null);
+    setVerificationSuccess(null);
+    setOneTimeRecoveryCodes([]);
+    setShowRecoveryCodesModal(false);
+    setActiveTab('signup');
+  };
+
+  // Copy Single Recovery Code
+  const handleCopyCode = async (code: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCodeIndex(index);
+      setTimeout(() => setCopiedCodeIndex(null), 2000);
+    } catch {}
+  };
+
+  // Copy All Recovery Codes
+  const handleCopyAllCodes = async () => {
+    try {
+      await navigator.clipboard.writeText(displayedRecoveryCodes.join('\n'));
+      setCopiedAllCodes(true);
+      setTimeout(() => setCopiedAllCodes(false), 2000);
+    } catch {}
+  };
+
+  // Finish Recovery Codes View and Redirect ONLY upon explicit user click
+  const handleFinishAndRedirect = () => {
+    hasRedirectedRef.current = true;
+    isVerifyingEmailRef.current = false;
+    showRecoveryCodesRef.current = false;
+    clearPendingRecoveryCodes?.();
+    setShowRecoveryCodesModal(false);
+    setOneTimeRecoveryCodes([]);
+    const redirect = searchParams.get('redirect') || '/';
+    router.push(redirect);
+  };
+
+  // During post-login redirect (when isAuthenticated is true and NOT locked in verification),
+  // render a clean minimal redirecting state (or null) instead of letting any login/signup branch flash before navigation finishes.
+  // Invariant B: Normal login returns null immediately with ZERO flash of recovery codes.
+  // Invariant A: Signup email verification never returns null while locked.
+  if (isUserAuthenticated && !isLockedInVerification) {
+    return null;
+  }
 
   if (isInitialLoading || (authLoading && process.env.NODE_ENV !== 'test')) {
     return <AuthGhostSkeleton />;
@@ -309,13 +520,19 @@ function AuthContent() {
         </div>
 
         {/* Tab Selection */}
-        {!mfaChallenge && (
+        {!mfaChallenge && !isVerifyingEmail && !isDisplayingRecoveryCodes && (
           <div className="grid grid-cols-2 gap-1.5 p-1 bg-stone-200/80 rounded-2xl mb-4 text-xs font-bold shadow-inner">
             <button
               type="button"
               onClick={() => {
                 setActiveTab('login');
                 setLoginError(null);
+                isVerifyingEmailRef.current = false;
+                showRecoveryCodesRef.current = false;
+                clearPendingRecoveryCodes?.();
+                setOneTimeRecoveryCodes([]);
+                setShowRecoveryCodesModal(false);
+                setIsVerifyingEmail(false);
               }}
               className={`py-2.5 rounded-xl transition-all ${
                 activeTab === 'login'
@@ -330,6 +547,12 @@ function AuthContent() {
               onClick={() => {
                 setActiveTab('signup');
                 setSignupError(null);
+                isVerifyingEmailRef.current = false;
+                showRecoveryCodesRef.current = false;
+                clearPendingRecoveryCodes?.();
+                setOneTimeRecoveryCodes([]);
+                setShowRecoveryCodesModal(false);
+                setIsVerifyingEmail(false);
               }}
               className={`py-2.5 rounded-xl transition-all ${
                 activeTab === 'signup'
@@ -345,7 +568,7 @@ function AuthContent() {
         {/* ========================================================= */}
         {/* TAB 1: SIGN IN / LOGIN FORM                              */}
         {/* ========================================================= */}
-        {activeTab === 'login' && !mfaChallenge && (
+        {activeTab === 'login' && !mfaChallenge && !isVerifyingEmail && !isDisplayingRecoveryCodes && (
           <BaseCard variant="elevated" className="p-6 border border-amber-200/90 bg-white shadow-xl">
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               {loginError && (
@@ -423,34 +646,6 @@ function AuthContent() {
                 rightIcon={!loginLoading && <ArrowRight className="w-4 h-4" />}
               >
                 {loginLoading ? 'Authenticating...' : 'Sign In to Beeline'}
-              </BaseButton>
-
-              {/* Divider & Guest Option */}
-              <div className="relative flex py-2 items-center">
-                <div className="flex-grow border-t border-stone-200" />
-                <span className="flex-shrink mx-3 text-[11px] font-semibold text-stone-400 uppercase">
-                  or
-                </span>
-                <div className="flex-grow border-t border-stone-200" />
-              </div>
-
-              <BaseButton
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={async () => {
-                  setLoginLoading(true);
-                  try {
-                    await continueAsGuest();
-                    router.push('/');
-                  } finally {
-                    setLoginLoading(false);
-                  }
-                }}
-                className="w-full justify-center text-xs font-semibold py-2"
-                leftIcon={<Sparkles className="w-3.5 h-3.5 text-amber-500" />}
-              >
-                Continue as Guest Traveler
               </BaseButton>
             </form>
           </BaseCard>
@@ -532,7 +727,7 @@ function AuthContent() {
         {/* ========================================================= */}
         {/* TAB 2: SIGN UP WITH BREACH INSPECTOR                     */}
         {/* ========================================================= */}
-        {activeTab === 'signup' && (
+        {activeTab === 'signup' && !mfaChallenge && !isVerifyingEmail && !isDisplayingRecoveryCodes && (
           <BaseCard variant="elevated" className="p-6 border border-amber-200/90 bg-white shadow-xl">
             <form onSubmit={handleSignupSubmit} className="space-y-3.5">
               {signupError && (
@@ -787,6 +982,168 @@ function AuthContent() {
                   : 'Create Beeline Account'}
               </BaseButton>
             </form>
+          </BaseCard>
+        )}
+
+        {/* ========================================================= */}
+        {/* STEP: INLINE EMAIL VERIFICATION (6-DIGIT OTP)             */}
+        {/* ========================================================= */}
+        {isVerifyingEmail && !isDisplayingRecoveryCodes && (
+          <BaseCard variant="elevated" className="p-6 border border-amber-200/90 bg-white shadow-xl animate-fade-in">
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                <Mail className="w-6 h-6 text-amber-600" />
+              </div>
+              <h2 className="text-xl font-black text-stone-900 tracking-tight">
+                Verify Your Email
+              </h2>
+              <p className="text-xs text-stone-600 mt-1 max-w-sm mx-auto">
+                We sent a 6-digit verification code to{' '}
+                <span className="font-bold text-amber-950 break-all">{pendingVerificationEmail}</span>
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyEmailSubmit} className="space-y-4">
+              {verificationError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-xs text-red-700 animate-fade-in">
+                  <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{verificationError}</span>
+                </div>
+              )}
+
+              {verificationSuccess && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs text-emerald-800 animate-fade-in font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{verificationSuccess}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5 text-center">
+                  6-Digit Verification Code
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  value={verificationCode}
+                  onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="e.g. 123456"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  required
+                  aria-label="6-digit verification code"
+                  className="w-full px-3 py-3 text-center text-2xl font-mono font-bold tracking-widest bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all"
+                />
+              </div>
+
+              <BaseButton
+                type="submit"
+                variant="primary"
+                size="md"
+                disabled={verificationLoading || verificationCode.length < 6}
+                className="w-full justify-center text-stone-950 font-bold bg-amber-500 hover:bg-amber-400 shadow-md py-2.5 text-sm"
+              >
+                {verificationLoading ? 'Verifying Code...' : 'Verify Email'}
+              </BaseButton>
+
+              <div className="flex items-center justify-between text-xs pt-2">
+                <button
+                  type="button"
+                  onClick={handleResendCode}
+                  disabled={resendCooldown > 0 || resendLoading}
+                  className={`font-semibold transition-colors ${
+                    resendCooldown > 0 || resendLoading
+                      ? 'text-stone-400 cursor-not-allowed'
+                      : 'text-amber-700 hover:text-amber-800 hover:underline'
+                  }`}
+                >
+                  {resendLoading
+                    ? 'Resending...'
+                    : resendCooldown > 0
+                    ? `Resend code in ${resendCooldown}s`
+                    : 'Resend code'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleGoBackToSignup}
+                  className="text-stone-500 hover:text-stone-800 transition-colors flex items-center gap-1 font-medium"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" /> Wrong email? Go back
+                </button>
+              </div>
+            </form>
+          </BaseCard>
+        )}
+
+        {/* ========================================================= */}
+        {/* STEP: ONE-TIME RECOVERY CODES DISPLAY (SHOW ONCE)        */}
+        {/* ========================================================= */}
+        {isDisplayingRecoveryCodes && (
+          <BaseCard variant="elevated" data-testid="recovery-codes-modal" className="p-6 border border-emerald-300 bg-white shadow-xl animate-fade-in">
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2 shadow-sm">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h2 className="text-xl font-black text-stone-900 tracking-tight">
+                Emergency Recovery Codes
+              </h2>
+              <p className="text-xs text-stone-600 mt-1 max-w-sm mx-auto">
+                Email verified successfully! Save these <strong>3 emergency recovery codes</strong> now. They are shown <strong>only once</strong> on screen and are never emailed.
+              </p>
+            </div>
+
+            <div className="space-y-2.5 my-4">
+              {displayedRecoveryCodes.map((code, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-amber-50/70 border border-amber-300 rounded-xl font-mono text-sm font-bold text-amber-950 tracking-wider shadow-sm"
+                >
+                  <span>{code}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCode(code, idx)}
+                    className="p-1.5 rounded-lg text-amber-800 hover:bg-amber-200/80 transition-colors flex items-center gap-1 text-xs"
+                    aria-label={`Copy code ${code}`}
+                  >
+                    {copiedCodeIndex === idx ? (
+                      <Check className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              <BaseButton
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCopyAllCodes}
+                className="w-full justify-center text-xs font-semibold py-2"
+                leftIcon={copiedAllCodes ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              >
+                {copiedAllCodes ? 'All Codes Copied!' : 'Copy All Codes'}
+              </BaseButton>
+            </div>
+
+            <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl text-[11px] text-stone-600 mb-5 leading-relaxed">
+              ⚠️ Store these codes offline in a password vault or secure notes. If you ever lose access to your primary device or authenticator, you can log in using one of these codes.
+            </div>
+
+            <BaseButton
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={handleFinishAndRedirect}
+              className="w-full justify-center text-stone-950 font-bold bg-amber-500 hover:bg-amber-400 shadow-md py-2.5 text-sm"
+              rightIcon={<ArrowRight className="w-4 h-4" />}
+            >
+              I Have Saved My Codes — Continue to Beeline
+            </BaseButton>
           </BaseCard>
         )}
 

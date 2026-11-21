@@ -25,6 +25,56 @@ export const TOTAL_XML_DAILY_TRAINS = 2103;
 export const TOTAL_XML_CORRIDOR_ROUTES = 709;
 export const PROVIDERS = RAIL_OPERATORS;
 
+export interface OperatorRelationship {
+  role: string;
+  relationship: string;
+}
+
+export const OPERATOR_RELATIONSHIPS: Record<string, OperatorRelationship> = {
+  cfr: {
+    role: 'National Passenger Flagship',
+    relationship: 'National passenger flagship connecting all 8 mainline magistrales and București Nord Hub across Romania.',
+  },
+  tfc: {
+    role: 'Regional & Commuter Services',
+    relationship: 'High-frequency regional network linking București Nord Hub, Buzău, Galați, and Transylvania.',
+  },
+  regio: {
+    role: 'Inter-Regional Network',
+    relationship: 'Extensive regional network linking Moldavia, Transylvania, and Banat through key junction hubs.',
+  },
+  interregional: {
+    role: 'Western Corridor Network',
+    relationship: 'Regional network serving western rail corridors, Transylvania, Crișana, and border junctions.',
+  },
+  astra: {
+    role: 'Long-Distance & Sleeper Services',
+    relationship: 'Private passenger rail carrier running long-distance sleeper and comfort trains through Carpathian & Danube Hubs.',
+  },
+  ferotrafic: {
+    role: 'Regional Feeder Services',
+    relationship: 'Private passenger rail carrier feeding passenger traffic into key regional mainline junctions.',
+  },
+  softrans: {
+    role: 'Electric Intercity Services',
+    relationship: 'Private passenger rail carrier operating electric Hyperion trainsets via Craiova, București Nord Hub, and Brașov.',
+  },
+};
+
+/**
+ * Computes a visual relational bar width percentage using a soft perceptual curve.
+ * Math.max(18, Math.round(Math.pow(value / maxValue, 0.36) * 100))
+ * Ensures smaller operators (16-21 trains) remain unmistakable bars (18%-24%)
+ * while the top operator reaches 100% and mid-tiers form clear, graduated steps.
+ */
+export function getVisualBarPct(value: number, maxValue: number): number {
+  if (maxValue <= 0 || value <= 0) {
+    return 18;
+  }
+  const ratio = Math.min(1, Math.max(0, value / maxValue));
+  return Math.max(18, Math.min(100, Math.round(Math.pow(ratio, 0.36) * 100)));
+}
+
 export interface TransitHoneycombSectionProps {
   className?: string;
   [key: string]: unknown;
@@ -121,11 +171,18 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E1B18]">
           Romanian Rail Network
         </h2>
-        <div className="text-sm sm:text-base text-[#78716C] tabular-nums flex items-center gap-3 mt-1.5">
+        <div className="text-sm sm:text-base text-[#78716C] tabular-nums flex items-center gap-3 mt-1.5 flex-wrap">
           <span>{totalDailyTrains.toLocaleString()} trains/day</span>
           <span className="h-4 w-px bg-[#D6C7AE]" aria-hidden="true" />
           <span>{totalRoutes.toLocaleString()} routes</span>
+          <span className="h-4 w-px bg-[#D6C7AE]" aria-hidden="true" />
+          <span className="text-stone-600 font-medium hidden sm:inline">
+            7 Passenger Railway Operators
+          </span>
         </div>
+        <p className="mt-1 text-xs sm:text-sm text-[#78716C]">
+          National mainline corridors, regional routes, and passenger carriers feeding key junctions.
+        </p>
       </div>
 
       {/* Asymmetric Two-Column Layout */}
@@ -210,12 +267,24 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
           </svg>
         </div>
 
-        {/* Right Column (lg:col-span-7) — Cozy Rail Ledger */}
+        {/* Right Column (lg:col-span-7) — Cozy Rail Ledger & Visual Scale Overview */}
         <div className="lg:col-span-7">
+          {/* Network Overview Strip */}
+          <div className="mb-3.5 flex flex-wrap items-center justify-between gap-2 px-1 text-xs text-[#78716C]">
+            <span className="font-medium text-[#1E1B18] flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D97706]" aria-hidden="true" />
+              Network Overview
+            </span>
+            <span className="text-[11px] sm:text-xs text-[#78716C]">
+              7 Licensed Passenger Rail Operators
+            </span>
+          </div>
+
           <div className="divide-y divide-[#F3E8D2] border-y border-[#F3E8D2]">
             {operators.map((op) => {
               const isSelected = selectedId === op.id;
-              const trainPct = (op.dailyTrains / maxDailyTrains) * 100;
+              const visualBarPct = getVisualBarPct(op.dailyTrains, maxDailyTrains);
+              const relInfo = OPERATOR_RELATIONSHIPS[op.id];
 
               return (
                 <button
@@ -230,7 +299,7 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
                   }`}
                 >
                   {isSelected ? (
-                    <div>
+                    <div data-testid="provider-story-card" className="w-full">
                       {/* Active Top Line */}
                       <div className="flex items-center justify-between gap-3 w-full">
                         <div className="flex items-center gap-2 min-w-0">
@@ -247,36 +316,50 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
                         </span>
                       </div>
 
-                      {/* Active Full-Row Proportional Golden Bar */}
-                      <div className="w-full mt-2">
-                        <div
-                          className="h-1.5 rounded-full bg-gradient-to-r from-[#D97706] to-[#F59E0B] transition-all duration-300 motion-reduce:transition-none"
-                          style={{
-                            width: `${trainPct}%`,
-                            minWidth: '8px',
-                          }}
-                        />
+                      {/* Active Extended Relational Bar Track */}
+                      <div className="mt-2.5 flex items-center justify-between gap-4">
+                        <div className="w-36 sm:w-48 md:w-56 h-2 rounded-full bg-amber-950/[0.06] overflow-hidden shrink-0">
+                          <div
+                            data-testid={`relational-bar-${op.id}`}
+                            data-bar-pct={visualBarPct}
+                            className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-600 transition-all duration-300 motion-reduce:transition-none"
+                            style={{
+                              width: `${visualBarPct}%`,
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs sm:text-sm text-[#78716C] tabular-nums whitespace-nowrap">
+                          {op.routes} routes
+                        </span>
                       </div>
 
-                      {/* Active Expanded Factual Sub-line */}
-                      <div className="text-xs sm:text-sm text-[#78716C] tabular-nums mt-1.5">
-                        {op.routes} routes
-                      </div>
+                      {/* Active Network Relationship Narrative */}
+                      {relInfo?.relationship && (
+                        <div className="text-xs text-[#78716C] mt-2.5 leading-relaxed border-t border-[#F3E8D2]/60 pt-2">
+                          <span className="font-semibold text-amber-950">{relInfo.role}: </span>
+                          <span>{relInfo.relationship}</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    /* Inactive Row: Single horizontal flex line */
-                    <div className="flex items-center justify-between gap-4 w-full">
-                      <span className="text-[15px] font-medium text-[#1E1B18] shrink-0 min-w-[140px] sm:min-w-[170px]">
-                        {op.name}
-                      </span>
-                      <div className="flex-1 mx-2 sm:mx-4 flex items-center">
-                        <div
-                          className="h-1.5 rounded-full bg-[#D97706]/80 transition-all duration-300 motion-reduce:transition-none"
-                          style={{
-                            width: `${trainPct}%`,
-                            minWidth: '6px',
-                          }}
-                        />
+                    /* Inactive Row: Single horizontal flex line with extended relational bar */
+                    <div className="flex items-center justify-between gap-3 sm:gap-4 w-full">
+                      <div className="flex items-center gap-2 min-w-[140px] sm:min-w-[170px] shrink-0">
+                        <span className="text-[15px] font-medium text-[#1E1B18] truncate">
+                          {op.name}
+                        </span>
+                      </div>
+                      <div className="flex-1 flex items-center justify-center sm:justify-start">
+                        <div className="w-36 sm:w-48 md:w-56 h-2 rounded-full bg-amber-950/[0.06] overflow-hidden shrink-0">
+                          <div
+                            data-testid={`relational-bar-${op.id}`}
+                            data-bar-pct={visualBarPct}
+                            className="h-full rounded-full bg-gradient-to-r from-amber-500/85 to-amber-600/85 transition-all duration-300 motion-reduce:transition-none"
+                            style={{
+                              width: `${visualBarPct}%`,
+                            }}
+                          />
+                        </div>
                       </div>
                       <span className="text-sm tabular-nums text-[#57534E] whitespace-nowrap shrink-0">
                         {op.dailyTrains.toLocaleString()} / day
@@ -286,6 +369,12 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
                 </button>
               );
             })}
+          </div>
+
+          {/* Synchronized Rail Hubs Indicator */}
+          <div className="mt-3 px-1 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#A8A29E]">
+            <span>Synchronized Hubs: București Nord Hub · Carpathian & Danube Hubs</span>
+            <span>100% Passenger Rail Timetables</span>
           </div>
         </div>
       </div>

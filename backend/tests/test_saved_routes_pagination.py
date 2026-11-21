@@ -1,15 +1,16 @@
 import pytest
 from httpx import AsyncClient
+from tests.conftest import signup_and_verify
 
 
 @pytest.mark.asyncio
 async def test_saved_routes_pagination(client: AsyncClient):
-    # 1. Signup user
-    signup_res = await client.post("/api/v1/auth/signup", json={
+    # 1. Signup and verify user
+    signup_data = await signup_and_verify(client, {
         "email": "saved.pagination@beeline.io",
         "password": "SecurePassword123!"
     })
-    token = signup_res.json()["access_token"]
+    token = signup_data["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # 2. Plan a sample route
@@ -24,6 +25,11 @@ async def test_saved_routes_pagination(client: AsyncClient):
     for i in range(3):
         p = dict(plan)
         p["id"] = f"plan-{i}"
+        p["departureTime"] = f"2026-11-21T0{8+i}:00:00+02:00"
+        if "legs" in p and p["legs"]:
+            legs_copy = [dict(leg) for leg in p["legs"]]
+            legs_copy[0]["departureTime"] = p["departureTime"]
+            p["legs"] = legs_copy
         await client.post("/api/v1/routes/saved", json={"plan": p}, headers=headers)
 
     # 4. Fetch page 1 (pageSize 2)

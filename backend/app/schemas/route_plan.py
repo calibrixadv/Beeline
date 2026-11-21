@@ -481,6 +481,13 @@ class TransitRouteQuery(BaseModel):
     optimizationPreference: Literal["FASTEST", "BEST_VALUE", "SAFE_BUFFERS", "LEAST_TRANSFERS", "MOST_RELIABLE"] = "SAFE_BUFFERS"
     minimumBufferMinutes: Optional[int] = 20
 
+    @field_validator("origin", "destination", mode="before")
+    @classmethod
+    def _coerce_location(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return LocationQuery(name=v, city=v)
+        return v
+
 
 class MascotRecommendation(BaseModel):
     persona: Literal["barnaby", "honey", "bumble"]
@@ -608,7 +615,7 @@ class BookingWindowInfo(BaseModel):
     maxDate: str
     advanceBookingDays: int = 90
     activeTimetable: str = "2025-2026 / 2026-2027"
-    liveSource: str = "INFOFER_IRIS_AND_OFFICIAL_XML"
+    liveSource: str = "INFOFER_LIVE_ONLY"
 
     model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
@@ -623,7 +630,7 @@ class TrainItineraryResponse(BaseModel):
     totalDistanceKm: float = Field(..., validation_alias=AliasChoices("totalDistanceKm", "total_distance_km"))
     totalDurationMinutes: int = Field(..., validation_alias=AliasChoices("totalDurationMinutes", "total_duration_minutes"))
     stops: List[LegStop] = Field(default_factory=list)
-    liveSource: str = "INFOFER_IRIS_AND_OFFICIAL_XML"
+    liveSource: str = "INFOFER_LIVE_ONLY"
     bookingWindow: Optional[BookingWindowInfo] = Field(default=None, validation_alias=AliasChoices("bookingWindow", "booking_window"))
 
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
@@ -676,6 +683,21 @@ class RoutePlanResponse(BaseModel):
 class SaveRouteRequest(BaseModel):
     plan: TransitRoutePlan
     notes: Optional[str] = None
+    alertMuted: Optional[bool] = Field(
+        default=False,
+        validation_alias=AliasChoices("alertMuted", "alert_muted"),
+        serialization_alias="alertMuted",
+    )
+    alertLeadMinutes: Optional[Literal[5, 10, 30, 60]] = Field(
+        default=30,
+        validation_alias=AliasChoices("alertLeadMinutes", "alert_lead_minutes"),
+        serialization_alias="alertLeadMinutes",
+    )
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+
+SavedRouteCreate = SaveRouteRequest
 
 
 class SavedRouteResponse(BaseModel):
@@ -684,7 +706,27 @@ class SavedRouteResponse(BaseModel):
     destination_name: str
     plan: TransitRoutePlan
     notes: Optional[str] = None
+    alertMuted: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("alertMuted", "alert_muted"),
+        serialization_alias="alertMuted",
+    )
+    alertLeadMinutes: Literal[5, 10, 30, 60] = Field(
+        default=30,
+        validation_alias=AliasChoices("alertLeadMinutes", "alert_lead_minutes"),
+        serialization_alias="alertLeadMinutes",
+    )
     created_at: str
+
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    @property
+    def alert_muted(self) -> bool:
+        return self.alertMuted
+
+    @property
+    def alert_lead_minutes(self) -> int:
+        return self.alertLeadMinutes
 
 
 class SavedRouteUpdate(BaseModel):
@@ -692,5 +734,23 @@ class SavedRouteUpdate(BaseModel):
     destination_name: Optional[str] = None
     plan: Optional[TransitRoutePlan] = None
     notes: Optional[str] = None
+    alertMuted: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices("alertMuted", "alert_muted"),
+        serialization_alias="alertMuted",
+    )
+    alertLeadMinutes: Optional[Literal[5, 10, 30, 60]] = Field(
+        default=None,
+        validation_alias=AliasChoices("alertLeadMinutes", "alert_lead_minutes"),
+        serialization_alias="alertLeadMinutes",
+    )
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
+
+    @property
+    def alert_muted(self) -> Optional[bool]:
+        return self.alertMuted
+
+    @property
+    def alert_lead_minutes(self) -> Optional[int]:
+        return self.alertLeadMinutes

@@ -1,9 +1,12 @@
 'use client';
 
 import React from 'react';
-import { X } from 'lucide-react';
+import { X, ExternalLink, Check, Plus } from 'lucide-react';
 import { TrainJourney } from '../types/train';
 import { formatTimeOnly } from '../utils/trainFilters';
+import { isTrainDeparted } from '../utils/departureTime';
+import { buildOfficialTicketUrl, SAFE_EXTERNAL_LINK_ATTRS } from '../utils/officialTicketUrl';
+import { useTrip } from '../context/TripContext';
 import BaseButton from './BaseButton';
 
 export interface TrainDetailModalProps {
@@ -13,7 +16,31 @@ export interface TrainDetailModalProps {
 }
 
 export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({ journey, isOpen, onClose }) => {
+  const { isTrainInTrip, addTrainToTrip, removeTrainFromTrip, trips } = useTrip();
+
   if (!isOpen || !journey) return null;
+
+  const isSaved = isTrainInTrip(journey.id);
+  const isCancelled = journey.status === 'CANCELLED';
+  const departed = isTrainDeparted(journey.departureTime);
+
+  const handleToggleTrip = () => {
+    if (departed || isCancelled) return;
+    if (isSaved) {
+      const match = trips.find((t) => t.journey.id === journey.id);
+      if (match) removeTrainFromTrip(match.id);
+    } else {
+      addTrainToTrip(journey);
+    }
+  };
+
+  const trainUrl = buildOfficialTicketUrl({
+    trainNumber: journey.trainNumber,
+    travelDate: journey.departureTime ? journey.departureTime.slice(0, 10) : undefined,
+    origin: journey.origin.name,
+    destination: journey.destination.name,
+    operator: journey.operator,
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
@@ -24,6 +51,14 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({ journey, isO
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-lg text-stone-900">{journey.trainNumber}</span>
               <span className="text-xs text-stone-500 font-semibold">{journey.operator}</span>
+              {isTrainDeparted(journey.departureTime) && (
+                <span
+                  data-testid="train-modal-departed-badge"
+                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-stone-100 text-stone-600 border border-stone-300"
+                >
+                  Departed
+                </span>
+              )}
             </div>
             <span className="text-xs text-amber-600 font-medium">{journey.operator} Service</span>
           </div>
@@ -92,10 +127,47 @@ export const TrainDetailModal: React.FC<TrainDetailModalProps> = ({ journey, isO
         </div>
 
         {/* Footer */}
-        <div className="pt-3 border-t border-stone-100 flex justify-end">
-          <BaseButton variant="outline" size="sm" onClick={onClose}>
-            Close
-          </BaseButton>
+        <div className="pt-3 border-t border-stone-100 flex items-center justify-between flex-wrap gap-2">
+          <a
+            href={trainUrl}
+            {...SAFE_EXTERNAL_LINK_ATTRS}
+            data-testid="modal-infofer-train-link"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 hover:underline"
+            title={`Vezi trenul ${journey.trainNumber} pe InfoFer`}
+          >
+            <span>Vezi trenul pe InfoFer</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+
+          <div className="flex items-center gap-2">
+            <BaseButton variant="outline" size="sm" onClick={onClose}>
+              Close
+            </BaseButton>
+
+            <BaseButton
+              variant={isSaved ? 'success' : isCancelled || departed ? 'outline' : 'primary'}
+              size="sm"
+              disabled={isCancelled || departed}
+              aria-disabled={isCancelled || departed}
+              onClick={handleToggleTrip}
+              className={
+                departed
+                  ? 'bg-stone-100 text-stone-400 border-stone-300 cursor-not-allowed opacity-75'
+                  : isSaved
+                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-semibold'
+                  : 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold shadow-xs'
+              }
+              leftIcon={
+                isSaved ? (
+                  <Check className="w-3.5 h-3.5" />
+                ) : !departed && !isCancelled ? (
+                  <Plus className="w-3.5 h-3.5" />
+                ) : undefined
+              }
+            >
+              {isSaved ? 'In Trip ✓' : isCancelled ? 'Cancelled' : departed ? 'Departed' : '+ Add to Itinerary'}
+            </BaseButton>
+          </div>
         </div>
       </div>
     </div>

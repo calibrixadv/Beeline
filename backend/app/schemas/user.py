@@ -42,6 +42,8 @@ class UserBase(BaseModel):
     is_guest: bool = False
     is_active: bool = True
     mfa_enabled: bool = False
+    email_verified: bool = False
+    email_verified_at: Optional[datetime] = None
     account_status: str = "ACTIVE"
 
 
@@ -62,6 +64,9 @@ class UserProfile(UserBase):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+UserResponse = UserProfile
 
 
 class ChangePasswordRequest(BaseModel):
@@ -95,3 +100,29 @@ class SessionResponse(BaseModel):
     is_current: bool = False
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RouteCorridorSummary(BaseModel):
+    origin: str
+    destination: str
+    tripCount: int
+    totalDistanceKm: float
+    moneySavedLei: float
+    minutesSaved: int
+    topOperator: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
+
+class UserTravelStatsResponse(BaseModel):
+    totalTrips: int = 0
+    moneySavedLei: float = 0.0
+    minutesSaved: int = 0
+    totalDistanceKm: float = 0.0
+    co2SavedKg: float = 0.0
+    comparisonBaseline: str = "CAR"
+    favoriteRoute: Optional[RouteCorridorSummary] = None
+    topRoutes: List[RouteCorridorSummary] = Field(default_factory=list)
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+

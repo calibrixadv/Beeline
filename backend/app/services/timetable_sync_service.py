@@ -59,7 +59,7 @@ class TimetableSyncService:
             "maxDate": max_date.isoformat(),
             "advanceBookingDays": 90,
             "activeTimetable": "2025-2026 / 2026-2027",
-            "liveSource": "INFOFER_IRIS_AND_OFFICIAL_XML",
+            "liveSource": "INFOFER_LIVE_ONLY",
         }
 
     def resolve_timetable_version(self, target_date: Union[str, date, datetime]) -> str:

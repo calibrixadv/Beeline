@@ -562,6 +562,45 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(screen.queryByText(/CTP Cluj/i)).not.toBeInTheDocument();
   });
 
+  it('renders proportional relational bars for small operators with >= 18% visual width and zero dot collapse (Chapter 2 Polish)', () => {
+    const { container } = render(<HomePage />);
+
+    // Selected story card is present for default active operator (CFR)
+    expect(screen.getByTestId('provider-story-card')).toBeInTheDocument();
+
+    // Ensure tier/niche labels have been cleanly removed from the DOM
+    expect(screen.queryByText('Core Mainline')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Regional Backbone/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Specialized \/ Niche/i)).not.toBeInTheDocument();
+
+    // Verify small operators render a non-zero visual bar width (>= 18%) rather than collapsing to zero/dot
+    const smallOperatorIds = ['astra', 'ferotrafic', 'softrans'];
+    smallOperatorIds.forEach((id) => {
+      const bar = container.querySelector(`[data-testid="relational-bar-${id}"]`);
+      expect(bar).toBeInTheDocument();
+      const pct = parseInt(bar?.getAttribute('data-bar-pct') || '0', 10);
+      expect(pct).toBeGreaterThanOrEqual(18);
+      expect(pct).toBeLessThanOrEqual(25);
+    });
+
+    // Top operator sits at 100% of the bar track
+    const cfrBar = container.querySelector('[data-testid="relational-bar-cfr"]');
+    expect(cfrBar).toBeInTheDocument();
+    expect(cfrBar?.getAttribute('data-bar-pct')).toBe('100');
+
+    // Mid-tier operators form graduated steps (50% - 65%)
+    ['tfc', 'regio', 'interregional'].forEach((id) => {
+      const bar = container.querySelector(`[data-testid="relational-bar-${id}"]`);
+      expect(bar).toBeInTheDocument();
+      const pct = parseInt(bar?.getAttribute('data-bar-pct') || '0', 10);
+      expect(pct).toBeGreaterThanOrEqual(50);
+      expect(pct).toBeLessThan(100);
+    });
+
+    // Strictly 0 canvas, 0 leaflet-container, and 0 map elements
+    expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
+  });
+
   it('renders the 3 Queen Bee cards, archetype-matched Mini Worker Bees, and rich SVG props (Test 18)', () => {
     const { container } = render(<HomePage />);
 
@@ -694,18 +733,18 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(previewMap).toBeInTheDocument();
     expect(screen.getByTestId('queen-route-preview')).toBeInTheDocument();
 
-    // 3. Verify exactly 7 Beehive Stations (data-testid="preview-beehive-station")
+    // 3. Verify exactly 7 Beehive Stations (data-testid="preview-beehive-station") on Desktop
     const stations = container.querySelectorAll('[data-testid="preview-beehive-station"]');
     expect(stations.length).toBe(7);
 
     // Verify all 7 generic beehive station names are rendered
-    expect(screen.getAllByText(/Point A • Origin Hive/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Meadow Vale Hive/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Sunny Creek Hive/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Central Junction Hive/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Amber Ridge Hive/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Orchard Valley Hive/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Point B • Destination Hive/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Origin Hive/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Clover Halt/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Sunlit Creek/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Central Junction/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Amber Ridge/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Honey Orchard/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Arrival Hive/i).length).toBeGreaterThan(0);
 
     // 4. Verify Express Bee Locomotive replaces train locomotive (Strict Invariant)
     const beeLocomotive = container.querySelector('[data-testid="route-preview-bee-locomotive"]');
@@ -714,41 +753,50 @@ describe('HomePage Screen-Size Hero with Dynamic Mascot', () => {
     expect(beeLocomotive).toHaveAttribute('data-bee-color', 'safe');
 
     // 5. Assert Consumer Story 1: Reliability (Safe - Queen Meli)
-    // Story: Always arrive on time, built-in cushion/margin of error accounts for extra time in case another train is delayed
-    expect(screen.getAllByText(/Always Arrive On Time\. Built-In Cushion for Any Delay\./i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/\+20 min Built-In Delay Buffer/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Protected Transfers, Calm Arrivals/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/🛡️ \+20m Delay Cushion/i).length).toBeGreaterThan(0);
 
     // Click delay stress test button (+15 min unexpected delay on leg 1)
     const delayBtn = screen.getByTestId('safe-delay-btn');
     fireEvent.click(delayBtn);
-    expect(screen.getAllByText(/15 minutes of unexpected delay absorbed/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/100% On Time/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/First train ran \+15m late/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/On Time ✓/i).length).toBeGreaterThan(0);
 
     // 6. Assert Consumer Story 2: Fast (Queen Vira) via Open Portal button
     fireEvent.click(fastPortalBtn);
     expect(mockScrollIntoView).toHaveBeenCalled();
     expect(beeLocomotive).toHaveAttribute('data-bee-color', 'fast');
 
-    // Story: There is simply no faster route from A to B, maximum speed, zero wasted stops
-    expect(screen.getAllByText(/There Is Simply No Faster Route From A to B\./i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/-55 minutes saved/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Skipped • 0 Wasted Stops/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Direct Mainline Flight, Zero Wasted Stops/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/⚡ Direct Express · 0 Stops/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/5 local halts bypassed/i).length).toBeGreaterThan(0);
 
     // 7. Assert Consumer Story 3: Economy (Queen Flora) via Open Portal button
     fireEvent.click(economyPortalBtn);
     expect(beeLocomotive).toHaveAttribute('data-bee-color', 'economy');
 
-    // Story: Calm, unrushed journey with longer stops when you have no deadline, keep most money in your pocket
-    expect(
-      screen.getAllByText(/Calm, Unrushed Journey with Longer Stops When You Have No Deadline\./i).length
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Save up to 40%/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/\+12m Relaxed Stop/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Unhurried Stops, Sweetest Rail Fares/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Lowest Fare/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/\+12m pause/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/keep more nectar in your pocket/i).length).toBeGreaterThan(0);
 
-    // Verify calm unhurried stops and pocket savings promise
-    expect(screen.getAllByText(/stretch your legs, zero rush/i).length).toBeGreaterThan(0);
+    // 8. Mobile S-Curve Serpentine Map Assertions (Prompt Section 4.2)
+    const mobileScurve = screen.getByTestId('mobile-scurve-route-preview');
+    expect(mobileScurve).toBeInTheDocument();
+    const mobileStations = container.querySelectorAll('[data-testid="mobile-beehive-station"]');
+    expect(mobileStations.length).toBe(7);
 
-    // 8. Strict Invariant 1: Strictly zero map or canvas elements anywhere in DOM
+    const mobileBee = container.querySelector('[data-testid="mobile-route-bee"]');
+    expect(mobileBee).toBeInTheDocument();
+    expect(mobileBee).toHaveAttribute('data-bee-color', 'economy');
+
+    // Switch back to Safe and Fast on mobile
+    fireEvent.click(safePortalBtn);
+    expect(mobileBee).toHaveAttribute('data-bee-color', 'safe');
+    fireEvent.click(fastPortalBtn);
+    expect(mobileBee).toHaveAttribute('data-bee-color', 'fast');
+
+    // 9. Strict Invariant 1: Strictly zero map or canvas elements anywhere in DOM
     expect(container.querySelectorAll('.leaflet-container, canvas, map').length).toBe(0);
 
     window.HTMLElement.prototype.scrollIntoView = originalScrollIntoView;

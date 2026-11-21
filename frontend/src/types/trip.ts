@@ -14,12 +14,17 @@ export interface TripOption {
 
 export interface TripItem {
   id: string;
+  savedRouteId?: string;
   journey: TrainJourney;
   selectedClass: TrainClass;
   travelDate: string;
   notes?: string;
   addedAt: string;
   date?: string;
+  alertMuted?: boolean;
+  alertLeadMinutes?: 5 | 10 | 30 | 60;
+  curatedPillars?: CuratedPillar[];
+  curatedPillar?: CuratedPillar;
   bookingWindow?: {
     minDate: string;
     maxDate: string;
@@ -31,12 +36,20 @@ export interface TripItem {
   delayMinutes?: number;
   timetableSource?: string;
   commercialStops?: string[];
+  legs?: any[];
+  transfersCount?: number;
+  transfers?: any[];
 }
 
 export interface TripContextType {
   trips: TripItem[];
   addTrainToTrip: (journey: TrainJourney, selectedClass?: TrainClass, travelDate?: string) => boolean;
+  addTrip: (journeyOrItem: TrainJourney | TripItem, selectedClass?: TrainClass, travelDate?: string) => boolean;
   removeTrainFromTrip: (tripItemId: string) => void;
+  updateTripAlertSettings: (
+    tripId: string,
+    settings: { alertMuted?: boolean; alertLeadMinutes?: 5 | 10 | 30 | 60 }
+  ) => Promise<void> | void;
   isTrainInTrip: (trainId: string) => boolean;
   clearTrip: () => void;
   getTripTotalCost: () => number;

@@ -18,3 +18,4 @@ export * from './TripsGhostSkeleton';
 export * from './HomePageGhostSkeleton';
 export * from './AuthGhostSkeleton';
 export * from './TrainsGhostSkeleton';
+export * from './AmbientPageMascot';

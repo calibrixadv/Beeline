@@ -234,7 +234,7 @@ async def test_train_itinerary_endpoint_success_and_errors(client: AsyncClient):
     assert data_hyphen["totalDurationMinutes"] > 180
     assert len(data_hyphen["stops"]) >= 8
     assert "bookingWindow" in data_hyphen
-    assert data_hyphen["liveSource"] == "INFOFER_IRIS_AND_OFFICIAL_XML"
+    assert data_hyphen["liveSource"] == "INFOFER_LIVE_ONLY"
 
     # 2. Normalization check: digits only ('1572')
     res_digits = await client.get("/api/v1/trains/1572/itinerary?date=2026-11-20")

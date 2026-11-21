@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+import hmac
 import json
 import secrets
 from typing import Any, Optional, Union
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.api.deps import get_client_ip, get_current_session_id, get_current_user, get_device_info
 from app.core.config import settings
@@ -15,10 +16,11 @@ from app.core.security import (
     create_mfa_session_token,
     decode_token,
     encrypt_auth_token,
+    generate_secure_random_token,
     hash_token,
     verify_password,
 )
-from app.models.user import MFACredential, User, UserSession
+from app.models.user import EmailVerificationToken, MFACredential, User, UserSession, utcnow
 from app.schemas.auth import (
     BreachCheckRequest,
     BreachCheckResponse,
@@ -36,9 +38,13 @@ from app.schemas.auth import (
     MFAVerifyRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
+    ResendVerificationRequest,
+    ResendVerificationResponse,
     SignUpRequest,
+    SignUpResponse,
     TokenResponse,
     UnfreezeAccountRequest,
+    VerifyEmailRequest,
     RecoveryLoginRequest,
 )
 from app.schemas.user import UserProfile
@@ -47,8 +53,12 @@ from app.services.auth_service import (
     AuthService,
     check_password_breach,
     forgot_shield,
+    hash_otp_code,
+    is_expired,
     mfa_verify_shield,
     recovery_shield,
+    resend_cooldown,
+    verify_email_shield,
     verify_password_policy_and_breach,
 )
 from app.services.email_service import email_service
@@ -117,14 +127,20 @@ def clear_auth_cookies(response: Response) -> None:
     response.delete_cookie(key="beeline_device_proof", path="/")
 
 
-@router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=SignUpResponse, status_code=status.HTTP_201_CREATED)
 async def signup(
     data: SignUpRequest,
     request: Request,
     response: Response,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
-    """Register a new user, generate 3 obfuscated recovery codes, dispatch welcome email, and set session cookies."""
+    """
+    Register a new user in unverified state (email_verified=False).
+    Dispatches 6-digit OTP + URL token via email.
+    ZERO SECURITY COMPROMISE:
+    - Never issue session cookies on signup before email verification.
+    - Never generate, return, or email recovery codes before email verification.
+    """
     # Enforce unified password entropy and breach policies
     await verify_password_policy_and_breach(data.password, data.email)
 
@@ -136,10 +152,203 @@ async def signup(
         username=data.username
     )
 
-    # Objective 4: Automatically generate exactly 3 high-entropy recovery codes
-    raw_codes, hashed_codes = mfa_service.generate_post_signup_recovery_codes(user.id, count=3)
+    # Invalidate any prior unused tokens for this user
+    await db.execute(
+        update(EmailVerificationToken)
+        .where(
+            EmailVerificationToken.user_id == user.id,
+            EmailVerificationToken.is_used == False
+        )
+        .values(is_used=True)
+    )
 
-    # Persist obfuscated salted hashes in MFACredential (never plaintext in DB)
+    # Generate 6-digit numeric OTP and 32-byte URL-safe magic link token
+    otp_code = f"{secrets.randbelow(1000000):06d}"
+    raw_token = generate_secure_random_token(32)
+    code_hash = hash_otp_code(user.id, otp_code)
+    token_hash = hash_token(raw_token)
+    expires_at = utcnow() + timedelta(minutes=15)
+
+    verif_record = EmailVerificationToken(
+        user_id=user.id,
+        email=user.email,
+        code_hash=code_hash,
+        token_hash=token_hash,
+        attempts=0,
+        is_used=False,
+        expires_at=expires_at,
+        created_at=utcnow()
+    )
+    db.add(verif_record)
+    await db.commit()
+
+    # Clear brute-force counters for this email on new signup and set 60s resend cooldown
+    await verify_email_shield.clear_failures(user.email)
+    await resend_cooldown.set_cooldown(user.email)
+
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    verify_url = f"{frontend_url}/verify-email?token={raw_token}"
+
+    try:
+        await email_service.send_email_verification(
+            to_email=user.email,
+            otp_code=otp_code,
+            verify_url=verify_url,
+            full_name=user.full_name,
+            expires_minutes=15
+        )
+    except Exception as exc:
+        pass
+
+    return SignUpResponse(
+        verification_required=True,
+        email=user.email,
+        message="Verification code sent to your email. Please verify your email to activate your account.",
+        expires_in_minutes=15
+    )
+
+
+@router.post("/verify-email", response_model=TokenResponse)
+async def verify_email(
+    data: VerifyEmailRequest,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Verify user email ownership using either 6-digit OTP code or URL token.
+    On success:
+    - Sets email_verified = True
+    - Generates 3 obfuscated emergency recovery codes (BEE-XXXX-XXXX)
+    - Creates authenticated session & sets HttpOnly encrypted cookies
+    - Sends safe welcome confirmation email (no plaintext recovery codes)
+    - Returns TokenResponse with recovery_codes (shown ONCE here)
+    """
+    if not data.token and not (data.email and data.code):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either email and 6-digit code or verification token must be provided."
+        )
+
+    user = None
+    token_record = None
+
+    if data.token:
+        # Magic-link token flow
+        th = hash_token(data.token.strip())
+        res = await db.execute(
+            select(EmailVerificationToken)
+            .where(EmailVerificationToken.token_hash == th)
+        )
+        token_record = res.scalar_one_or_none()
+        if not token_record or token_record.is_used:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or already used verification token."
+            )
+        if is_expired(token_record.expires_at):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification link has expired. Please request a new verification code."
+            )
+        if token_record.attempts >= 5:
+            token_record.is_used = True
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many failed verification attempts. This token has been invalidated. Please request a new verification code."
+            )
+        user = await AuthService.get_user_by_id(db, token_record.user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found.")
+
+    else:
+        # 6-digit OTP code flow
+        clean_email = data.email.strip().lower()
+        clean_code = data.code.strip()
+
+        # Anti-Brute-Force Shield check
+        if await verify_email_shield.is_locked(clean_email):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many failed verification attempts. Please request a fresh verification code."
+            )
+
+        user = await AuthService.get_user_by_email(db, clean_email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification code or email."
+            )
+
+        # Retrieve latest active unused token record
+        res = await db.execute(
+            select(EmailVerificationToken)
+            .where(
+                EmailVerificationToken.user_id == user.id,
+                EmailVerificationToken.is_used == False
+            )
+            .order_by(EmailVerificationToken.created_at.desc())
+        )
+        token_record = res.scalars().first()
+        if not token_record:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No pending verification found or code has already been used. Please request a new verification code."
+            )
+
+        if is_expired(token_record.expires_at):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Verification code has expired. Please request a new verification code."
+            )
+
+        if token_record.attempts >= 5:
+            token_record.is_used = True
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Too many failed verification attempts. This code has been invalidated. Please request a new verification code."
+            )
+
+        # Constant-time comparison
+        expected_code_hash = hash_otp_code(user.id, clean_code)
+        if not hmac.compare_digest(token_record.code_hash, expected_code_hash):
+            token_record.attempts += 1
+            shield_count = await verify_email_shield.record_failure(clean_email)
+            if token_record.attempts >= 5 or shield_count >= 5:
+                token_record.is_used = True
+                await db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail="Too many failed verification attempts. This code has been invalidated. Please request a new verification code."
+                )
+            await db.commit()
+            remaining = 5 - token_record.attempts
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid verification code. {remaining} attempt(s) remaining."
+            )
+
+    # OTP or token is VALID!
+    # Invalidate current token and all other unused tokens for this user
+    token_record.is_used = True
+    await db.execute(
+        update(EmailVerificationToken)
+        .where(
+            EmailVerificationToken.user_id == user.id,
+            EmailVerificationToken.is_used == False
+        )
+        .values(is_used=True)
+    )
+    await verify_email_shield.clear_failures(user.email)
+
+    # Mark user email verified
+    user.email_verified = True
+    user.email_verified_at = utcnow()
+
+    # Generate the 3 obfuscated recovery codes (BEE-XXXX-XXXX)
+    raw_codes, hashed_codes = mfa_service.generate_post_signup_recovery_codes(user.id, count=3)
     cred_res = await db.execute(
         select(MFACredential).where(MFACredential.user_id == user.id)
     )
@@ -158,17 +367,9 @@ async def signup(
         cred.backup_codes = json.dumps(hashed_codes)
 
     await db.commit()
+    await db.refresh(user)
 
-    # Objective 1 & 4: Dispatch welcome email with recovery codes to dev sink / SMTP
-    try:
-        await email_service.send_welcome_recovery_codes(
-            to_email=user.email,
-            recovery_codes=raw_codes,
-            full_name=user.full_name
-        )
-    except Exception as exc:
-        pass
-
+    # Establish authenticated session
     ip = get_client_ip(request)
     device = data.device_info or get_device_info(request)
     fingerprint = compute_device_fingerprint(request)
@@ -192,12 +393,107 @@ async def signup(
         remember_me=data.remember_me,
     )
 
+    # Send safe welcome confirmation email (NO plaintext recovery codes)
+    try:
+        await email_service.send_welcome_verified(
+            to_email=user.email,
+            full_name=user.full_name
+        )
+    except Exception:
+        pass
+
     return TokenResponse(
         access_token=tokens.access_token,
         refresh_token=tokens.refresh_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         user=UserProfile.model_validate(user),
         recovery_codes=raw_codes
+    )
+
+
+@router.post("/resend-verification", response_model=ResendVerificationResponse)
+async def resend_verification(
+    data: ResendVerificationRequest,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Resend a fresh email verification 6-digit OTP and URL token.
+    Enforces a strict 60-second cooldown per email address.
+    Anti-enumeration safe for non-existent or already-verified accounts.
+    """
+    clean_email = data.email.strip().lower()
+
+    # Check 60-second cooldown
+    rem = await resend_cooldown.get_remaining_seconds(clean_email)
+    if rem > 0:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Please wait {rem} seconds before requesting a new verification code.",
+            headers={"Retry-After": str(rem)}
+        )
+
+    user = await AuthService.get_user_by_email(db, clean_email)
+    if not user or user.is_guest or user.email_verified:
+        # Anti-enumeration defense: trigger cooldown and return neutral response
+        await resend_cooldown.set_cooldown(clean_email)
+        return ResendVerificationResponse(
+            message="If this email requires verification, a fresh verification code has been dispatched.",
+            expires_in_minutes=15
+        )
+
+    # Set 60-second cooldown
+    await resend_cooldown.set_cooldown(clean_email)
+
+    # Invalidate previous unused verification tokens
+    await db.execute(
+        update(EmailVerificationToken)
+        .where(
+            EmailVerificationToken.user_id == user.id,
+            EmailVerificationToken.is_used == False
+        )
+        .values(is_used=True)
+    )
+
+    # Generate new OTP & URL token
+    otp_code = f"{secrets.randbelow(1000000):06d}"
+    raw_token = generate_secure_random_token(32)
+    code_hash = hash_otp_code(user.id, otp_code)
+    token_hash = hash_token(raw_token)
+    expires_at = utcnow() + timedelta(minutes=15)
+
+    verif_record = EmailVerificationToken(
+        user_id=user.id,
+        email=user.email,
+        code_hash=code_hash,
+        token_hash=token_hash,
+        attempts=0,
+        is_used=False,
+        expires_at=expires_at,
+        created_at=utcnow()
+    )
+    db.add(verif_record)
+    await db.commit()
+
+    # Clear brute-force counters for this email on resend
+    await verify_email_shield.clear_failures(clean_email)
+
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    verify_url = f"{frontend_url}/verify-email?token={raw_token}"
+
+    try:
+        await email_service.send_email_verification(
+            to_email=user.email,
+            otp_code=otp_code,
+            verify_url=verify_url,
+            full_name=user.full_name,
+            expires_minutes=15
+        )
+    except Exception:
+        pass
+
+    return ResendVerificationResponse(
+        message="A fresh verification code has been dispatched to your email address.",
+        expires_in_minutes=15
     )
 
 
@@ -226,6 +522,17 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username/email or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Enforce email verification check for non-guest travelers
+    if not user.is_guest and not user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "EMAIL_NOT_VERIFIED",
+                "email": user.email,
+                "message": "Please verify your email address before signing in."
+            }
         )
 
     # 30-Day Account Deletion Freeze Challenge
@@ -287,7 +594,8 @@ async def login(
         access_token=tokens.access_token,
         refresh_token=tokens.refresh_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        user=UserProfile.model_validate(user)
+        user=UserProfile.model_validate(user),
+        recovery_codes=None
     )
 
 
@@ -547,7 +855,8 @@ async def refresh_token(
         access_token=tokens.access_token,
         refresh_token=tokens.refresh_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        user=UserProfile.model_validate(user)
+        user=UserProfile.model_validate(user),
+        recovery_codes=None
     )
 
 
@@ -694,7 +1003,8 @@ async def recovery_login(
         access_token=tokens.access_token,
         refresh_token=tokens.refresh_token,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        user=UserProfile.model_validate(user)
+        user=UserProfile.model_validate(user),
+        recovery_codes=None
     )
 
 

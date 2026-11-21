@@ -473,6 +473,7 @@ describe('Glassy Ghost Layouts & Complete Schedules Removal Test Suite', () => {
       expect(screen.getByText('Trips')).toBeInTheDocument();
       expect(screen.getByText('Trains')).toBeInTheDocument();
       expect(screen.getByText('My Trip')).toBeInTheDocument();
+      expect(screen.queryByText(/Explore as Guest/i)).not.toBeInTheDocument();
     });
   });
 });

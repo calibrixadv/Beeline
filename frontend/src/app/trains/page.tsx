@@ -9,6 +9,8 @@ import BaseInput from '../../components/BaseInput';
 import TrainCard from '../../components/TrainCard';
 import TrainDetailModal from '../../components/TrainDetailModal';
 import TrainsGhostSkeleton from '../../components/TrainsGhostSkeleton';
+import AmbientPageMascot from '../../components/AmbientPageMascot';
+import { MascotGear } from '../../components/MascotBee';
 
 export const SAMPLE_TRAIN_CODES = ['IC 535', 'IR 1572', 'R 3029', 'RE 11631'] as const;
 
@@ -60,6 +62,13 @@ export function isTrainCodeMatch(trainNumber: string, query: string): boolean {
     const tParts = cleanT.split(' ');
     const tDigits = tParts.length > 1 ? tParts[1] : '';
     return cleanQ === tDigits || tDigits.includes(cleanQ);
+  }
+
+  // Cross-format train code match: e.g. "r2300" or "R-2300" matches "R 2300"
+  const qDigits = compactQ.replace(/\D/g, '');
+  const tDigits = compactT.replace(/\D/g, '');
+  if (qDigits && tDigits && (qDigits === tDigits || tDigits.includes(qDigits))) {
+    return true;
   }
 
   return compactT.includes(compactQ) || compactQ.includes(compactT);
@@ -190,11 +199,23 @@ function TrainsContent() {
 
         const rawItems = res?.items ?? (res as any)?.data ?? [];
         if (Array.isArray(rawItems)) {
+          // Client-side deduplication guard on normalized train number + date
+          const seenTrainKeys = new Set<string>();
+          const dedupedItems: any[] = [];
+          for (const item of rawItems) {
+            const numKey = (item.trainNumber || '').toUpperCase().replace(/\s+/g, '');
+            const dateKey = (item.departureTime || '').slice(0, 10);
+            const compositeKey = `${numKey}|${dateKey}`;
+            if (!seenTrainKeys.has(compositeKey)) {
+              seenTrainKeys.add(compositeKey);
+              dedupedItems.push(item);
+            }
+          }
           if (clean) {
-            const matched = rawItems.filter((t) => isTrainCodeMatch(t.trainNumber, clean));
-            setTrains(matched.length > 0 ? matched : rawItems);
+            const matched = dedupedItems.filter((t) => isTrainCodeMatch(t.trainNumber, clean));
+            setTrains(matched.length > 0 ? matched : dedupedItems);
           } else {
-            setTrains(rawItems);
+            setTrains(dedupedItems);
           }
         } else {
           setTrains([]);
@@ -223,6 +244,18 @@ function TrainsContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Debounced live search when user types in search box (300ms)
+  useEffect(() => {
+    const trimmed = trainCodeInput.trim();
+    if (!trimmed || trimmed === activeCode) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      executeSearch(trimmed);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [trainCodeInput, activeCode, executeSearch]);
+
   const handleFormSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     executeSearch(trainCodeInput);
@@ -242,19 +275,39 @@ function TrainsContent() {
     });
   }, [trains, statusFilter]);
 
+  const activeTrainMascotGear: MascotGear = useMemo(() => {
+    if (statusFilter === 'ON_TIME') {
+      return 'safe';
+    }
+    const clean = (activeCode || trainCodeInput || '').trim().toUpperCase();
+    if (/^(IC|IR)(\s|\d|$)/i.test(clean)) {
+      return 'fast';
+    }
+    if (/^(RE|R)(\s|\d|$)/i.test(clean)) {
+      return 'economy';
+    }
+    return 'default';
+  }, [statusFilter, activeCode, trainCodeInput]);
+
   return (
-    <div className="py-6 md:py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="mb-6">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-black text-stone-900 tracking-tight">
-            Train Search
-          </h1>
-          <p className="text-xs md:text-sm text-stone-500 mt-1">
-            Search Romanian passenger trains strictly by train code for live statuses, route stops, and fare details.
-          </p>
+    <div className="relative min-h-screen">
+      <AmbientPageMascot gear={activeTrainMascotGear} position="top-right" />
+      <div className="relative z-10 py-6 md:py-10 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-100/70 border border-amber-200/80 px-2.5 py-0.5 rounded-full mb-2">
+              <span>🧭</span>
+              <span>Bumbi&apos;s Live Rail Radar</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-black text-stone-900 tracking-tight">
+              Train Search
+            </h1>
+            <p className="text-xs md:text-sm text-stone-500 mt-1">
+              Search Romanian passenger trains strictly by train code for live statuses, route stops, and fare details.
+            </p>
+          </div>
         </div>
-      </div>
 
       {/* Clean Train Code Search Bar Container */}
       <div
@@ -441,6 +494,7 @@ function TrainsContent() {
         isOpen={Boolean(selectedJourney)}
         onClose={() => setSelectedJourney(null)}
       />
+      </div>
     </div>
   );
 }

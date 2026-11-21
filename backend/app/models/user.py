@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, String, Text, text
+from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Integer, String, Text, text
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -30,6 +30,8 @@ class User(Base):
     is_guest = Column(Boolean, default=False, nullable=False, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
     mfa_enabled = Column(Boolean, default=False, nullable=False)
+    email_verified = Column(Boolean, default=False, server_default=text("FALSE"), nullable=False)
+    email_verified_at = Column(DateTime(timezone=True), nullable=True)
     account_status = Column(String(32), default="ACTIVE", server_default=text("'ACTIVE'"), nullable=False, index=True)
     frozen_at = Column(DateTime(timezone=True), nullable=True)
     deletion_scheduled_at = Column(DateTime(timezone=True), nullable=True)
@@ -46,6 +48,7 @@ class User(Base):
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     mfa_credential = relationship("MFACredential", back_populates="user", uselist=False, cascade="all, delete-orphan")
     password_reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan")
+    email_verification_tokens = relationship("EmailVerificationToken", back_populates="user", cascade="all, delete-orphan")
     saved_routes = relationship("SavedRoute", back_populates="user", cascade="all, delete-orphan")
     bookings = relationship("Booking", back_populates="user", cascade="all, delete-orphan")
 
@@ -96,3 +99,19 @@ class PasswordResetToken(Base):
     created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
 
     user = relationship("User", back_populates="password_reset_tokens")
+
+
+class EmailVerificationToken(Base):
+    __tablename__ = "email_verification_tokens"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid, index=True)
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    email = Column(String(255), nullable=False, index=True)
+    code_hash = Column(String(128), nullable=False)
+    token_hash = Column(String(128), unique=True, index=True, nullable=False)
+    attempts = Column(Integer, default=0, server_default=text("0"), nullable=False)
+    is_used = Column(Boolean, default=False, server_default=text("FALSE"), nullable=False, index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+    user = relationship("User", back_populates="email_verification_tokens")

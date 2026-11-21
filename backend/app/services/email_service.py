@@ -125,21 +125,98 @@ class EmailRenderer:
     @staticmethod
     def render_welcome_recovery_codes(
         email_addr: str,
-        recovery_codes: List[str],
+        recovery_codes: Optional[List[str]] = None,
         full_name: Optional[str] = None
-    ) -> (str, str, str):
+    ) -> Tuple[str, str, str]:
+        # Rule: Never send plaintext recovery codes in emails
+        return EmailRenderer.render_welcome_verified(email_addr=email_addr, full_name=full_name)
+
+    @staticmethod
+    def render_welcome_verified(
+        email_addr: str,
+        full_name: Optional[str] = None
+    ) -> Tuple[str, str, str]:
         greeting = f"Hello {html.escape(full_name)}," if full_name else "Hello Traveler,"
-        subject = "Welcome to Beeline VoyageRail - Your Recovery Codes Inside"
+        subject = "Welcome to Beeline VoyageRail - Account Verified"
 
-        codes_html = "".join(
-            f'<div style="font-family: monospace; font-size: 20px; font-weight: 700; '
-            f'background: #FEF3C7; color: #92400E; border: 2px dashed #F59E0B; '
-            f'border-radius: 8px; padding: 12px 20px; margin: 10px 0; text-align: center; '
-            f'letter-spacing: 2px;">{html.escape(code)}</div>'
-            for code in recovery_codes
-        )
+        html_body = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #E2E8F0;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #10B981 0%, #059669 100%); padding: 25px 30px; text-align: left;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">
+                🐝 Beeline VoyageRail
+              </h1>
+              <p style="margin: 4px 0 0 0; color: #D1FAE5; font-size: 14px; font-weight: 500;">
+                The Cozy Hive • Welcome Aboard
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 35px 30px;">
+              <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #0F172A;">{greeting}</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+                Welcome to <strong>Beeline VoyageRail</strong>! Your email address (<strong>{html.escape(email_addr)}</strong>) has been successfully verified, and your account is now fully active.
+              </p>
 
-        codes_text = "\n".join(f"  • {code}" for code in recovery_codes)
+              <div style="background-color: #ECFDF5; border-left: 4px solid #10B981; padding: 16px 20px; border-radius: 4px; margin: 25px 0;">
+                <p style="margin: 0 0 6px 0; font-weight: 700; color: #065F46; font-size: 14px;">
+                  🔑 Emergency Recovery Codes:
+                </p>
+                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #047857;">
+                  Your 3 emergency account recovery codes were securely displayed on your screen immediately after email verification. For your security, recovery codes are never sent over email. Please ensure you have copied or saved them in an offline password vault.
+                </p>
+              </div>
+
+              <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; padding: 14px 18px; border-radius: 6px; margin: 20px 0; font-size: 13px; color: #475569;">
+                🚉 Explore synchronized Romanian national rail routes, urban transit schedules, and breach-protected journeys anytime in your traveler portal.
+              </div>
+
+              <p style="font-size: 14px; line-height: 1.6; color: #64748B; margin: 25px 0 0 0;">
+                Safe travels,<br>
+                <strong>The Beeline VoyageRail Security Team</strong>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+        text_body = f"""Beeline VoyageRail — Welcome Aboard
+======================================
+{greeting}
+
+Welcome to Beeline VoyageRail! Your email address ({email_addr}) has been verified and your account is active.
+
+EMERGENCY RECOVERY CODES NOTICE:
+Your 3 emergency account recovery codes were securely displayed on your screen during verification. For your security, recovery codes are NEVER transmitted in emails. Ensure you have stored them safely offline.
+
+Safe travels,
+The Beeline VoyageRail Security Team
+"""
+        return subject, html_body, text_body
+
+    @staticmethod
+    def render_email_verification(
+        email_addr: str,
+        otp_code: str,
+        verify_url: str,
+        full_name: Optional[str] = None,
+        expires_minutes: int = 15
+    ) -> Tuple[str, str, str]:
+        subject = f"Verify your Beeline account - Code: {otp_code}"
+        greeting = f"Hello {html.escape(full_name)}," if full_name else "Hello Traveler,"
 
         html_body = f"""<!DOCTYPE html>
 <html>
@@ -158,7 +235,7 @@ class EmailRenderer:
                 🐝 Beeline VoyageRail
               </h1>
               <p style="margin: 4px 0 0 0; color: #FEF3C7; font-size: 14px; font-weight: 500;">
-                The Cozy Hive • Emergency Account Security
+                The Cozy Hive • Email Verification
               </p>
             </td>
           </tr>
@@ -166,21 +243,31 @@ class EmailRenderer:
             <td style="padding: 35px 30px;">
               <h2 style="margin: 0 0 15px 0; font-size: 20px; color: #0F172A;">{greeting}</h2>
               <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
-                Welcome to <strong>Beeline VoyageRail</strong>! Your account has been registered.
-                To safeguard your account in the event you lose access to your primary authentication device, we have generated <strong>exactly 3 emergency recovery codes</strong>:
+                Thank you for creating an account with <strong>Beeline VoyageRail</strong>!
+                To verify ownership of <strong>{html.escape(email_addr)}</strong> and activate your account, please enter the 6-digit verification code below or click the verification button:
               </p>
-              
-              <div style="background-color: #FFFBEB; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <p style="margin: 0 0 12px 0; font-weight: 700; color: #B45309; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
-                  Your 3 Emergency Recovery Codes:
+
+              <div style="background-color: #FFFBEB; border: 2px dashed #F59E0B; border-radius: 12px; padding: 24px; margin: 25px 0; text-align: center;">
+                <p style="margin: 0 0 8px 0; font-weight: 700; color: #92400E; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;">
+                  Your 6-Digit Verification Code:
                 </p>
-                {codes_html}
+                <div style="font-family: monospace; font-size: 36px; font-weight: 800; color: #B45309; letter-spacing: 8px; margin: 10px 0;">
+                  {html.escape(otp_code)}
+                </div>
+                <p style="margin: 8px 0 0 0; font-size: 12px; color: #78350F;">
+                  Valid for {expires_minutes} minutes
+                </p>
               </div>
 
-              <div style="background-color: #F1F5F9; border-left: 4px solid #F59E0B; padding: 15px 18px; border-radius: 4px; margin: 25px 0;">
-                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #475569;">
-                  ⚠️ <strong>Security Notice:</strong> Each recovery code can only be used <strong>once</strong>. Store these codes offline in a password manager or secure vault. Our team will never ask for them.
-                </p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="{html.escape(verify_url)}" style="display: inline-block; background-color: #F59E0B; color: #1E293B; font-size: 16px; font-weight: 800; text-decoration: none; padding: 14px 36px; border-radius: 8px; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);">
+                  Verify Email
+                </a>
+              </div>
+
+              <div style="background-color: #F1F5F9; border-left: 4px solid #64748B; padding: 14px 18px; border-radius: 4px; margin: 25px 0; font-size: 13px; color: #475569; line-height: 1.5;">
+                ⏱️ <strong>Expiration:</strong> This verification code and link expire in <strong>{expires_minutes} minutes</strong>.<br>
+                🔒 <strong>Security Notice:</strong> If you did not create a Beeline VoyageRail account, you can safely ignore this email. The account will remain inactive and no session will be created.
               </div>
 
               <p style="font-size: 14px; line-height: 1.6; color: #64748B; margin: 25px 0 0 0;">
@@ -196,17 +283,21 @@ class EmailRenderer:
 </body>
 </html>"""
 
-        text_body = f"""Beeline VoyageRail — The Cozy Hive
+        text_body = f"""Beeline VoyageRail — Email Verification
 ========================================
 {greeting}
 
-Welcome to Beeline VoyageRail! Your account has been registered.
-Here are your 3 emergency recovery codes for emergency access:
+Thank you for creating an account with Beeline VoyageRail!
+To verify ownership of {email_addr} and activate your account, use your 6-digit code or visit the link below:
 
-{codes_text}
+Verification Code: {otp_code}
+
+Verify Link: {verify_url}
+
+This verification code and link expire in {expires_minutes} minutes.
 
 SECURITY NOTICE:
-Each code is single-use. If you lose your phone or 2FA authenticator, you can log in using one of these codes. Store them in a secure offline location.
+If you did not sign up for a Beeline VoyageRail account, please ignore this email. The account will remain completely inactive.
 
 Safe travels,
 The Beeline VoyageRail Security Team
@@ -1643,15 +1734,42 @@ class EmailService:
     # High-Level Domain Convenience Methods
     # ==========================================
 
-    async def send_welcome_recovery_codes(
+    async def send_email_verification(
         self,
         to_email: str,
-        recovery_codes: List[str],
+        otp_code: str,
+        verify_url: str,
+        full_name: Optional[str] = None,
+        expires_minutes: int = 15
+    ) -> EmailMessageRecord:
+        subject, html_body, text_body = self._renderer.render_email_verification(
+            email_addr=to_email,
+            otp_code=otp_code,
+            verify_url=verify_url,
+            full_name=full_name,
+            expires_minutes=expires_minutes
+        )
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            template_name="email_verification",
+            context={
+                "otp_code": otp_code,
+                "verify_url": verify_url,
+                "full_name": full_name,
+                "expires_minutes": expires_minutes
+            }
+        )
+
+    async def send_welcome_verified(
+        self,
+        to_email: str,
         full_name: Optional[str] = None
     ) -> EmailMessageRecord:
-        subject, html_body, text_body = self._renderer.render_welcome_recovery_codes(
+        subject, html_body, text_body = self._renderer.render_welcome_verified(
             email_addr=to_email,
-            recovery_codes=recovery_codes,
             full_name=full_name
         )
         return await self.send_email(
@@ -1659,9 +1777,18 @@ class EmailService:
             subject=subject,
             html_body=html_body,
             text_body=text_body,
-            template_name="welcome_recovery_codes",
-            context={"recovery_codes": recovery_codes, "full_name": full_name}
+            template_name="welcome_verified",
+            context={"full_name": full_name}
         )
+
+    async def send_welcome_recovery_codes(
+        self,
+        to_email: str,
+        recovery_codes: Optional[List[str]] = None,
+        full_name: Optional[str] = None
+    ) -> EmailMessageRecord:
+        # Backward compatibility wrapper: never send plaintext recovery codes in emails
+        return await self.send_welcome_verified(to_email=to_email, full_name=full_name)
 
     async def send_password_reset_email(
         self,

@@ -53,16 +53,6 @@ export const AuthGhostSkeleton: React.FC<AuthGhostSkeletonProps> = ({
           {/* Primary submit button bar */}
           <div className="h-12 w-full rounded-2xl glass-ghost-bar mt-2" />
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 my-2">
-            <div className="h-px flex-1 glass-ghost-bar" />
-            <div className="h-3 w-8 rounded-full glass-ghost-bar" />
-            <div className="h-px flex-1 glass-ghost-bar" />
-          </div>
-
-          {/* Secondary guest button bar */}
-          <div className="h-11 w-full rounded-2xl glass-ghost-bar" />
-
           {/* Full-bleed shimmer overlay */}
           <div className="glass-shimmer-overlay" aria-hidden="true" />
         </div>
