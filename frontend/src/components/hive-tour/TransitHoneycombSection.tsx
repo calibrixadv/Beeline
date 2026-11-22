@@ -164,7 +164,7 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
     <section
       id="tour-providers"
       aria-label="Romanian Rail Network"
-      className={`relative w-full max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 ${className}`}
+      className={`relative w-full max-w-6xl mx-auto px-3 sm:px-6 py-12 sm:py-16 overflow-x-clip ${className}`}
     >
       {/* Minimal Header (Top-Left) */}
       <div>
@@ -292,33 +292,33 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
                   type="button"
                   aria-pressed={isSelected}
                   onClick={() => setSelectedId(op.id)}
-                  className={`w-full text-left px-4 py-3.5 transition-colors duration-200 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/40 motion-reduce:transition-none ${
+                  className={`w-full text-left px-3 sm:px-4 py-3 sm:py-3.5 transition-colors duration-200 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/40 motion-reduce:transition-none ${
                     isSelected
                       ? 'bg-[#FAF4E8]/90 border-l-[3px] border-l-[#D97706]'
                       : 'hover:bg-[#FAF4E8]/55'
                   }`}
                 >
                   {isSelected ? (
-                    <div data-testid="provider-story-card" className="w-full">
+                    <div data-testid="provider-story-card" className="w-full min-w-0">
                       {/* Active Top Line */}
-                      <div className="flex items-center justify-between gap-3 w-full">
+                      <div className="flex items-center justify-between gap-2 sm:gap-3 w-full min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
                           <span
                             className="w-2 h-2 rounded-full bg-[#D97706] shrink-0"
                             aria-hidden="true"
                           />
-                          <span className="text-[15px] font-semibold text-[#1E1B18] truncate">
+                          <span className="text-sm sm:text-[15px] font-semibold text-[#1E1B18] truncate">
                             {op.name}
                           </span>
                         </div>
-                        <span className="text-sm font-semibold tabular-nums text-[#1E1B18] whitespace-nowrap shrink-0">
+                        <span className="text-xs sm:text-sm font-bold sm:font-semibold tabular-nums text-[#1E1B18] whitespace-nowrap shrink-0">
                           {op.dailyTrains.toLocaleString()} / day
                         </span>
                       </div>
 
                       {/* Active Extended Relational Bar Track */}
-                      <div className="mt-2.5 flex items-center justify-between gap-4">
-                        <div className="w-36 sm:w-48 md:w-56 h-2 rounded-full bg-amber-950/[0.06] overflow-hidden shrink-0">
+                      <div className="mt-2 sm:mt-2.5 flex items-center justify-between gap-3 sm:gap-4 w-full min-w-0">
+                        <div className="w-full sm:w-48 md:w-56 h-2.5 sm:h-2 rounded-full bg-amber-100 sm:bg-amber-950/[0.06] overflow-hidden">
                           <div
                             data-testid={`relational-bar-${op.id}`}
                             data-bar-pct={visualBarPct}
@@ -328,7 +328,7 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
                             }}
                           />
                         </div>
-                        <span className="text-xs sm:text-sm text-[#78716C] tabular-nums whitespace-nowrap">
+                        <span className="text-xs sm:text-sm text-[#78716C] tabular-nums whitespace-nowrap shrink-0">
                           {op.routes} routes
                         </span>
                       </div>
@@ -342,26 +342,32 @@ export const TransitHoneycombSection: React.FC<TransitHoneycombSectionProps> = (
                       )}
                     </div>
                   ) : (
-                    /* Inactive Row: Single horizontal flex line with extended relational bar */
-                    <div className="flex items-center justify-between gap-3 sm:gap-4 w-full">
-                      <div className="flex items-center gap-2 min-w-[140px] sm:min-w-[170px] shrink-0">
-                        <span className="text-[15px] font-medium text-[#1E1B18] truncate">
+                    /* Inactive Row: Clean two-line mobile stack (< 640px) & inline on sm: (>= 640px) */
+                    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3 w-full min-w-0">
+                      {/* Top row on mobile / Left info on desktop */}
+                      <div className="flex items-center justify-between gap-2 w-full sm:w-auto sm:min-w-[170px] sm:shrink-0 min-w-0">
+                        <span className="text-sm sm:text-[15px] font-semibold sm:font-medium text-stone-900 truncate">
                           {op.name}
                         </span>
+                        <span className="sm:hidden text-xs sm:text-sm font-bold text-stone-700 tabular-nums whitespace-nowrap shrink-0">
+                          {op.dailyTrains.toLocaleString()} / day
+                        </span>
                       </div>
-                      <div className="flex-1 flex items-center justify-center sm:justify-start">
-                        <div className="w-36 sm:w-48 md:w-56 h-2 rounded-full bg-amber-950/[0.06] overflow-hidden shrink-0">
-                          <div
-                            data-testid={`relational-bar-${op.id}`}
-                            data-bar-pct={visualBarPct}
-                            className="h-full rounded-full bg-gradient-to-r from-amber-500/85 to-amber-600/85 transition-all duration-300 motion-reduce:transition-none"
-                            style={{
-                              width: `${visualBarPct}%`,
-                            }}
-                          />
-                        </div>
+
+                      {/* Bottom row on mobile / Middle progress bar on desktop */}
+                      <div className="w-full sm:flex-1 h-2.5 rounded-full bg-amber-100 sm:bg-amber-950/[0.06] overflow-hidden">
+                        <div
+                          data-testid={`relational-bar-${op.id}`}
+                          data-bar-pct={visualBarPct}
+                          className="h-full rounded-full bg-gradient-to-r from-amber-500/85 to-amber-600/85 transition-all duration-300 motion-reduce:transition-none"
+                          style={{
+                            width: `${visualBarPct}%`,
+                          }}
+                        />
                       </div>
-                      <span className="text-sm tabular-nums text-[#57534E] whitespace-nowrap shrink-0">
+
+                      {/* Metric on desktop (hidden on mobile since top row already rendered it) */}
+                      <span className="hidden sm:inline-block text-xs sm:text-sm font-bold sm:font-medium tabular-nums text-stone-700 whitespace-nowrap shrink-0">
                         {op.dailyTrains.toLocaleString()} / day
                       </span>
                     </div>

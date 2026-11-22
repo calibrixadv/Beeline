@@ -286,7 +286,7 @@ function VerifyEmailContent() {
                   onChange={(e) => setManualEmail(e.target.value)}
                   placeholder="traveler@example.com"
                   required
-                  className="w-full px-3 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 outline-none"
+                  className="w-full px-3 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none"
                 />
               </div>
 
@@ -302,7 +302,7 @@ function VerifyEmailContent() {
                   onChange={(e) => setManualCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="e.g. 123456"
                   required
-                  className="w-full px-3 py-3 text-center text-2xl font-mono font-bold tracking-widest bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 outline-none"
+                  className="w-full px-3 py-3 text-center text-2xl font-mono font-bold tracking-widest bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none"
                 />
               </div>
 

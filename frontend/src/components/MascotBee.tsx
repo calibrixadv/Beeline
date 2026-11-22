@@ -250,6 +250,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
   const [displayGear, setDisplayGear] = React.useState<MascotGear>(targetGear);
   const [exitingGear, setExitingGear] = React.useState<MascotGear | null>(null);
   const [isTransitioning, setIsTransitioning] = React.useState<boolean>(false);
+  const [transitionCount, setTransitionCount] = React.useState<number>(0);
   const prevTargetRef = React.useRef<MascotGear>(targetGear);
   const transitionTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -257,6 +258,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
     if (prevTargetRef.current !== targetGear) {
       const oldGear = prevTargetRef.current;
       prevTargetRef.current = targetGear;
+      setTransitionCount((prev) => prev + 1);
 
       if (!animated) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -317,7 +319,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
       case 'default':
         return (
           <g
-            key={`gear-default-${status}`}
+            key={`gear-default-${status}-${transitionCount}`}
             className={gearClass}
             data-gear-type="default"
             data-gear-status={status}
@@ -379,7 +381,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
       case 'fast':
         return (
           <g
-            key={`gear-fast-${status}`}
+            key={`gear-fast-${status}-${transitionCount}`}
             className={gearClass}
             data-gear-type="fast"
             data-gear-status={status}
@@ -447,7 +449,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
       case 'safe':
         return (
           <g
-            key={`gear-safe-${status}`}
+            key={`gear-safe-${status}-${transitionCount}`}
             className={gearClass}
             data-gear-type="safe"
             data-gear-status={status}
@@ -512,7 +514,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
       case 'economy':
         return (
           <g
-            key={`gear-economy-${status}`}
+            key={`gear-economy-${status}-${transitionCount}`}
             className={gearClass}
             data-gear-type="economy"
             data-gear-status={status}
@@ -584,6 +586,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
   const renderGearShine = (target: MascotGear) => {
     return (
       <g
+        key={`gear-shine-${target}-${transitionCount}`}
         className="pointer-events-none"
         data-testid="mascot-gear-shine"
         data-shine-gear={target}
@@ -768,6 +771,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
           width={px}
           height={px}
           className="overflow-visible"
+          style={{ overflow: 'visible' }}
         >
           <defs>
             {/* Rich honey gradients */}
@@ -925,6 +929,7 @@ export const MascotBee: React.FC<MascotBeeProps> = ({
           {exitingGear && (
             <>
               <circle
+                key={`gear-shockwave-${transitionCount}`}
                 cx="60"
                 cy="60"
                 r="16"

@@ -205,10 +205,10 @@ export const StationAutocompleteInput: React.FC<StationAutocompleteInputProps> =
             if (!isOpen) setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
-          className={`w-full bg-white border rounded-xl py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-all ${
+          className={`w-full bg-white border rounded-xl py-2.5 text-sm text-stone-900 placeholder:text-stone-400 outline-none focus:outline-none focus-visible:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 transition-all ${
             leftIcon ? 'pl-10' : 'pl-3.5'
           } ${onClear && value ? 'pr-10' : 'pr-3.5'} ${
-            error ? 'border-red-400 focus:ring-red-400/20' : 'border-stone-200'
+            error ? 'border-red-400 focus:ring-red-400/20' : 'border-amber-200/90'
           } ${className}`}
         />
 

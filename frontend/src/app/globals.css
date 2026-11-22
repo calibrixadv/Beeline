@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
 @layer base {
-  :root {
+  :root,
+  html {
+    color-scheme: light;
     --honey-primary: #F59E0B;
     --honey-primary-hover: #D97706;
     --honey-bg: #FFFDF9;
@@ -17,6 +19,37 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
+  }
+
+  /* Prevent harsh black/dark UA outlines & borders across Opera/Windows Chromium */
+  input,
+  select,
+  textarea {
+    outline: none;
+    accent-color: var(--honey-primary);
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid rgba(245, 158, 11, 0.55);
+    outline-offset: 1px;
+  }
+
+  /* Clean WebKit/Blink Autofill for Windows/Opera */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #FFFDF9 inset !important;
+    -webkit-text-fill-color: #1E1B18 !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
 }
 
@@ -76,10 +109,10 @@
 /* Glassmorphic shimmering ghost skeleton animation & styles */
 @keyframes glassShimmerSweep {
   0% {
-    transform: translateX(-120%);
+    transform: translate3d(-120%, 0, 0);
   }
   100% {
-    transform: translateX(120%);
+    transform: translate3d(120%, 0, 0);
   }
 }
 
@@ -91,13 +124,23 @@
   box-shadow: 0 8px 28px -8px rgba(217, 119, 6, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   position: relative;
   overflow: hidden;
+  isolation: isolate;
+  transform: translateZ(0);
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  contain: paint;
 }
 
 .glass-shimmer-overlay {
   position: absolute;
   inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
   pointer-events: none;
-  background: linear-gradient(110deg, transparent 15%, rgba(255, 255, 255, 0.72) 42%, rgba(254, 243, 199, 0.62) 52%, transparent 82%);
+  transform: translate3d(-120%, 0, 0);
+  background: linear-gradient(110deg, transparent 15%, rgba(255, 255, 255, 0.78) 40%, rgba(254, 243, 199, 0.70) 52%, rgba(255, 255, 255, 0.45) 58%, transparent 82%);
   animation: glassShimmerSweep 1.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   will-change: transform;
 }
@@ -284,7 +327,8 @@
 .animate-gear-radial-exit {
   transform-box: view-box;
   transform-origin: 60px 60px;
-  animation: gearRadialExit 380ms cubic-bezier(0.2, 0, 0.35, 1) forwards;
+  animation: gearRadialExit 380ms cubic-bezier(0.2, 0, 0.35, 1) both;
+  animation-fill-mode: both;
   pointer-events: none;
 }
 
@@ -311,7 +355,8 @@
 .animate-gear-enter-top {
   transform-box: view-box;
   transform-origin: 60px 60px;
-  animation: gearEnterFromTop 460ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: gearEnterFromTop 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-fill-mode: both;
 }
 
 /* 3. Radial Shockwave Ripple (Emanating outward from center 60,60) */
@@ -329,7 +374,10 @@
 }
 
 .animate-gear-shockwave {
-  animation: gearRadialShockwave 420ms cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+  animation: gearRadialShockwave 420ms cubic-bezier(0.1, 0.6, 0.3, 1) both;
+  animation-fill-mode: both;
 }
 
 /* 4. Shine Effect: Sparkle Glint / Starburst at Focal Equipment Point */
@@ -355,14 +403,16 @@
 .animate-gear-sparkle {
   transform-box: fill-box;
   transform-origin: center;
-  animation: gearShineSparkle 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 260ms forwards;
+  animation: gearShineSparkle 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 260ms both;
+  animation-fill-mode: both;
   opacity: 0;
 }
 
 .animate-gear-sparkle-delayed {
   transform-box: fill-box;
   transform-origin: center;
-  animation: gearShineSparkle 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 360ms forwards;
+  animation: gearShineSparkle 480ms cubic-bezier(0.34, 1.56, 0.64, 1) 360ms both;
+  animation-fill-mode: both;
   opacity: 0;
 }
 
@@ -385,7 +435,10 @@
 }
 
 .animate-gear-sweep {
-  animation: gearShineSweep 500ms ease-out 250ms forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gearShineSweep 500ms ease-out 250ms both;
+  animation-fill-mode: both;
   opacity: 0;
 }
 
@@ -580,7 +633,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-mascot-float,
-  .glass-shimmer-overlay,
   .animate-bee-dynamic-flight,
   .animate-wing-left,
   .animate-wing-right,
@@ -607,6 +659,13 @@
   .animate-corridor-train-fast,
   .animate-corridor-train-economy {
     animation: none !important;
+  }
+
+  .glass-shimmer-overlay {
+    animation: none !important;
+    transform: none !important;
+    background: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, 0.45) 50%, transparent 80%) !important;
+    opacity: 0.6 !important;
   }
 
   .animate-honey-cell-breathe {

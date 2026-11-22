@@ -591,7 +591,7 @@ function AuthContent() {
                     placeholder="e.g. alexandra or traveler@beeline.io"
                     autoComplete="username"
                     required
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none transition-all"
                   />
                   <User className="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
                 </div>
@@ -622,7 +622,7 @@ function AuthContent() {
                     placeholder="Enter your password"
                     autoComplete="current-password"
                     required
-                    className="w-full pl-9 pr-10 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all"
+                    className="w-full pl-9 pr-10 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none transition-all"
                   />
                   <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
                   <button
@@ -690,7 +690,7 @@ function AuthContent() {
                   autoComplete="one-time-code"
                   maxLength={isBackupCode ? 64 : 6}
                   required
-                  className="w-full px-3 py-2.5 text-center text-lg font-mono tracking-widest bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none"
+                  className="w-full px-3 py-2.5 text-center text-lg font-mono tracking-widest bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none"
                 />
               </div>
 
@@ -757,7 +757,7 @@ function AuthContent() {
                     placeholder="traveler@example.com"
                     autoComplete="email"
                     required
-                    className="w-full pl-9 pr-8 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all"
+                    className="w-full pl-9 pr-8 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none transition-all"
                   />
                   <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
                   {isCheckingEmailBreach && (
@@ -786,10 +786,10 @@ function AuthContent() {
                     placeholder="Retype your email address"
                     autoComplete="email"
                     required
-                    className={`w-full pl-9 pr-3 py-2.5 text-sm bg-stone-50 border rounded-xl outline-none transition-all ${
+                    className={`w-full pl-9 pr-3 py-2.5 text-sm bg-stone-50 border rounded-xl outline-none focus:outline-none focus-visible:outline-none transition-all ${
                       signupVerificationEmail.length > 0 && !isEmailMatching
                         ? 'border-red-300 bg-red-50/40 focus:border-red-500'
-                        : 'border-stone-200 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
+                        : 'border-stone-300 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35'
                     }`}
                   />
                   <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
@@ -821,7 +821,7 @@ function AuthContent() {
                     required
                     minLength={3}
                     maxLength={50}
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none transition-all"
                   />
                   <User className="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
                 </div>
@@ -848,7 +848,7 @@ function AuthContent() {
                     autoComplete="new-password"
                     required
                     minLength={8}
-                    className="w-full pl-9 pr-10 py-2.5 text-sm bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all"
+                    className="w-full pl-9 pr-10 py-2.5 text-sm bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none transition-all"
                   />
                   <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
                   <button
@@ -944,10 +944,10 @@ function AuthContent() {
                     autoComplete="new-password"
                     required
                     minLength={8}
-                    className={`w-full pl-9 pr-10 py-2.5 text-sm bg-stone-50 border rounded-xl outline-none transition-all ${
+                    className={`w-full pl-9 pr-10 py-2.5 text-sm bg-stone-50 border rounded-xl outline-none focus:outline-none focus-visible:outline-none transition-all ${
                       signupRetypePassword.length > 0 && !isPasswordMatching
                         ? 'border-red-300 bg-red-50/40 focus:border-red-500'
-                        : 'border-stone-200 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
+                        : 'border-stone-300 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35'
                     }`}
                   />
                   <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-3 pointer-events-none" />
@@ -1033,7 +1033,7 @@ function AuthContent() {
                   autoFocus
                   required
                   aria-label="6-digit verification code"
-                  className="w-full px-3 py-3 text-center text-2xl font-mono font-bold tracking-widest bg-stone-50 border border-stone-200 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none transition-all"
+                  className="w-full px-3 py-3 text-center text-2xl font-mono font-bold tracking-widest bg-stone-50 border border-stone-300 rounded-xl focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-400/35 outline-none focus:outline-none focus-visible:outline-none transition-all"
                 />
               </div>
 
