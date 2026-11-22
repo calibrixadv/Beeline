@@ -400,7 +400,7 @@ function TripsContent() {
                 updateUrlParams(activeOrigin, activeDestination, e.target.value);
                 setFetchTrigger((prev) => prev + 1);
               }}
-              className="text-xs font-bold text-stone-800 bg-transparent focus:outline-none cursor-pointer"
+              className="text-xs font-bold text-stone-800 bg-transparent border-0 outline-none focus:outline-none focus-visible:outline-none cursor-pointer"
             />
           </div>
 

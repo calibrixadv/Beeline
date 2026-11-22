@@ -329,7 +329,7 @@ export const QueenBeesSection: React.FC<QueenBeesSectionProps> = ({
     <section
       id="tour-queens"
       aria-label="The Three Queen Bees and Their Hive Swarms"
-      className="relative w-full max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8 select-none"
+      className="relative w-full max-w-6xl mx-auto py-12 px-3 sm:px-6 lg:px-8 overflow-x-clip select-none"
     >
       {/* ------------------------------------------------------------- */}
       {/* 1. SECTION HEADER (CHAPTER 1 • THE ROYAL HIVES)               */}

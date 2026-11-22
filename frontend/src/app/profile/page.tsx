@@ -440,7 +440,7 @@ export default function ProfilePage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="e.g. traveler_bee"
-                className="w-full px-3.5 py-2 text-xs rounded-xl bg-white border border-[#F3E8D2] text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                className="w-full px-3.5 py-2 text-xs rounded-xl bg-white border border-amber-200/90 text-stone-900 outline-none focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-amber-400/35 focus:border-amber-500"
               />
             </div>
             <button

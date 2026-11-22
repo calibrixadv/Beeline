@@ -601,7 +601,7 @@ export default function HomePage() {
                         max={maxDateStr}
                         value={travelDate}
                         onChange={(e) => setTravelDate(e.target.value)}
-                        className="w-full sm:w-48 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50/50 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400"
+                        className="w-full sm:w-48 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50/50 text-xs font-semibold text-stone-800 outline-none focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-amber-400/35 focus:border-amber-500"
                       />
 
                       <button

@@ -177,7 +177,7 @@ export const TripFilterBar: React.FC<TripFilterBarProps> = ({
                   maxTransfers: Number.isNaN(parsed) ? undefined : parsed,
                 });
               }}
-              className="bg-transparent border-0 text-xs font-semibold text-stone-800 focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent border-0 text-xs font-semibold text-stone-800 outline-none focus:outline-none focus-visible:outline-none cursor-pointer pr-1"
             >
               {MAX_TRANSFERS_OPTIONS.map((opt) => (
                 <option key={opt.id} value={opt.id}>
@@ -194,7 +194,7 @@ export const TripFilterBar: React.FC<TripFilterBarProps> = ({
               value={filters.sortBy}
               onChange={(e) => onChange({ ...filters, sortBy: e.target.value as any })}
               aria-label="Sort trips by"
-              className="bg-transparent border-0 text-xs font-semibold text-stone-800 focus:outline-none cursor-pointer pr-1"
+              className="bg-transparent border-0 text-xs font-semibold text-stone-800 outline-none focus:outline-none focus-visible:outline-none cursor-pointer pr-1"
             >
               <option value="departure">Departure Time (00:00–23:59)</option>
               <option value="risk">Recommended / Safest</option>
